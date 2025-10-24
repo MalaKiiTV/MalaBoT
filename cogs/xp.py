@@ -88,14 +88,14 @@ class XP(commands.Cog):
                     streak_bonus_applied = True
                     
                     # Update streak in database
-                    await self.bot.db_manager.get_connection().execute(
+                    conn = await self.bot.db_manager.get_connection()await conn.execute(
                         "UPDATE users SET daily_streak = ?, last_daily_award_date = ? WHERE user_id = ?",
                         (streak_days, today.isoformat(), user_id)
                     )
                 elif last_daily is None or (today - last_daily).days > 1:
                     # Streak broken or first time
                     streak_days = 1
-                    await self.bot.db_manager.get_connection().execute(
+                    conn = await self.bot.db_manager.get_connection()await conn.execute(
                         "UPDATE users SET daily_streak = ?, last_daily_award_date = ? WHERE user_id = ?",
                         (streak_days, today.isoformat(), user_id)
                     )
