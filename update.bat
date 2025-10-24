@@ -1,173 +1,127 @@
 @echo off
-REM MalaBoT Update Script for Windows
-REM Fully clean, update, and restart MalaBoT
-
 setlocal enabledelayedexpansion
+title MalaBoT Update Script
 
-REM Configuration
-set BOT_DIR=%~dp0
-set BACKUP_DIR=%BOT_DIR%backups
-set LOG_DIR=%BOT_DIR%data\logs
-set DB_FILE=%BOT_DIR%data\bot.db
-set PYTHON_CMD=python
-set RESTART_REASON=%1
+:: Configuration
+set "BOT_DIR=%~dp0"
+set "VENV_DIR=%BOT_DIR%venv"
+set "PYTHON=%VENV_DIR%\Scripts\python.exe"
+set "LOG_DIR=%BOT_DIR%data\logs"
+set "BACKUP_DIR=%BOT_DIR%backups"
+set "TIMESTAMP=%date:~-4%%date:~-10,2%%date:~-7,2%-%time:~0,2%%time:~3,2%"
+set "TIMESTAMP=%TIMESTAMP: =0%"
+set "UPDATE_LOG=%LOG_DIR%\update_%TIMESTAMP%.log"
 
-if "%RESTART_REASON%"=="" set RESTART_REASON=manual
-
-REM Colors (Windows 10+ ANSI support)
-set RED=[91m
-set GREEN=[92m
-set YELLOW=[93m
-set BLUE=[94m
-set NC=[0m
-
-REM Create timestamp
-for /f "tokens=2 delims==" %%I in ('wmic os get LocalDateTime /value') do set datetime=%%I
-set TIMESTAMP=%datetime:~0,4%-%datetime:~4,2%-%datetime:~6,2%-%datetime:~8,2%%datetime:~10,2%
-set UPDATE_LOG=%LOG_DIR%\update_%TIMESTAMP%.log
-
-echo %GREEN%[%date% %time%]%NC% Starting MalaBoT update process...
-echo %GREEN%[%date% %time%]%NC% Restart reason: %RESTART_REASON%
-echo %GREEN%[%date% %time%]%NC% Update log: %UPDATE_LOG%
-
-REM Create directories
-if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
+:: Create log directory if it doesn't exist
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
-if not exist "%BACKUP_DIR%\logs\%TIMESTAMP%" mkdir "%BACKUP_DIR%\logs\%TIMESTAMP%"
-if not exist "%BACKUP_DIR%\db\%TIMESTAMP%" mkdir "%BACKUP_DIR%\db\%TIMESTAMP%"
-if not exist "%BOT_DIR%\data\flags" mkdir "%BOT_DIR%\data\flags"
 
-REM Function to stop the bot
-echo %GREEN%[%date% %time%]%NC% Stopping MalaBoT process...
-taskkill /F /IM python.exe /FI "WINDOWTITLE eq bot.py*" 2>NUL
-timeout /T 3 /NOBREAK >NUL
+:: Start logging
+echo ============================================================ > "%UPDATE_LOG%"
+echo MalaBoT Update Script >> "%UPDATE_LOG%"
+echo Started: %date% %time% >> "%UPDATE_LOG%"
+echo ============================================================ >> "%UPDATE_LOG%"
+echo.
 
-REM Function to create backups
-echo %GREEN%[%date% %time%]%NC% Creating backups...
+echo [INFO] Starting MalaBoT update process...
+echo [INFO] Update log: %UPDATE_LOG%
+echo.
 
-REM Backup logs
-if exist "%LOG_DIR%\*" (
-    echo %GREEN%[%date% %time%]%NC% Backing up logs to %BACKUP_DIR%\logs\%TIMESTAMP%
-    xcopy "%LOG_DIR%\*" "%BACKUP_DIR%\logs\%TIMESTAMP%&quot; /E /I /Y >NUL 2>&1
-)
-
-REM Backup database
-if exist "%DB_FILE%" (
-    echo %GREEN%[%date% %time%]%NC% Backing up database to %BACKUP_DIR%\db\%TIMESTAMP%
-    copy "%DB_FILE%" "%BACKUP_DIR%\db\%TIMESTAMP%\bot.db" >NUL
-)
-
-REM Backup .env file
-if exist "%BOT_DIR%.env" (
-    copy "%BOT_DIR%.env" "%BACKUP_DIR%\env_backup_%TIMESTAMP%" >NUL
-)
-
-REM Function to update from Git
-echo %GREEN%[%date% %time%]%NC% Updating code from Git...
-cd /D "%BOT_DIR%"
-
-git fetch --all
-git reset --hard origin/main
-
-for /f "delims=" %%I in ('git log -1 --oneline') do set LATEST_COMMIT=%%I
-echo %GREEN%[%date% %time%]%NC% Updated to: %LATEST_COMMIT%
-
-REM Function to update dependencies
-echo %GREEN%[%date% %time%]%NC% Updating Python dependencies...
-
-REM Check if virtual environment exists
-if not exist "venv" (
-    echo %GREEN%[%date% %time%]%NC% Creating virtual environment...
-    %PYTHON_CMD% -m venv venv
-)
-
-REM Activate virtual environment and update dependencies
-call venv\Scripts\activate.bat
-python -m pip install --upgrade pip
-pip install -r requirements.txt --upgrade
-
-REM Function to clean old backups
-echo %GREEN%[%date% %time%]%NC% Cleaning old backups...
-
-REM Clean old log backups (keep 10 most recent)
-for /f "skip=10 delims=" %%D in ('dir /B /AD /O-N "%BACKUP_DIR%\logs" 2^>NUL') do (
-    rmdir /S /Q "%BACKUP_DIR%\logs\%%D" 2>NUL
-)
-
-REM Clean old database backups (keep 10 most recent)
-for /f "skip=10 delims=" %%D in ('dir /B /AD /O-N "%BACKUP_DIR%\db" 2^>NUL') do (
-    rmdir /S /Q "%BACKUP_DIR%\db\%%D" 2>NUL
-)
-
-REM Clean old env backups (keep 5)
-for /f "skip=5 delims=" %%F in ('dir /B /O-N "%BACKUP_DIR%\env_backup_*" 2^>NUL') do (
-    del "%BACKUP_DIR%\%%F" 2>NUL
-)
-
-REM Function to clean caches
-echo %GREEN%[%date% %time%]%NC% Cleaning caches...
-for /r %%F in (*.pyc) do del "%%F" 2>NUL
-for /d %%D in (__pycache__) do rmdir /S /Q "%%D" 2>NUL
-rmdir /S /Q .pytest_cache 2>NUL
-
-REM Handle watchdog restarts
-if not "%RESTART_REASON%"=="manual" (
-    echo %GREEN%[%date% %time%]%NC% Watchdog initiated restart - reason: %RESTART_REASON%
-    echo %RESTART_REASON% > "%BOT_DIR%\data\flags\crash_detected"
-)
-
-REM Function to start the bot
-echo %GREEN%[%date% %time%]%NC% Starting MalaBoT...
-
-REM Ensure data directories exist
-if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
-if not exist "%BOT_DIR%\data\flags" mkdir "%BOT_DIR%\data\flags"
-
-REM Start bot in background
-start "MalaBoT" /MIN %PYTHON_CMD% bot.py
-
-echo %GREEN%[%date% %time%]%NC% MalaBoT started
-echo %GREEN%[%date% %time%]%NC% Latest log file: data\logs\latest.log
-
-REM Wait for startup
-timeout /T 10 /NOBREAK >NUL
-
-REM Verify startup
-echo %GREEN%[%date% %time%]%NC% Verifying startup...
-
-REM Check if process is running
-tasklist /FI "IMAGENAME eq python.exe" /FI "WINDOWTITLE eq *bot.py*" | find "python.exe" >NUL
-if %ERRORLEVEL%==0 (
-    echo %GREEN%[%date% %time%]%NC% %GREEN%✅ MalaBoT is running successfully%NC%
+:: Stop the bot if it's running
+echo [INFO] Checking for running bot processes...
+tasklist /FI "IMAGENAME eq python.exe" /FI "WINDOWTITLE eq MalaBoT*" 2>nul | find /I "python.exe" >nul
+if %ERRORLEVEL% EQU 0 (
+    echo [INFO] Stopping MalaBoT process...
+    taskkill /FI "WINDOWTITLE eq MalaBoT*" /F >nul 2>&1
+    timeout /t 3 /nobreak >nul
+    echo [INFO] Bot stopped
 ) else (
-    echo %RED%[%date% %time%]%NC% %RED%❌ MalaBoT is not running after startup%NC%
-    echo %RED%[%date% %time%]%NC% Check logs for errors
+    echo [INFO] No running bot process found
+)
+
+:: Create backups
+echo [INFO] Creating backups...
+if not exist "%BACKUP_DIR%\logs" mkdir "%BACKUP_DIR%\logs"
+if exist "%LOG_DIR%\*.log" (
+    xcopy "%LOG_DIR%\*.log" "%BACKUP_DIR%\logs\%TIMESTAMP%&quot; /Y /Q >nul 2>&1
+    echo [INFO] Logs backed up
+)
+
+:: Update from Git if repository exists
+if exist ".git" (
+    echo [INFO] Updating from Git repository...
+    git pull >> "%UPDATE_LOG%" 2>&1
+    if %ERRORLEVEL% EQU 0 (
+        echo [INFO] Git pull successful
+    ) else (
+        echo [WARN] Git pull failed or no changes
+    )
+) else (
+    echo [INFO] Not a Git repository, skipping Git update
+)
+
+:: Activate virtual environment or create it
+if not exist "%VENV_DIR%" (
+    echo [INFO] Creating virtual environment...
+    python -m venv "%VENV_DIR%" >> "%UPDATE_LOG%" 2>&1
+)
+
+echo [INFO] Activating virtual environment...
+call "%VENV_DIR%\Scripts\activate.bat"
+
+:: Update pip
+echo [INFO] Updating pip...
+python -m pip install --upgrade pip >> "%UPDATE_LOG%" 2>&1
+
+:: Install/update dependencies
+echo [INFO] Installing dependencies...
+pip install -r requirements.txt >> "%UPDATE_LOG%" 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [INFO] Dependencies installed successfully
+) else (
+    echo [ERROR] Failed to install dependencies
+    echo [ERROR] Check %UPDATE_LOG% for details
     pause
     exit /b 1
 )
 
-REM Check latest log for startup message
-if exist "%LOG_DIR%\latest.log" (
-    findstr /C:"MalaBoT is now Locked in" "%LOG_DIR%\latest.log" >NUL
-    if %ERRORLEVEL%==0 (
-        echo %GREEN%[%date% %time%]%NC% %GREEN%✅ Startup verification passed%NC%
-    ) else (
-        echo %YELLOW%[%date% %time%]%NC% %YELLOW%⚠️ Startup verification inconclusive - check logs%NC%
-    )
+:: Clean old backups (keep last 7 days)
+echo [INFO] Cleaning old backups...
+forfiles /P "%BACKUP_DIR%\logs" /D -7 /C "cmd /c if @isdir==TRUE rmdir /S /Q @path" 2>nul
+
+:: Clean cache
+echo [INFO] Cleaning caches...
+if exist "__pycache__" rmdir /S /Q "__pycache__" 2>nul
+if exist "cogs\__pycache__" rmdir /S /Q "cogs\__pycache__" 2>nul
+if exist "utils\__pycache__" rmdir /S /Q "utils\__pycache__" 2>nul
+if exist "config\__pycache__" rmdir /S /Q "config\__pycache__" 2>nul
+if exist "database\__pycache__" rmdir /S /Q "database\__pycache__" 2>nul
+
+:: Start the bot
+echo.
+echo [INFO] Starting MalaBoT...
+start "MalaBoT" /MIN "%PYTHON%" bot.py
+timeout /t 3 /nobreak >nul
+
+:: Verify bot started
+echo [INFO] Verifying bot startup...
+timeout /t 5 /nobreak >nul
+
+:: Check if bot is running by looking for the process
+tasklist /FI "IMAGENAME eq python.exe" 2>nul | find /I "python.exe" >nul
+if %ERRORLEVEL% EQU 0 (
+    echo [INFO] ✅ MalaBoT is running
+    echo [INFO] Check data\logs\latest.log for bot status
+) else (
+    echo [WARN] Could not verify bot process
+    echo [WARN] Check data\logs\latest.log for any errors
 )
 
-echo %GREEN%[%date% %time%]%NC% === MalaBoT Update Process Completed Successfully ===
-echo %GREEN%[%date% %time%]%NC% Bot should be online and ready within 30 seconds
+echo.
+echo [INFO] Update complete!
+echo [INFO] Full log: %UPDATE_LOG%
+echo.
+echo ============================================================
+echo Update completed: %date% %time% >> "%UPDATE_LOG%"
+echo ============================================================ >> "%UPDATE_LOG%"
 
-REM Check if owner alerts are enabled
-if exist "%BOT_DIR%.env" (
-    findstr /C:"OWNER_ALERTS_ENABLED=true" "%BOT_DIR%.env" >NUL
-    if %ERRORLEVEL%==0 (
-        echo %GREEN%[%date% %time%]%NC% Owner alerts are enabled - owner will be notified of restart
-    )
-)
-
-echo %GREEN%[%date% %time%]%NC% Press any key to exit...
-pause >NUL
-
-exit /b 0
+pause
