@@ -1,0 +1,60 @@
+# Environment and secrets
+.env
+*.env
+
+# Database
+data/bot.db
+data/bot.db-journal
+data/bot.db-shm
+data/bot.db-wal
+
+# Logs and backups
+data/logs/
+backups/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+cache/
+.tmp/
+
+# Crash flags
+data/flags/
