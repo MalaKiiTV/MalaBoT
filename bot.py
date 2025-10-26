@@ -107,6 +107,10 @@ class MalaBoT(commands.Bot):
             await self._start_background_tasks()
             
             self.logger.info("Bot setup completed successfully")
+               
+               # Send online message if configured
+               if self.get_cog('Owner'):
+                   await self.get_cog('Owner').send_online_message()
             
         except Exception as e:
             log_critical("Failed during bot setup", e)

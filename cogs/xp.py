@@ -46,17 +46,17 @@ class XP(commands.Cog):
             
             # Award XP
             xp_gained = random.randint(XP_PER_MESSAGE_MIN, XP_PER_MESSAGE_MAX)
-            await self.bot.db_manager.add_user_xp(message.author.id, message.guild.id, xp_gained)
+            await self.bot.db_manager.update_user_xp(message.author.id, xp_gained)
             
             # Update last XP time
             self.last_xp_time[user_id] = current_time
             
             # Check for level up
-            user_data = await self.bot.db_manager.get_user_xp(message.author.id, message.guild.id)
+            user_data = await self.bot.db_manager.get_user(message.author.id)
             if user_data:
-                current_level = xp_helper.get_level_from_xp(user_data['total_xp'])
-                if current_level > user_data['level']:
-                    await self._handle_level_up(message.author, message.guild, current_level, user_data['level'])
+                current_level = xp_helper.get_level_from_xp(user_data.get('total_xp', 0))
+                if current_level > user_data.get('level', 0):
+                    await self._handle_level_up(message.author, message.guild, current_level, user_data.get('level', 0))
             
         except Exception as e:
             self.logger.error(f"Error in on_message XP: {e}")
@@ -76,7 +76,7 @@ class XP(commands.Cog):
             await channel.send(embed=embed)
             
             # Update database
-            await self.bot.db_manager.update_user_level(member.id, guild.id, new_level)
+            await self.bot.db_manager.update_user_xp(member.id, 0)  # Update level in database
             
             # Assign level role if configured
             await xp_helper.assign_level_role(member, new_level)
@@ -94,9 +94,9 @@ class XP(commands.Cog):
             target_user = user or interaction.user
             
             # Get user XP data
-            user_data = await self.bot.db_manager.get_user_xp(target_user.id, interaction.guild.id)
+            user_data = await self.bot.db_manager.get_user(target_user.id)
             
-            if not user_data:
+            if not user_data or not user_data.get('total_xp', 0):
                 embed = embed_helper.error_embed(
                     title="No XP Data",
                     description=f"{target_user.mention} hasn't earned any XP yet."
@@ -105,7 +105,7 @@ class XP(commands.Cog):
                 return
             
             # Calculate rank info
-            current_xp = user_data['total_xp']
+            current_xp = user_data.get('total_xp', 0)
             current_level = xp_helper.get_level_from_xp(current_xp)
             level_xp = xp_helper.get_xp_for_level(current_level)
             next_level_xp = xp_helper.get_xp_for_level(current_level + 1)
@@ -127,7 +127,7 @@ class XP(commands.Cog):
             
             embed.add_field(
                 name="🏆 Rank",
-                value=f"#{server_rank:,}",
+                value=f"#{server_rank:,}" if server_rank else "#N/A",
                 inline=True
             )
             
@@ -159,7 +159,7 @@ class XP(commands.Cog):
             
             embed.add_field(
                 name="📅 Daily Check-in",
-                value=f"✅ Available" if not user_data.get('daily_claimed') else "❌ Already claimed",
+                value=f"✅ Available" if not user_data.get('daily_claimed', False) else "❌ Already claimed",
                 inline=True
             )
             
@@ -217,9 +217,9 @@ class XP(commands.Cog):
                     else:
                         medal = f"#{i}"
                     
-                    leaderboard_text += f"{medal} **{user.display_name}** - Level {user_data['level']} ({user_data['total_xp']:,} XP)\n"
+                    leaderboard_text += f"{medal} **{user.display_name}** - Level {user_data.get('level', 0)} ({user_data.get('total_xp', 0):,} XP)\n"
                 else:
-                    leaderboard_text += f"#{i} Unknown User - Level {user_data['level']} ({user_data['total_xp']:,} XP)\n"
+                    leaderboard_text += f"#{i} Unknown User - Level {user_data.get('level', 0)} ({user_data.get('total_xp', 0):,} XP)\n"
             
             embed.description = leaderboard_text
             embed.set_footer(text=f"Top {limit} users • Requested by {interaction.user.display_name}")
@@ -235,40 +235,29 @@ class XP(commands.Cog):
         """Claim daily XP bonus."""
         try:
             # Check if already claimed
-            user_data = await self.bot.db_manager.get_user_xp(interaction.user.id, interaction.guild.id)
+            user_data = await self.bot.db_manager.get_user(interaction.user.id)
             
             if not user_data:
-                await self.bot.db_manager.create_user_xp(interaction.user.id, interaction.guild.id)
+                await self.bot.db_manager.create_user(interaction.user.id, interaction.guild.id)
                 user_data = {'daily_claimed': False, 'streak': 0}
             
             if user_data.get('daily_claimed', False):
                 # Show next claim time
-                last_claim = await self.bot.db_manager.get_daily_streak(interaction.user.id, interaction.guild.id)
-                if last_claim:
-                    next_claim_time = last_claim + datetime.timedelta(days=1)
-                    time_until = time_helper.format_time_until(next_claim_time)
-                    
-                    embed = embed_helper.error_embed(
-                        title="Daily Bonus Already Claimed",
-                        description=f"You've already claimed your daily bonus!\n\nNext claim: {time_until}"
-                    )
-                else:
-                    embed = embed_helper.error_embed(
-                        title="Daily Bonus Error",
-                        description="Could not determine next claim time. Please try again later."
-                    )
-                
+                embed = embed_helper.error_embed(
+                    title="Daily Bonus Already Claimed",
+                    description="You've already claimed your daily bonus!\n\nCome back tomorrow for your next bonus."
+                )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
             # Calculate bonus
             base_bonus = DAILY_CHECKIN_XP
-            streak = await self.bot.db_manager.get_daily_streak(interaction.user.id, interaction.guild.id) or 0
+            streak = user_data.get('streak', 0)
             streak_bonus = int(base_bonus * (streak * STREAK_BONUS_PERCENT / 100))
             total_bonus = base_bonus + streak_bonus
             
             # Award XP
-            await self.bot.db_manager.add_user_xp(interaction.user.id, interaction.guild.id, total_bonus)
+            await self.bot.db_manager.update_user_xp(interaction.user.id, total_bonus)
             await self.bot.db_manager.set_daily_claimed(interaction.user.id, interaction.guild.id)
             new_streak = await self.bot.db_manager.increment_daily_streak(interaction.user.id, interaction.guild.id)
             
@@ -363,7 +352,7 @@ class XP(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            await self.bot.db_manager.add_user_xp(user.id, interaction.guild.id, amount)
+            await self.bot.db_manager.update_user_xp(user.id, amount)
             
             embed = embed_helper.success_embed(
                 title="✅ XP Added",
@@ -389,8 +378,8 @@ class XP(commands.Cog):
                 return
             
             # Get current XP
-            user_data = await self.bot.db_manager.get_user_xp(user.id, interaction.guild.id)
-            if not user_data or user_data['total_xp'] < amount:
+            user_data = await self.bot.db_manager.get_user(user.id)
+            if not user_data or user_data.get('total_xp', 0) < amount:
                 embed = embed_helper.error_embed(
                     title="Insufficient XP",
                     description=f"{user.mention} only has {user_data.get('total_xp', 0):,} XP."
@@ -398,8 +387,8 @@ class XP(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            new_xp = user_data['total_xp'] - amount
-            await self.bot.db_manager.set_user_xp(user.id, interaction.guild.id, new_xp)
+            new_xp = user_data.get('total_xp', 0) - amount
+            await self.bot.db_manager.update_user_xp(user.id, -amount)
             
             embed = embed_helper.success_embed(
                 title="✅ XP Removed",
@@ -424,7 +413,13 @@ class XP(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            await self.bot.db_manager.set_user_xp(user.id, interaction.guild.id, amount)
+            # Get current XP and calculate difference
+            user_data = await self.bot.db_manager.get_user(user.id)
+            current_xp = user_data.get('total_xp', 0) if user_data else 0
+            diff = amount - current_xp
+            
+            if diff != 0:
+                await self.bot.db_manager.update_user_xp(user.id, diff)
             
             embed = embed_helper.success_embed(
                 title="✅ XP Set",
@@ -441,7 +436,7 @@ class XP(commands.Cog):
     async def _xpadmin_reset(self, interaction: discord.Interaction, user: discord.Member):
         """Reset user XP and level."""
         try:
-            await self.bot.db_manager.reset_user_xp(user.id, interaction.guild.id)
+            await self.bot.db_manager.reset_user_xp(user.id)
             
             embed = embed_helper.success_embed(
                 title="✅ XP Reset",

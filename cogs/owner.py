@@ -31,7 +31,6 @@ class Owner(commands.Cog):
     
     async def cog_check(self, interaction: discord.Interaction) -> bool:
         """Check if user is bot owner."""
-        # Debug: Log the user ID and owner IDs
         user_id = interaction.user.id
         owner_ids = settings.OWNER_IDS
         self.logger.info(f"Owner check: User {user_id}, Owner IDs: {owner_ids}")
@@ -51,7 +50,6 @@ class Owner(commands.Cog):
     async def owner(self, interaction: discord.Interaction, action: str):
         """Owner control panel for various administrative actions."""
         try:
-            # Manual owner check for debugging
             user_id = interaction.user.id
             owner_ids = settings.OWNER_IDS
             
@@ -66,7 +64,6 @@ class Owner(commands.Cog):
             
             self.logger.info(f"Owner command access granted to user {user_id} for action: {action}")
             
-            # Route to appropriate handler
             if action == "status":
                 await self._owner_status(interaction)
             elif action == "restart":
@@ -91,10 +88,8 @@ class Owner(commands.Cog):
     async def _owner_status(self, interaction: discord.Interaction):
         """Show detailed bot status."""
         try:
-            # Get system info
             sys_info = get_system_info()
             
-            # Calculate uptime
             start_time = getattr(self.bot, 'start_time', time.time())
             if isinstance(start_time, datetime):
                 uptime_seconds = int(time.time() - start_time.timestamp())
@@ -102,13 +97,12 @@ class Owner(commands.Cog):
                 uptime_seconds = int(time.time() - start_time)
             uptime_str = self._format_duration(uptime_seconds)
             
-            # Create status embed
-            embed = create_embed(
+            embed = embed_helper.create_embed(
                 title="🔧 Bot Status Report",
+                description="Bot status information",
                 color=COLORS["info"]
             )
             
-            # Basic information
             embed.add_field(
                 name="🤖 Bot Information",
                 value=f"Name: {self.bot.user}\n"
@@ -119,7 +113,6 @@ class Owner(commands.Cog):
                 inline=True
             )
             
-            # System information
             if sys_info:
                 embed.add_field(
                     name="💻 System Resources",
@@ -130,7 +123,6 @@ class Owner(commands.Cog):
                     inline=True
                 )
             
-            # Bot statistics
             total_guilds = len(self.bot.guilds)
             total_users = sum(guild.member_count for guild in self.bot.guilds)
             total_channels = sum(len(guild.channels) for guild in self.bot.guilds)
@@ -166,10 +158,8 @@ class Owner(commands.Cog):
             
             self.logger.info(f"Bot restart requested by owner {interaction.user.id}")
             
-            # Give time for message to send
             await asyncio.sleep(2)
             
-            # Restart using script or direct restart
             try:
                 subprocess.run(["./update.sh", "manual"], check=True)
             except:
@@ -191,10 +181,8 @@ class Owner(commands.Cog):
             
             self.logger.info(f"Bot shutdown requested by owner {interaction.user.id}")
             
-            # Give time for message to send
             await asyncio.sleep(2)
             
-            # Graceful shutdown
             await self.bot.close()
             
         except Exception as e:
@@ -228,7 +216,6 @@ class Owner(commands.Cog):
     async def _owner_setonline(self, interaction: discord.Interaction):
         """Set online message configuration."""
         try:
-            # Get all text channels from all servers
             all_channels = []
             for guild in self.bot.guilds:
                 for channel in guild.text_channels:
@@ -246,7 +233,6 @@ class Owner(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            # Create channel selection view
             class OnlineChannelSelectView(discord.ui.View):
                 def __init__(self, cog_instance):
                     super().__init__(timeout=60)
@@ -267,7 +253,6 @@ class Owner(commands.Cog):
                     self.selected_channel = int(select.values[0])
                     self.stop()
                     
-                    # Now ask for the message
                     modal = OnlineMessageModal(self.cog, self.selected_channel)
                     await interaction.response.send_modal(modal)
             
@@ -287,11 +272,9 @@ class Owner(commands.Cog):
                 
                 async def on_submit(self, interaction: discord.Interaction):
                     try:
-                        # Save to database
                         await self.cog.bot.db_manager.set_setting('online_channel_id', str(self.channel_id))
                         await self.cog.bot.db_manager.set_setting('online_message', self.message.value)
                         
-                        # Test the message
                         channel = self.cog.bot.get_channel(self.channel_id)
                         if channel:
                             embed = embed_helper.success_embed(
