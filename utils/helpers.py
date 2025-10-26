@@ -1,142 +1,78 @@
 """
-Helper functions and utilities for MalaBoT.
-Contains embed creators, time utilities, permission checks, and more.
+Helper utilities for MalaBoT
+Provides various helper classes and functions for common operations
 """
 
 import discord
 from datetime import datetime, timedelta
-from typing import Optional, List, Union, Dict, Any
-import asyncio
+from typing import Dict, Any
 import psutil
 import os
-from config.constants import COLORS, ERROR_MESSAGES, SUCCESS_MESSAGES, LEVEL_ROLE_MAP
-from config.settings import settings
+import platform
+import random
+
+from config.constants import COLORS
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+def log_moderation(message: str):
+    """Log moderation actions."""
+    logger.info(message)
+
+def log_xp(message: str):
+    """Log XP-related actions."""
+    logger.info(message)
+
+def log_birthday(message: str):
+    """Log birthday-related actions."""
+    logger.info(message)
 
 class EmbedHelper:
     """Helper class for creating consistent embeds."""
     
     @staticmethod
-    def create_embed(title: str, description: str = None, color: int = COLORS["primary"],
-                    footer: str = None, thumbnail: str = None, image: str = None,
-                    author_name: str = None, author_icon: str = None,
-                    fields: List[tuple] = None) -> discord.Embed:
-        """Create a standardized embed."""
+    def create_embed(title: str, description: str, color: int = COLORS['info']) -> discord.Embed:
+        """Create a standardized embed with consistent formatting."""
         embed = discord.Embed(
             title=title,
             description=description,
             color=color,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now()
         )
-        
-        if footer:
-            embed.set_footer(text=footer)
-        else:
-            embed.set_footer(text=f"MalaBoT • v{settings.BOT_VERSION}")
-        
-        if thumbnail:
-            embed.set_thumbnail(url=thumbnail)
-        
-        if image:
-            embed.set_image(url=image)
-        
-        if author_name:
-            embed.set_author(name=author_name, icon_url=author_icon)
-        
-        if fields:
-            for name, value, inline in fields:
-                if name and value:
-                    embed.add_field(name=name, value=value, inline=inline)
-        
         return embed
     
     @staticmethod
-    def success_embed(title: str, description: str = None) -> discord.Embed:
-        """Create a success embed."""
-        return EmbedHelper.create_embed(
-            title=f"✅ {title}",
-            description=description,
-            color=COLORS["success"]
-        )
+    def error_embed(title: str, description: str) -> discord.Embed:
+        """Create an error embed with red color."""
+        return EmbedHelper.create_embed(title, description, COLORS['error'])
     
     @staticmethod
-    def error_embed(title: str, description: str = None) -> discord.Embed:
-        """Create an error embed."""
-        return EmbedHelper.create_embed(
-            title=f"❌ {title}",
-            description=description,
-            color=COLORS["error"]
-        )
+    def success_embed(title: str, description: str) -> discord.Embed:
+        """Create a success embed with green color."""
+        return EmbedHelper.create_embed(title, description, COLORS['success'])
     
     @staticmethod
-    def warning_embed(title: str, description: str = None) -> discord.Embed:
-        """Create a warning embed."""
-        return EmbedHelper.create_embed(
-            title=f"⚠️ {title}",
-            description=description,
-            color=COLORS["warning"]
-        )
-    
-    @staticmethod
-    def info_embed(title: str, description: str = None) -> discord.Embed:
-        """Create an info embed."""
-        return EmbedHelper.create_embed(
-            title=f"ℹ️ {title}",
-            description=description,
-            color=COLORS["info"]
-        )
-    
-    @staticmethod
-    def xp_embed(title: str, description: str = None, user: discord.Member = None) -> discord.Embed:
-        """Create an XP-themed embed."""
-        author_name = user.display_name if user else None
-        author_icon = user.avatar.url if user and user.avatar else None
-        
-        return EmbedHelper.create_embed(
-            title=f"🏆 {title}",
-            description=description,
-            color=COLORS["xp"],
-            author_name=author_name,
-            author_icon=author_icon
-        )
-    
-    @staticmethod
-    def birthday_embed(title: str, description: str = None, user: discord.Member = None) -> discord.Embed:
-        """Create a birthday-themed embed."""
-        return EmbedHelper.create_embed(
-            title=f"🎂 {title}",
-            description=description,
-            color=COLORS["birthday"]
-        )
-    
-    @staticmethod
-    def welcome_embed(title: str, description: str = None, user: discord.Member = None,
-                     image_url: str = None) -> discord.Embed:
-        """Create a welcome embed."""
-        thumbnail = user.avatar.url if user and user.avatar else None
-        
-        return EmbedHelper.create_embed(
-            title=f"👋 {title}",
-            description=description,
-            color=COLORS["welcome"],
-            thumbnail=thumbnail,
-            image=image_url
-        )
-    
-    @staticmethod
-    def roast_embed(title: str, description: str = None) -> discord.Embed:
-        """Create a roast-themed embed."""
-        return EmbedHelper.create_embed(
-            title=f"🔥 {title}",
-            description=description,
-            color=COLORS["roast"]
-        )
+    def info_embed(title: str, description: str) -> discord.Embed:
+        """Create an info embed with blue color."""
+        return EmbedHelper.create_embed(title, description, COLORS['info'])
 
 class TimeHelper:
     """Helper class for time-related operations."""
     
     @staticmethod
-    def format_duration(seconds: int) -> str:
-        """Format duration in seconds to human-readable string."""
+    def format_duration(td) -> str:
+        """Format duration (timedelta or seconds) to human-readable string."""
+        # If it's a timedelta object, convert to seconds
+        if isinstance(td, datetime):
+            # If a datetime object is passed, calculate difference from now
+            td = datetime.now() - td
+        if hasattr(td, 'total_seconds'):
+            seconds = int(td.total_seconds())
+        else:
+            # If already an integer/float, use as seconds
+            seconds = int(td)
+            
         if seconds < 60:
             return f"{seconds}s"
         elif seconds < 3600:
@@ -149,313 +85,146 @@ class TimeHelper:
         else:
             days = seconds // 86400
             hours = (seconds % 86400) // 3600
-            return f"{days}d {hours}h"
-    
-    @staticmethod
-    def format_timestamp(timestamp: datetime) -> str:
-        """Format timestamp to readable string."""
-        return timestamp.strftime("%Y-%m-%d %H:%M:%S")
-    
-    @staticmethod
-    def get_discord_timestamp(timestamp: datetime, format_type: str = "R") -> str:
-        """Get Discord timestamp format."""
-        return f"<t:{int(timestamp.timestamp())}:{format_type}>"
-    
-    @staticmethod
-    def parse_birthday(birthday_str: str) -> Optional[str]:
-        """Parse birthday string to MM-DD format."""
-        try:
-            # Remove any separators and parse
-            clean_date = birthday_str.replace('/', '-').replace('.', '-')
-            parts = clean_date.split('-')
-            
-            if len(parts) == 2:
-                month = int(parts[0])
-                day = int(parts[1])
-                
-                if 1 <= month <= 12 and 1 <= day <= 31:
-                    return f"{month:02d}-{day:02d}"
-            elif len(parts) == 3:
-                # If year is included, ignore it
-                month = int(parts[0])
-                day = int(parts[1])
-                
-                if 1 <= month <= 12 and 1 <= day <= 31:
-                    return f"{month:02d}-{day:02d}"
-        except (ValueError, IndexError):
-            pass
-        
-        return None
-    
-    @staticmethod
-    def get_next_birthday_days(birthday_mm_dd: str) -> int:
-        """Get days until next birthday."""
-        today = datetime.now()
-        current_year = today.year
-        
-        # Parse birthday
-        month, day = map(int, birthday_mm_dd.split('-'))
-        next_birthday = datetime(current_year, month, day)
-        
-        # If birthday has passed this year, use next year
-        if next_birthday < today:
-            next_birthday = datetime(current_year + 1, month, day)
-        
-        return (next_birthday - today).days
-    
-    @staticmethod
-    def is_today(birthday_mm_dd: str) -> bool:
-        """Check if birthday is today."""
-        today = datetime.now()
-        month, day = map(int, birthday_mm_dd.split('-'))
-        return today.month == month and today.day == day
+            minutes = (seconds % 3600) // 60
+            return f"{days}d {hours}h {minutes}m"
 
 class PermissionHelper:
-    """Helper class for permission checks."""
+    """Helper class for permission-related operations."""
     
     @staticmethod
-    def is_owner(user: Union[discord.User, discord.Member]) -> bool:
-        """Check if user is bot owner."""
-        return user.id in settings.OWNER_IDS
-    
+    def is_owner(user: discord.User) -> bool:
+        """Check if user is a bot owner."""
+        from config.settings import settings
+        return str(user.id) in settings.OWNER_IDS
+
     @staticmethod
     def is_admin(member: discord.Member) -> bool:
-        """Check if member has admin permissions."""
-        return PermissionHelper.is_owner(member) or \
-               member.guild_permissions.administrator or \
-               member.guild_permissions.manage_guild
-    
-    @staticmethod
-    def is_moderator(member: discord.Member) -> bool:
-        """Check if member has moderator permissions."""
-        return PermissionHelper.is_admin(member) or \
-               member.guild_permissions.manage_messages or \
-               member.guild_permissions.kick_members
-    
-    @staticmethod
-    def can_manage_server(member: discord.Member) -> bool:
-        """Check if member can manage server."""
-        return PermissionHelper.is_admin(member)
-    
-    @staticmethod
-    def get_permission_level(member: discord.Member) -> int:
-        """Get permission level for member."""
-        from config.constants import PERMISSION_LEVELS
-        
-        if PermissionHelper.is_owner(member):
-            return PERMISSION_LEVELS["OWNER"]
-        elif PermissionHelper.is_admin(member):
-            return PERMISSION_LEVELS["ADMIN"]
-        elif PermissionHelper.is_moderator(member):
-            return PERMISSION_LEVELS["MODERATOR"]
-        else:
-            return PERMISSION_LEVELS["MEMBER"]
+        """Check if member has administrator permissions."""
+        return member.guild_permissions.administrator
 
 class XPHelper:
     """Helper class for XP-related operations."""
     
     @staticmethod
-    def calculate_xp_for_next_level(current_level: int) -> int:
-        """Calculate XP needed for next level."""
-        from config.constants import XP_TABLE
-        
-        # Find the next level in the XP table
-        levels = sorted(XP_TABLE.keys())
-        current_index = levels.index(current_level) if current_level in levels else -1
-        
-        if current_index + 1 < len(levels):
-            next_level = levels[current_index + 1]
-            return XP_TABLE[next_level] - XP_TABLE.get(current_level, 0)
-        
-        return 1000  # Default for levels beyond table
+    def calculate_level_from_xp(total_xp: int, xp_table: Dict[int, int]) -> int:
+        """Calculate level from total XP using the XP table."""
+        level = 1
+        for lvl, xp_required in sorted(xp_table.items()):
+            if total_xp >= xp_required:
+                level = lvl
+            else:
+                break
+        return level
     
     @staticmethod
-    def get_xp_progress_bar(current_xp: int, total_needed: int, bar_length: int = 20) -> str:
-        """Create a visual XP progress bar."""
-        if total_needed == 0:
-            return "█" * bar_length
-        
-        filled = int((current_xp / total_needed) * bar_length)
-        empty = bar_length - filled
-        
-        bar = "█" * filled + "░" * empty
-        percentage = int((current_xp / total_needed) * 100)
-        
-        return f"{bar} {percentage}%"
+    def get_xp_for_next_level(current_level: int, xp_table: Dict[int, int]) -> int:
+        """Get XP required for next level."""
+        next_level = current_level + 1
+        return xp_table.get(next_level, xp_table[max(xp_table.keys())])
     
     @staticmethod
-    async def assign_level_role(member: discord.Member, new_level: int) -> Optional[discord.Role]:
-        """Assign level role to member."""
-        guild = member.guild
-        
-        # Get the role for this level
-        role_name_or_id = LEVEL_ROLE_MAP.get(new_level)
-        if not role_name_or_id:
-            return None
-        
-        # Find the role
-        target_role = None
-        if isinstance(role_name_or_id, int):
-            target_role = guild.get_role(role_name_or_id)
-        else:
-            target_role = discord.utils.get(guild.roles, name=role_name_or_id)
-        
-        if not target_role:
-            return None
-        
-        # Remove previous level roles
-        roles_to_remove = []
-        for level, role in LEVEL_ROLE_MAP.items():
-            if role and level != new_level:
-                if isinstance(role, int):
-                    prev_role = guild.get_role(role)
-                else:
-                    prev_role = discord.utils.get(guild.roles, name=role)
-                
-                if prev_role and prev_role in member.roles:
-                    roles_to_remove.append(prev_role)
-        
-        # Remove old roles and assign new one
-        if roles_to_remove:
-            await member.remove_roles(*roles_to_remove, reason="Level up role update")
-        
-        await member.add_roles(target_role, reason="Level up achievement")
-        return target_role
+    def get_random_xp(min_xp: int, max_xp: int) -> int:
+        """Get random XP amount within range."""
+        return random.randint(min_xp, max_xp)
 
-class SystemHelper:
-    """Helper class for system operations."""
+class RoleHelper:
+    """Helper class for role-related operations."""
     
     @staticmethod
-    def get_system_info() -> Dict[str, Any]:
-        """Get system information."""
+    async def add_role_to_member(member: discord.Member, role_name_or_id) -> bool:
+        """Add a role to a member by name or ID."""
         try:
-            # CPU usage
-            cpu_percent = psutil.cpu_percent(interval=1)
-            
-            # Memory usage
-            memory = psutil.virtual_memory()
-            memory_usage = memory.percent
-            memory_used_mb = memory.used / (1024 * 1024)
-            
-            # Disk usage
-            disk = psutil.disk_usage('/')
-            disk_usage = disk.percent
-            disk_free_gb = disk.free / (1024 * 1024 * 1024)
-            
-            return {
-                "cpu_percent": cpu_percent,
-                "memory_percent": memory_usage,
-                "memory_used_mb": round(memory_used_mb, 2),
-                "disk_percent": disk_usage,
-                "disk_free_gb": round(disk_free_gb, 2),
-                "process_count": len(psutil.pids())
-            }
-        except Exception:
-            return {}
-    
-    @staticmethod
-    def get_file_size(file_path: str) -> str:
-        """Get human-readable file size."""
-        try:
-            size_bytes = os.path.getsize(file_path)
-            
-            if size_bytes < 1024:
-                return f"{size_bytes} B"
-            elif size_bytes < 1024 * 1024:
-                return f"{size_bytes / 1024:.1f} KB"
-            elif size_bytes < 1024 * 1024 * 1024:
-                return f"{size_bytes / (1024 * 1024):.1f} MB"
+            if not role_name_or_id:
+                return False
+                
+            # Try to find role by ID first, then by name
+            role = None
+            if isinstance(role_name_or_id, int) or role_name_or_id.isdigit():
+                role = discord.utils.get(member.guild.roles, id=int(role_name_or_id))
             else:
-                return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
-        except OSError:
-            return "Unknown"
-    
-    @staticmethod
-    async def safe_send_message(channel, content: str = None,
-                               embed: discord.Embed = None, ephemeral: bool = False) -> bool:
-        """Safely send a message with error handling."""
-        try:
-            if isinstance(channel, discord.Interaction):
-                if channel.response.is_done():
-                    await channel.followup.send(content=content, embed=embed, ephemeral=ephemeral)
-                else:
-                    await channel.response.send_message(content=content, embed=embed, ephemeral=ephemeral)
-            else:
-                await channel.send(content=content, embed=embed)
+                role = discord.utils.get(member.guild.roles, name=role_name_or_id)
+                
+            if not role:
+                return False
+                
+            await member.add_roles(role)
             return True
-        except (discord.Forbidden, discord.HTTPException) as e:
-            # Avoid circular import
-            import logging
-            logging.getLogger('bot').error(f"Failed to send message: {e}")
+        except:
             return False
-    
-    @staticmethod
-    def sanitize_input(text: str, max_length: int = 1000) -> str:
-        """Sanitize user input."""
-        if not text:
-            return ""
-        
-        # Remove potentially harmful characters
-        sanitized = text.replace('@', '@\u200b')  # Zero-width space to prevent pings
-        
-        # Truncate if too long
-        if len(sanitized) > max_length:
-            sanitized = sanitized[:max_length-3] + "..."
-        
-        return sanitized.strip()
-    
-    @staticmethod
-    def create_user_mention_safe(user_id: int) -> str:
-        """Create safe user mention."""
-        return f"<@{user_id}>"
 
 class CooldownHelper:
-    """Helper class for managing command cooldowns."""
+    """Helper class for cooldown management."""
     
     def __init__(self):
         self.cooldowns = {}
     
-    def check_cooldown(self, user_id: int, command_name: str, cooldown_seconds: int) -> bool:
-        """Check if user is on cooldown for command."""
-        key = f"{user_id}:{command_name}"
-        
-        if key not in self.cooldowns:
-            return True
-        
-        last_used = self.cooldowns[key]
-        return (datetime.now() - last_used).total_seconds() >= cooldown_seconds
+    def is_on_cooldown(self, user_id: int, command: str) -> bool:
+        """Check if user is on cooldown for a command."""
+        key = f"{user_id}_{command}"
+        if key in self.cooldowns:
+            return datetime.now() < self.cooldowns[key]
+        return False
     
-    def set_cooldown(self, user_id: int, command_name: str):
-        """Set cooldown for user and command."""
-        key = f"{user_id}:{command_name}"
-        self.cooldowns[key] = datetime.now()
+    def set_cooldown(self, user_id: int, command: str, seconds: int):
+        """Set a cooldown for a user on a command."""
+        key = f"{user_id}_{command}"
+        self.cooldowns[key] = datetime.now() + timedelta(seconds=seconds)
     
-    def get_remaining_cooldown(self, user_id: int, command_name: str, cooldown_seconds: int) -> int:
-        """Get remaining cooldown seconds."""
-        key = f"{user_id}:{command_name}"
-        
-        if key not in self.cooldowns:
-            return 0
-        
-        last_used = self.cooldowns[key]
-        elapsed = (datetime.now() - last_used).total_seconds()
-        remaining = cooldown_seconds - elapsed
-        
-        return max(0, int(remaining))
+    def get_remaining_cooldown(self, user_id: int, command: str) -> int:
+        """Get remaining cooldown time in seconds."""
+        key = f"{user_id}_{command}"
+        if key in self.cooldowns:
+            remaining = (self.cooldowns[key] - datetime.now()).total_seconds()
+            return max(0, int(remaining))
+        return 0
 
-# Global instances
+class SystemHelper:
+    """Helper class for system-related operations."""
+    
+    @staticmethod
+    def get_system_info() -> Dict[str, Any]:
+        """Get system information."""
+        process = psutil.Process(os.getpid())
+        memory_info = process.memory_info()
+        
+        return {
+            'platform': platform.system(),
+            'platform_version': platform.version(),
+            'platform_release': platform.release(),
+            'cpu_count': psutil.cpu_count(),
+            'cpu_usage': psutil.cpu_percent(interval=1),
+            'memory_usage': memory_info.rss / 1024 / 1024,  # MB
+            'memory_percent': process.memory_percent(),
+            'disk_usage': psutil.disk_usage('/'),
+            'boot_time': datetime.fromtimestamp(psutil.boot_time()).strftime("%Y-%m-%d %H:%M:%S")
+        }
+    
+    @staticmethod
+    def get_file_size(file_path: str) -> str:
+        """Get file size in human-readable format."""
+        try:
+            size_bytes = os.path.getsize(file_path)
+            for unit in ['B', 'KB', 'MB', 'GB']:
+                if size_bytes < 1024.0:
+                    return f"{size_bytes:.2f} {unit}"
+                size_bytes /= 1024.0
+            return f"{size_bytes:.2f} TB"
+        except:
+            return "Unknown"
+
+# Convenience instances
 embed_helper = EmbedHelper()
 time_helper = TimeHelper()
 permission_helper = PermissionHelper()
 xp_helper = XPHelper()
-system_helper = SystemHelper()
 cooldown_helper = CooldownHelper()
+system_helper = SystemHelper()
 
 # Convenience functions
 def create_embed(*args, **kwargs) -> discord.Embed:
     return embed_helper.create_embed(*args, **kwargs)
 
-def format_duration(seconds: int) -> str:
+def format_duration(seconds) -> str:
     return time_helper.format_duration(seconds)
 
 def is_owner(user: discord.User) -> bool:
@@ -467,6 +236,27 @@ def is_admin(member: discord.Member) -> bool:
 def get_system_info() -> Dict[str, Any]:
     return system_helper.get_system_info()
 
-async def safe_send_message(channel, content=None, embed=None, ephemeral=False):
-    """Convenience function for safe message sending."""
-    return await system_helper.safe_send_message(channel, content, embed, ephemeral)
+async def safe_send_message(channel, content=None, embed=None, ephemeral=False, **kwargs):
+    """Safely send a message to a channel with error handling."""
+    try:
+        if hasattr(channel, 'send'):  # Regular channel
+            return await channel.send(content=content, embed=embed, **kwargs)
+        elif hasattr(channel, 'followup'):  # Interaction followup
+            return await channel.followup.send(content=content, embed=embed, ephemeral=ephemeral, **kwargs)
+        else:  # Assume it's an interaction
+            if ephemeral:
+                return await channel.response.send_message(content=content, embed=embed, ephemeral=True, **kwargs)
+            else:
+                return await channel.response.send_message(content=content, embed=embed, **kwargs)
+    except discord.Forbidden:
+        # Bot doesn't have permission to send messages in this channel
+        print(f"Missing permissions to send message in {channel}")
+        return None
+    except discord.HTTPException as e:
+        # Other Discord API errors
+        print(f"Failed to send message: {e}")
+        return None
+    except Exception as e:
+        # Any other errors
+        print(f"Unexpected error when sending message: {e}")
+        return None
