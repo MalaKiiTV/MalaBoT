@@ -19,7 +19,7 @@ from utils.helpers import (
     embed_helper, is_owner, safe_send_message, 
     create_embed, get_system_info
 )
-from config.constants import COLORS, ROAST_TITLES
+from config.constants import COLORS
 from config.settings import settings
 
 class Owner(commands.Cog):
@@ -29,9 +29,13 @@ class Owner(commands.Cog):
         self.bot = bot
         self.logger = get_logger('owner')
     
-    def cog_check(self, interaction: discord.Interaction) -> bool:
+    async def cog_check(self, interaction: discord.Interaction) -> bool:
         """Check if user is bot owner."""
-        return is_owner(interaction.user)
+        # Debug: Log the user ID and owner IDs
+        user_id = interaction.user.id
+        owner_ids = settings.OWNER_IDS
+        self.logger.info(f"Owner check: User {user_id}, Owner IDs: {owner_ids}")
+        return user_id in owner_ids
     
     @app_commands.command(name="owner", description="Owner-only control panel (Bot Owner only)")
     @app_commands.describe(
@@ -41,26 +45,26 @@ class Owner(commands.Cog):
         app_commands.Choice(name="status", value="status"),
         app_commands.Choice(name="restart", value="restart"),
         app_commands.Choice(name="shutdown", value="shutdown"),
-        app_commands.Choice(name="eval", value="eval"),
-        app_commands.Choice(name="announce", value="announce"),
-        app_commands.Choice(name="dm", value="dm"),
-        app_commands.Choice(name="setstatus", value="setstatus"),
-        app_commands.Choice(name="setactivity", value="setactivity"),
         app_commands.Choice(name="clearcrash", value="clearcrash"),
-        app_commands.Choice(name="digest", value="digest"),
-        app_commands.Choice(name="setroasttitle", value="setroasttitle"),
-        app_commands.Choice(name="togglerestart", value="togglerestart")
+        app_commands.Choice(name="setonline", value="setonline")
     ])
     async def owner(self, interaction: discord.Interaction, action: str):
         """Owner control panel for various administrative actions."""
         try:
-            if not is_owner(interaction.user):
+            # Manual owner check for debugging
+            user_id = interaction.user.id
+            owner_ids = settings.OWNER_IDS
+            
+            if user_id not in owner_ids:
+                self.logger.error(f"Access denied: User {user_id} not in owner list {owner_ids}")
                 embed = embed_helper.error_embed(
                     title="Access Denied",
-                    description="This command is only available to the bot owner."
+                    description=f"This command is only available to the bot owner.\nYour ID: {user_id}\nOwner IDs: {owner_ids}"
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
+            
+            self.logger.info(f"Owner command access granted to user {user_id} for action: {action}")
             
             # Route to appropriate handler
             if action == "status":
@@ -69,31 +73,17 @@ class Owner(commands.Cog):
                 await self._owner_restart(interaction)
             elif action == "shutdown":
                 await self._owner_shutdown(interaction)
-            elif action == "eval":
-                await self._owner_eval(interaction)
-            elif action == "announce":
-                await self._owner_announce(interaction)
-            elif action == "dm":
-                await self._owner_dm(interaction)
-            elif action == "setstatus":
-                await self._owner_setstatus(interaction)
-            elif action == "setactivity":
-                await self._owner_setactivity(interaction)
             elif action == "clearcrash":
                 await self._owner_clearcrash(interaction)
-            elif action == "digest":
-                await self._owner_digest(interaction)
-            elif action == "setroasttitle":
-                await self._owner_setroasttitle(interaction)
-            elif action == "togglerestart":
-                await self._owner_togglerestart(interaction)
+            elif action == "setonline":
+                await self._owner_setonline(interaction)
             else:
                 embed = embed_helper.error_embed(
                     title="Unknown Action",
                     description="The specified action is not recognized."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-        
+
         except Exception as e:
             self.logger.error(f"Error in owner command: {e}")
             await self._error_response(interaction, f"Failed to execute owner command: {action}")
@@ -105,7 +95,11 @@ class Owner(commands.Cog):
             sys_info = get_system_info()
             
             # Calculate uptime
-            uptime_seconds = int(time.time() - getattr(self.bot, 'start_time', time.time()))
+            start_time = getattr(self.bot, 'start_time', time.time())
+            if isinstance(start_time, datetime):
+                uptime_seconds = int(time.time() - start_time.timestamp())
+            else:
+                uptime_seconds = int(time.time() - start_time)
             uptime_str = self._format_duration(uptime_seconds)
             
             # Create status embed
@@ -150,42 +144,15 @@ class Owner(commands.Cog):
                 inline=True
             )
             
-            # Feature status
-            features_status = []
-            features_status.append(f"Safe Mode: {'🔴' if getattr(self.bot, 'safe_mode', False) else '🟢'}")
-            features_status.append(f"Health Monitor: {'🟢' if settings.ENABLE_HEALTH_MONITOR else '🔴'}")
-            features_status.append(f"Watchdog: {'🟢' if settings.ENABLE_WATCHDOG else '🔴'}")
-            
-            embed.add_field(
-                name="⚙️ Feature Status",
-                value="\n".join(features_status),
-                inline=True
-            )
-            
-            # Database status
-            db_status = "🟢 Connected" if self.bot.db_manager else "🔴 Disconnected"
-            embed.add_field(
-                name="💾 Database",
-                value=f"Status: {db_status}\n"
-                      f"Path: {settings.DATABASE_URL}",
-                inline=True
-            )
-            
             embed.set_footer(text=f"Status requested by {interaction.user.display_name}")
             
             await interaction.response.send_message(embed=embed, ephemeral=True)
             
-            # Log status command usage
-            if self.bot.db_manager:
-                await self.bot.db_manager.log_event(
-                    category='OWNER',
-                    action='STATUS_CHECK',
-                    user_id=interaction.user.id
-                )
-        
+            self.logger.info(f"Status command executed by owner {interaction.user.id}")
+            
         except Exception as e:
             self.logger.error(f"Error in owner status: {e}")
-            raise
+            await self._error_response(interaction, "Failed to get bot status")
     
     async def _owner_restart(self, interaction: discord.Interaction):
         """Restart the bot."""
@@ -197,127 +164,42 @@ class Owner(commands.Cog):
             
             await interaction.response.send_message(embed=embed, ephemeral=True)
             
-            # Log restart command
-            if self.bot.db_manager:
-                await self.bot.db_manager.log_event(
-                    category='SYSTEM',
-                    action='RESTART',
-                    user_id=interaction.user.id,
-                    details="Manual restart requested by owner"
-                )
-            
-            log_system(f"Bot restart requested by owner {interaction.user.id}")
-            
-            # Set crash flag for recovery
-            if self.bot.db_manager:
-                await self.bot.db_manager.set_flag('crash_detected', 'manual_restart')
+            self.logger.info(f"Bot restart requested by owner {interaction.user.id}")
             
             # Give time for message to send
             await asyncio.sleep(2)
             
-            # Restart using the update script or direct restart
+            # Restart using script or direct restart
             try:
-                # Try to use update script
                 subprocess.run(["./update.sh", "manual"], check=True)
             except:
-                # Fallback to direct restart
                 os.execv(sys.executable, [sys.executable] + sys.argv)
-        
+                
         except Exception as e:
             self.logger.error(f"Error in owner restart: {e}")
-            raise
+            await self._error_response(interaction, "Failed to restart bot")
     
     async def _owner_shutdown(self, interaction: discord.Interaction):
         """Shutdown the bot."""
         try:
             embed = embed_helper.error_embed(
                 title="🛑 Shutting Down Bot",
-                description="The bot will shutdown now. Use the update script to restart."
+                description="The bot will shutdown now."
             )
             
             await interaction.response.send_message(embed=embed, ephemeral=True)
             
-            # Log shutdown command
-            if self.bot.db_manager:
-                await self.bot.db_manager.log_event(
-                    category='SYSTEM',
-                    action='SHUTDOWN',
-                    user_id=interaction.user.id,
-                    details="Manual shutdown requested by owner"
-                )
-            
-            log_system(f"Bot shutdown requested by owner {interaction.user.id}")
+            self.logger.info(f"Bot shutdown requested by owner {interaction.user.id}")
             
             # Give time for message to send
             await asyncio.sleep(2)
             
             # Graceful shutdown
-            await self.bot.shutdown()
-        
+            await self.bot.close()
+            
         except Exception as e:
             self.logger.error(f"Error in owner shutdown: {e}")
-            raise
-    
-    async def _owner_eval(self, interaction: discord.Interaction):
-        """Evaluate Python code (owner only)."""
-        try:
-            # This is a simplified version - in production, you'd want more security
-            await interaction.response.send_message(
-                "Eval command requires code input. This is a placeholder for security reasons.",
-                ephemeral=True
-            )
-        
-        except Exception as e:
-            self.logger.error(f"Error in owner eval: {e}")
-            raise
-    
-    async def _owner_announce(self, interaction: discord.Interaction):
-        """Send announcement to all servers."""
-        try:
-            await interaction.response.send_message(
-                "Announce command requires message content. This is a placeholder.",
-                ephemeral=True
-            )
-        
-        except Exception as e:
-            self.logger.error(f"Error in owner announce: {e}")
-            raise
-    
-    async def _owner_dm(self, interaction: discord.Interaction):
-        """Send DM to a user."""
-        try:
-            await interaction.response.send_message(
-                "DM command requires user ID and message. This is a placeholder.",
-                ephemeral=True
-            )
-        
-        except Exception as e:
-            self.logger.error(f"Error in owner dm: {e}")
-            raise
-    
-    async def _owner_setstatus(self, interaction: discord.Interaction):
-        """Set bot status."""
-        try:
-            await interaction.response.send_message(
-                "Set status command requires status text. This is a placeholder.",
-                ephemeral=True
-            )
-        
-        except Exception as e:
-            self.logger.error(f"Error in owner setstatus: {e}")
-            raise
-    
-    async def _owner_setactivity(self, interaction: discord.Interaction):
-        """Set bot activity."""
-        try:
-            await interaction.response.send_message(
-                "Set activity command requires activity type and text. This is a placeholder.",
-                ephemeral=True
-            )
-        
-        except Exception as e:
-            self.logger.error(f"Error in owner setactivity: {e}")
-            raise
+            await self._error_response(interaction, "Failed to shutdown bot")
     
     async def _owner_clearcrash(self, interaction: discord.Interaction):
         """Clear crash flags."""
@@ -327,65 +209,148 @@ class Owner(commands.Cog):
                 
                 embed = embed_helper.success_embed(
                     title="🧹 Crash Flags Cleared",
-                    description="All crash flags have been cleared. The bot will start normally on next restart."
+                    description="All crash flags have been cleared."
                 )
                 
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-                
-                # Log crash flag clearing
-                await self.bot.db_manager.log_event(
-                    category='OWNER',
-                    action='CRASH_FLAGS_CLEARED',
-                    user_id=interaction.user.id
-                )
-            
+                self.logger.info(f"Crash flags cleared by owner {interaction.user.id}")
             else:
                 embed = embed_helper.error_embed(
                     title="Database Error",
                     description="Database is not available to clear crash flags."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-        
+                
         except Exception as e:
             self.logger.error(f"Error clearing crash flags: {e}")
-            raise
+            await self._error_response(interaction, "Failed to clear crash flags")
     
-    async def _owner_digest(self, interaction: discord.Interaction):
-        """Trigger daily digest manually."""
+    async def _owner_setonline(self, interaction: discord.Interaction):
+        """Set online message configuration."""
         try:
-            # This would trigger the daily digest function
-            await interaction.response.send_message(
-                "Daily digest manual trigger - This is a placeholder.",
-                ephemeral=True
+            # Get all text channels from all servers
+            all_channels = []
+            for guild in self.bot.guilds:
+                for channel in guild.text_channels:
+                    all_channels.append({
+                        'id': channel.id,
+                        'name': f"{guild.name} - #{channel.name}",
+                        'guild_id': guild.id
+                    })
+            
+            if not all_channels:
+                embed = embed_helper.error_embed(
+                    title="No Channels Found",
+                    description="No text channels found in any servers."
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+            
+            # Create channel selection view
+            class OnlineChannelSelectView(discord.ui.View):
+                def __init__(self, cog_instance):
+                    super().__init__(timeout=60)
+                    self.cog = cog_instance
+                    self.selected_channel = None
+                    
+                @discord.ui.select(
+                    placeholder="Select channel for online message",
+                    options=[
+                        discord.SelectOption(
+                            label=channel['name'],
+                            value=str(channel['id']),
+                            description=f"Channel ID: {channel['id']}"
+                        ) for channel in all_channels[:25]
+                    ]
+                )
+                async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
+                    self.selected_channel = int(select.values[0])
+                    self.stop()
+                    
+                    # Now ask for the message
+                    modal = OnlineMessageModal(self.cog, self.selected_channel)
+                    await interaction.response.send_modal(modal)
+            
+            class OnlineMessageModal(discord.ui.Modal, title="Set Online Message"):
+                def __init__(self, cog_instance, channel_id):
+                    super().__init__()
+                    self.cog = cog_instance
+                    self.channel_id = channel_id
+                    
+                message = discord.ui.TextInput(
+                    label="Online Message",
+                    placeholder="Enter the message to send when bot comes online...",
+                    style=discord.TextStyle.paragraph,
+                    max_length=1000,
+                    required=True
+                )
+                
+                async def on_submit(self, interaction: discord.Interaction):
+                    try:
+                        # Save to database
+                        await self.cog.bot.db_manager.set_setting('online_channel_id', str(self.channel_id))
+                        await self.cog.bot.db_manager.set_setting('online_message', self.message.value)
+                        
+                        # Test the message
+                        channel = self.cog.bot.get_channel(self.channel_id)
+                        if channel:
+                            embed = embed_helper.success_embed(
+                                title="🟢 Bot Online Message Set",
+                                description=self.message.value
+                            )
+                            await channel.send(embed=embed)
+                            
+                            embed = embed_helper.success_embed(
+                                title="✅ Online Message Configured",
+                                description=f"Message will be sent to {channel.mention} whenever the bot starts up."
+                            )
+                            await interaction.response.send_message(embed=embed, ephemeral=True)
+                        else:
+                            embed = embed_helper.error_embed(
+                                title="Channel Not Found",
+                                description="Could not find the selected channel."
+                            )
+                            await interaction.response.send_message(embed=embed, ephemeral=True)
+                            
+                    except Exception as e:
+                        embed = embed_helper.error_embed(
+                            title="Error",
+                            description=f"Failed to save online message: {e}"
+                        )
+                        await interaction.response.send_message(embed=embed, ephemeral=True)
+            
+            view = OnlineChannelSelectView(self)
+            embed = embed_helper.info_embed(
+                title="📢 Select Online Message Channel",
+                description="Select the channel where the online message should be sent when the bot starts."
             )
-        
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            
         except Exception as e:
-            self.logger.error(f"Error in owner digest: {e}")
-            raise
+            self.logger.error(f"Error setting online message: {e}")
+            await self._error_response(interaction, "Failed to set online message")
     
-    async def _owner_setroasttitle(self, interaction: discord.Interaction):
-        """Set custom final roast title."""
+    async def send_online_message(self):
+        """Send online message if configured."""
         try:
-            await interaction.response.send_message(
-                "Set roast title command requires title text. This is a placeholder.",
-                ephemeral=True
-            )
-        
+            if not self.bot.db_manager:
+                return
+            
+            online_channel_id = await self.bot.db_manager.get_setting('online_channel_id')
+            online_message = await self.bot.db_manager.get_setting('online_message')
+            
+            if online_channel_id and online_message:
+                channel = self.bot.get_channel(int(online_channel_id))
+                if channel:
+                    embed = embed_helper.success_embed(
+                        title="🟢 Bot Online",
+                        description=online_message
+                    )
+                    await channel.send(embed=embed)
+                    self.logger.info(f"Sent online message to channel {online_channel_id}")
+                    
         except Exception as e:
-            self.logger.error(f"Error in owner setroasttitle: {e}")
-            raise
-    
-    async def _owner_togglerestart(self, interaction: discord.Interaction):
-        """Toggle auto-restart feature."""
-        try:
-            await interaction.response.send_message(
-                "Toggle restart command - This is a placeholder.",
-                ephemeral=True
-            )
-        
-        except Exception as e:
-            self.logger.error(f"Error in owner togglerestart: {e}")
-            raise
+            self.logger.error(f"Error sending online message: {e}")
     
     def _format_duration(self, seconds: int) -> str:
         """Format duration in seconds to human-readable string."""

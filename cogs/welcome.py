@@ -12,7 +12,7 @@ from utils.logger import get_logger
 from utils.helpers import (
     embed_helper, is_admin, safe_send_message, create_embed
 )
-from config.constants import COLORS, DEFAULT_WELCOME_TITLE, DEFAULT_WELCOME_MESSAGE, DEFAULT_WELCOME_IMAGE
+from config.constants import COLORS, DEFAULT_WELCOME_TITLE, DEFAULT_WELCOME_MESSAGE
 from config.settings import settings
 
 class Welcome(commands.Cog):
@@ -33,13 +33,13 @@ class Welcome(commands.Cog):
             welcome_channel_id = await self.bot.db_manager.get_setting('welcome_channel_id')
             welcome_title = await self.bot.db_manager.get_setting('welcome_title', DEFAULT_WELCOME_TITLE)
             welcome_message = await self.bot.db_manager.get_setting('welcome_message', DEFAULT_WELCOME_MESSAGE)
-            welcome_image = await self.bot.db_manager.get_setting('welcome_image', DEFAULT_WELCOME_IMAGE)
             
             if not welcome_channel_id:
                 return
             
-            channel = self.bot.get_channel(welcome_channel_id)
+            channel = self.bot.get_channel(int(welcome_channel_id))
             if not channel:
+                self.logger.warning(f"Welcome channel {welcome_channel_id} not found")
                 return
             
             # Format welcome message
@@ -48,82 +48,24 @@ class Welcome(commands.Cog):
             formatted_message = formatted_message.replace('{server.name}', member.guild.name)
             
             # Create welcome embed
-            embed = embed_helper.welcome_embed(
-                title=welcome_title,
+            embed = create_embed(
+                title=welcome_title.replace('{member.name}', member.name),
                 description=formatted_message,
-                user=member,
-                image_url=welcome_image
+                color=COLORS["success"]
             )
             
-            # Add member count
-            embed.add_field(
-                name="👥 Member Count",
-                value=f"You are member #{member.guild.member_count}!",
-                inline=False
-            )
+            embed.set_thumbnail(url=member.display_avatar.url if member.display_avatar else member.default_avatar.url)
+            embed.set_footer(text=f"Member #{len(member.guild.members)}")
             
-            # Send welcome message
             await safe_send_message(channel, embed=embed)
             
-            # Check for birthday catch-up
-            await self._check_birthday_catchup(member)
+            self.logger.info(f"Sent welcome message for {member.name} in {member.guild.name}")
             
-            # Log welcome
-            await self.bot.db_manager.log_event(
-                category='WELCOME',
-                action='MEMBER_JOINED',
-                user_id=member.id,
-                guild_id=member.guild.id,
-                details=f"Member: {member.name}"
-            )
-        
         except Exception as e:
             self.logger.error(f"Error in on_member_join: {e}")
     
-    async def _check_birthday_catchup(self, member: discord.Member):
-        """Check if new member has birthday today."""
-        try:
-            if not self.bot.db_manager:
-                return
-            
-            # Get member's birthday
-            birthday = await self.bot.db_manager.get_birthday(member.id)
-            
-            if not birthday:
-                return
-            
-            # Check if today is their birthday
-            from utils.helpers import time_helper
-            if time_helper.is_today(birthday):
-                # Get birthday channel
-                birthday_channel_id = await self.bot.db_manager.get_setting('birthday_channel_id')
-                
-                if birthday_channel_id:
-                    channel = self.bot.get_channel(birthday_channel_id)
-                    if channel:
-                        embed = embed_helper.birthday_embed(
-                            title="🎂 Birthday Catch-up!",
-                            description=f"Happy birthday to our new member {member.mention}! 🎉🎈",
-                            user=member
-                        )
-                        
-                        embed.set_footer(text="Birthday detected on join • Welcome to the server!")
-                        
-                        await safe_send_message(channel, embed=embed)
-                        
-                        # Log birthday catch-up
-                        await self.bot.db_manager.log_event(
-                            category='BDAY',
-                            action='CATCHUP',
-                            user_id=member.id,
-                            guild_id=member.guild.id,
-                            details="Birthday catch-up on member join"
-                        )
-        
-        except Exception as e:
-            self.logger.error(f"Error in birthday catch-up: {e}")
-    
     @app_commands.command(name="welcome", description="Welcome system configuration (Admin only)")
+    @app_commands.default_permissions(administrator=True)
     @app_commands.describe(
         action="What welcome action would you like to perform?"
     )
@@ -136,11 +78,11 @@ class Welcome(commands.Cog):
     async def welcome(self, interaction: discord.Interaction, action: str):
         """Welcome system configuration commands."""
         try:
-            # Check permissions
-            if not is_admin(interaction.user):
+            # Check permissions - Both admin and owner should be able to use this
+            if not (is_admin(interaction.user) or interaction.user.id in settings.OWNER_IDS):
                 embed = embed_helper.error_embed(
                     title="Permission Denied",
-                    description="This command is only available to administrators."
+                    description="This command is only available to server administrators."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
@@ -148,115 +90,199 @@ class Welcome(commands.Cog):
             if not self.bot.db_manager:
                 embed = embed_helper.error_embed(
                     title="Database Error",
-                    description="Welcome system is currently unavailable."
+                    description="Database is not available."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
+            # Route to appropriate handler
             if action == "setchannel":
-                await self._welcome_setchannel(interaction)
+                await self._set_welcome_channel(interaction)
             elif action == "settitle":
-                await self._welcome_settitle(interaction)
+                await self._set_welcome_title(interaction)
             elif action == "setmessage":
-                await self._welcome_setmessage(interaction)
+                await self._set_welcome_message(interaction)
             elif action == "setimage":
-                await self._welcome_setimage(interaction)
+                await self._set_welcome_image(interaction)
             else:
                 embed = embed_helper.error_embed(
                     title="Unknown Action",
-                    description="The specified welcome action is not available."
+                    description="The specified action is not recognized."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-        
+                
         except Exception as e:
             self.logger.error(f"Error in welcome command: {e}")
-            await self._error_response(interaction, "Failed to process welcome command")
+            await self._error_response(interaction, "Failed to execute welcome command")
     
-    async def _welcome_setchannel(self, interaction: discord.Interaction):
-        """Set welcome channel."""
+    async def _set_welcome_channel(self, interaction: discord.Interaction):
+        """Set the welcome channel."""
         try:
-            channel_id = interaction.channel.id
+            # Get all text channels
+            channels = [channel for channel in interaction.guild.text_channels]
             
-            await self.bot.db_manager.set_setting('welcome_channel_id', channel_id)
+            if not channels:
+                embed = embed_helper.error_embed(
+                    title="No Channels Found",
+                    description="No text channels found in this server."
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
             
-            embed = embed_helper.success_embed(
-                title="✅ Welcome Channel Set",
-                description=f"This channel ({interaction.channel.mention}) has been set as the welcome channel.\n\n"
-                           "New members will receive welcome messages here."
+            # Create channel selection view
+            class ChannelSelectView(discord.ui.View):
+                def __init__(self, cog_instance):
+                    super().__init__(timeout=60)
+                    self.cog = cog_instance
+                    self.selected_channel = None
+                    
+                @discord.ui.select(
+                    placeholder="Select a welcome channel",
+                    options=[
+                        discord.SelectOption(
+                            label=channel.name,
+                            value=str(channel.id),
+                            description=f"#{channel.name}"
+                        ) for channel in channels[:25]  # Discord limit is 25 options
+                    ]
+                )
+                async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
+                    self.selected_channel = int(select.values[0])
+                    self.stop()
+                    
+                    # Save to database
+                    await self.cog.bot.db_manager.set_setting('welcome_channel_id', str(self.selected_channel))
+                    
+                    channel = self.cog.bot.get_channel(self.selected_channel)
+                    embed = embed_helper.success_embed(
+                        title="✅ Welcome Channel Set",
+                        description=f"Welcome channel has been set to {channel.mention}"
+                    )
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+            
+            view = ChannelSelectView(self)
+            embed = embed_helper.info_embed(
+                title="📢 Select Welcome Channel",
+                description="Please select the channel where welcome messages should be sent."
             )
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
             
-            await interaction.response.send_message(embed=embed)
-            
-            # Log admin action
-            await self.bot.db_manager.log_event(
-                category='ADMIN',
-                action='WELCOME_CHANNEL_SET',
-                user_id=interaction.user.id,
-                channel_id=channel_id,
-                guild_id=interaction.guild.id,
-                details=f"Welcome channel set to {channel_id}"
-            )
-        
         except Exception as e:
             self.logger.error(f"Error setting welcome channel: {e}")
-            raise
+            await self._error_response(interaction, "Failed to set welcome channel")
     
-    async def _welcome_settitle(self, interaction: discord.Interaction):
-        """Set welcome title (requires text input)."""
+    async def _set_welcome_title(self, interaction: discord.Interaction):
+        """Set the welcome message title."""
         try:
-            embed = embed_helper.info_embed(
-                title="👋 Set Welcome Title",
-                description="To set a custom welcome title, use this command with a title parameter.\n\n"
-                           "Example: `/welcome settitle Welcome to our server!`\n\n"
-                           "Note: This is a placeholder. Full implementation requires additional parameters."
+            await interaction.response.send_message(
+                "Please enter the welcome message title.\n"
+                "You can use {member.name} for the member's name.",
+                ephemeral=True
             )
             
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        
+            def check(m):
+                return m.author == interaction.user and m.channel == interaction.channel
+            
+            try:
+                msg = await self.bot.wait_for('message', check=check, timeout=60.0)
+                
+                # Save to database
+                await self.bot.db_manager.set_setting('welcome_title', msg.content)
+                
+                embed = embed_helper.success_embed(
+                    title="✅ Welcome Title Set",
+                    description=f"Welcome title has been set to:\n\n{msg.content}"
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                
+            except asyncio.TimeoutError:
+                embed = embed_helper.error_embed(
+                    title="Timeout",
+                    description="You took too long to respond."
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                
         except Exception as e:
-            self.logger.error(f"Error in welcome settitle: {e}")
-            raise
+            self.logger.error(f"Error setting welcome title: {e}")
+            await self._error_response(interaction, "Failed to set welcome title")
     
-    async def _welcome_setmessage(self, interaction: discord.Interaction):
-        """Set welcome message (requires text input)."""
+    async def _set_welcome_message(self, interaction: discord.Interaction):
+        """Set the welcome message content."""
         try:
-            embed = embed_helper.info_embed(
-                title="👋 Set Welcome Message",
-                description="To set a custom welcome message, use this command with a message parameter.\n\n"
-                           "Available placeholders:\n"
-                           "• `{member.mention}` - Mentions the new member\n"
-                           "• `{member.name}` - Member's username\n"
-                           "• `{server.name}` - Server name\n\n"
-                           "Example: `Welcome {member.mention} to {server.name}!`\n\n"
-                           "Note: This is a placeholder. Full implementation requires additional parameters."
+            await interaction.response.send_message(
+                "Please enter the welcome message.\n"
+                "You can use {member.mention}, {member.name}, {server.name}",
+                ephemeral=True
             )
             
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        
+            def check(m):
+                return m.author == interaction.user and m.channel == interaction.channel
+            
+            try:
+                msg = await self.bot.wait_for('message', check=check, timeout=60.0)
+                
+                # Save to database
+                await self.bot.db_manager.set_setting('welcome_message', msg.content)
+                
+                embed = embed_helper.success_embed(
+                    title="✅ Welcome Message Set",
+                    description=f"Welcome message has been set to:\n\n{msg.content}"
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                
+            except asyncio.TimeoutError:
+                embed = embed_helper.error_embed(
+                    title="Timeout",
+                    description="You took too long to respond."
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                
         except Exception as e:
-            self.logger.error(f"Error in welcome setmessage: {e}")
-            raise
+            self.logger.error(f"Error setting welcome message: {e}")
+            await self._error_response(interaction, "Failed to set welcome message")
     
-    async def _welcome_setimage(self, interaction: discord.Interaction):
-        """Set welcome image (requires URL input)."""
+    async def _set_welcome_image(self, interaction: discord.Interaction):
+        """Set the welcome message image URL."""
         try:
-            embed = embed_helper.info_embed(
-                title="👋 Set Welcome Image",
-                description="To set a custom welcome image, use this command with an image URL parameter.\n\n"
-                           "Example: `/welcome setimage https://example.com/image.png`\n\n"
-                           "Note: This is a placeholder. Full implementation requires additional parameters."
+            await interaction.response.send_message(
+                "Please enter the welcome image URL (or 'none' to remove image):",
+                ephemeral=True
             )
             
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        
+            def check(m):
+                return m.author == interaction.user and m.channel == interaction.channel
+            
+            try:
+                msg = await self.bot.wait_for('message', check=check, timeout=60.0)
+                
+                if msg.content.lower() == 'none':
+                    await self.bot.db_manager.set_setting('welcome_image', '')
+                    image_desc = "No image"
+                else:
+                    await self.bot.db_manager.set_setting('welcome_image', msg.content)
+                    image_desc = msg.content
+                
+                embed = embed_helper.success_embed(
+                    title="✅ Welcome Image Set",
+                    description=f"Welcome image has been set to: {image_desc}"
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                
+            except asyncio.TimeoutError:
+                embed = embed_helper.error_embed(
+                    title="Timeout",
+                    description="You took too long to respond."
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                
         except Exception as e:
-            self.logger.error(f"Error in welcome setimage: {e}")
-            raise
+            self.logger.error(f"Error setting welcome image: {e}")
+            await self._error_response(interaction, "Failed to set welcome image")
     
     async def _error_response(self, interaction: discord.Interaction, message: str):
         """Send error response."""
         embed = embed_helper.error_embed(
-            title="Welcome System Error",
+            title="Welcome Command Error",
             description=message
         )
         
