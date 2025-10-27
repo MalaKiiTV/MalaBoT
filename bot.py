@@ -257,7 +257,7 @@ The bot will start in safe mode to prevent further issues.
                 'cogs.xp',
                 'cogs.birthdays',
                 'cogs.owner',
-                'cogs.verification'
+                'cogs.verify'
             ]
             
             self.logger.info("Loading essential cogs in safe mode...")
@@ -273,7 +273,7 @@ The bot will start in safe mode to prevent further issues.
                 'cogs.birthdays',
                 'cogs.welcome',
                 'cogs.owner',
-                'cogs.verification'
+                'cogs.verify'
             ]
             
             self.logger.info("Loading all cogs...")
