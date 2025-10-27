@@ -38,67 +38,73 @@ if not exist "backups" mkdir "backups"
 :menu
 cls
 echo ========================================
-echo    MalaBoT Professional Dev Tools
+echo          MalaBoT Development Tools
 echo ========================================
 echo.
-echo BOT MANAGEMENT:
-echo 1. Start Bot (with cache clear)
-echo 2. Stop Bot
-echo 3. Restart Bot (with cache clear)
-echo 4. Check Bot Status
-echo 5. View Live Logs
-echo 6. Clear All Caches
+echo [BOT MANAGEMENT]
+echo  1. Start Bot (with cache clear)
+echo  2. Stop Bot
+echo  3. Restart Bot (with cache clear)
+echo  4. Check Bot Status
+echo  5. View Live Logs
+echo  6. Clear All Caches
 echo.
-echo GIT OPERATIONS:
-echo 7. Check Git Status
-echo 8. Stage All Changes
-echo 9. Commit Changes
-echo 10. Push to GitHub
-echo 11. Pull from GitHub
-echo 12. View Commit History
+echo [WORKFLOWS]
+echo  7. Update Workflow  (Pull → Restart → Status)
+echo  8. Deploy Workflow  (Stage → Commit → Push)
 echo.
-echo COMPLETE WORKFLOWS:
-echo 13. Update Workflow (Pull -> Restart -> Status)
-echo 14. Deploy Workflow (Stage -> Commit -> Push)
+echo [GIT OPERATIONS]
+echo  9.  Check Git Status
+echo 10. Stage All Changes
+echo 11. Commit Changes
+echo 12. Push to GitHub
+echo 13. Remote Deploy to Droplet
+echo 14. Pull from GitHub
+echo 15. View Commit History
 echo.
-echo UTILITIES:
-echo 15. Install/Update Dependencies
-echo 16. Create .env file from template
-echo 17. Test Bot Configuration
+echo [UTILITIES]
+echo 16. Install/Update Dependencies
+echo 17. Create .env File from Template
+echo 18. Test Bot Configuration
 echo.
-echo ADVANCED OPS:
-echo 18. Full Local Clean Update
-echo 19. Remote Deploy to Droplet
+echo [ADVANCED OPS]
+echo 19. Full Local Clean Update
 echo 20. Backup Now
 echo 21. Verify Environment
 echo.
-echo 0. Exit
+echo [EXIT]
+echo  0. Exit
 echo.
 echo ========================================
 set /p choice="Enter your choice: "
 
-if "%choice%"=="1" goto start
-if "%choice%"=="2" goto stop
-if "%choice%"=="3" goto restart
-if "%choice%"=="4" goto status
-if "%choice%"=="5" goto logs
-if "%choice%"=="6" goto clearcache
-if "%choice%"=="7" goto gitstatus
-if "%choice%"=="8" goto gitstage
-if "%choice%"=="9" goto gitcommit
-if "%choice%"=="10" goto gitpush
-if "%choice%"=="11" goto gitpull
-if "%choice%"=="12" goto githistory
-if "%choice%"=="13" goto updateworkflow
-if "%choice%"=="14" goto deployworkflow
-if "%choice%"=="15" goto installdeps
-if "%choice%"=="16" goto createenv
-if "%choice%"=="17" goto testconfig
-if "%choice%"=="0" goto exit
-if "%choice%"=="18" goto fullupdate
-if "%choice%"=="19" goto remotedeploy
+if "%choice%"=="1"  goto start
+if "%choice%"=="2"  goto stop
+if "%choice%"=="3"  goto restart
+if "%choice%"=="4"  goto status
+if "%choice%"=="5"  goto logs
+if "%choice%"=="6"  goto clearcache
+
+if "%choice%"=="7"  goto updateworkflow
+if "%choice%"=="8"  goto deployworkflow
+
+if "%choice%"=="9"  goto gitstatus
+if "%choice%"=="10" goto gitstage
+if "%choice%"=="11" goto gitcommit
+if "%choice%"=="12" goto gitpush
+if "%choice%"=="13" goto remotedeploy
+if "%choice%"=="14" goto gitpull
+if "%choice%"=="15" goto githistory
+
+if "%choice%"=="16" goto installdeps
+if "%choice%"=="17" goto createenv
+if "%choice%"=="18" goto testconfig
+
+if "%choice%"=="19" goto fullupdate
 if "%choice%"=="20" goto backupnow
 if "%choice%"=="21" goto verifyenv
+
+if "%choice%"=="0"  goto exit
 
 echo Invalid choice. Please try again.
 timeout /T 2 /NOBREAK >NUL
@@ -221,7 +227,8 @@ echo ========================================
 
 REM === Detect bot.py running safely ===
 set "bot_running=0"
-for /f %%A in ('powershell -NoLogo -NoProfile -Command "if ((Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object { $_.Path -and (Get-Item $_.Path).Name -match 'python' } | Where-Object { $_.CommandLine -match 'bot\.py' }).Count -gt 0) { Write-Host 1 } else { Write-Host 0 }"') do set "bot_running=%%A"
+for /f "usebackq delims=" %%A in (`powershell -NoLogo -NoProfile -Command ^
+    "$p = Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match 'bot\.py' }; if ($p) { Write-Output 1 } else { Write-Output 0 }"`) do set "bot_running=%%A"
 
 if "%bot_running%"=="1" (
     echo [STATUS] Bot is RUNNING
@@ -668,8 +675,16 @@ if not exist .env (
     pause
     goto menu
 )
-python -c "from config.settings import settings; errs=settings.validate(); print('[OK] Environment validated successfully.') if not errs else (print('[ERROR] Config validation failed:'), [print(' -', e) for e in errs])"
+
+python -c "from config.settings import settings; errs=settings.validate(); import sys; \
+sys.exit(0) if not errs else (print('[ERROR] Config validation failed:') or [print(' -', e) for e in errs] or sys.exit(1))"
+if %ERRORLEVEL% EQU 0 (
+    echo [OK] Environment validated successfully.
+) else (
+    echo [ERROR] Validation failed. Check your .env settings.
+)
 pause
 goto menu
+
 
 
