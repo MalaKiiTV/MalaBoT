@@ -213,7 +213,7 @@ echo ========================================
 REM Detect bot process by command line (reliable across consoles)
 set "bot_running=0"
 
-for /f "tokens=1 delims=," %%A in ('wmic process where "commandline like '%bot.py%'" get processid,name,commandline /format:csv ^| findstr /I "python"') do (
+for /f "tokens=1 delims=," %%A in ('wmic process where "commandline like '%bot.py%'" get processid,name,commandline /format:csv 2^>nul ^| findstr /I "python"') do (
     set "bot_running=1"
 )
 
@@ -232,10 +232,18 @@ echo ========================================
 echo Recent log entries (last 10 lines):
 echo ========================================
 
+echo [INFO] Displaying last 10 log lines...
+
+REM Run PowerShell hidden so it doesn't change console font
 if exist "data\logs\bot.log" (
-    echo [INFO] Displaying last 10 log lines...
-    powershell -NoLogo -NoProfile -Command ^
-        "Try {Get-Content 'data/logs/bot.log' -Tail 10 -Encoding UTF8 | ForEach-Object {$_ -replace '[^\x20-\x7E]',''} } Catch {Write-Host '[ERROR] Unable to read log file.'}"
+    powershell -WindowStyle Hidden -NoLogo -NoProfile -Command ^
+        "Try {Get-Content 'data/logs/bot.log' -Tail 10 -Encoding UTF8 | ForEach-Object {$_ -replace '[^\x20-\x7E]',''} | Out-File -Encoding UTF8 'data/logs/_temp_view.txt'} Catch {'' | Out-File -Encoding UTF8 'data/logs/_temp_view.txt'}"
+    if exist "data\logs\_temp_view.txt" (
+        type data\logs\_temp_view.txt
+        del data\logs\_temp_view.txt >nul 2>&1
+    ) else (
+        echo [ERROR] Unable to read log file.
+    )
 ) else (
     echo [INFO] No log file found - bot may not have started yet
 )
