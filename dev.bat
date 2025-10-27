@@ -157,8 +157,8 @@ if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Bot stopped via window title
 ) else (
     REM Fallback: Try both python.exe and python3.exe for safety
-    wmic process where "name='python.exe' and commandline like '%%bot.py%%'" delete >nul 2>&1
-    wmic process where "name='python3.exe' and commandline like '%%bot.py%%'" delete >nul 2>&1
+    wmic process where "name='python.exe' and commandline like '%bot.py%'" delete >nul 2>&1
+    wmic process where "name='python3.exe' and commandline like '%bot.py%'" delete >nul 2>&1
     if %ERRORLEVEL% EQU 0 (
         echo [SUCCESS] Bot stopped via process detection
     ) else (
@@ -173,8 +173,8 @@ goto menu
 echo.
 echo [1/5] Stopping bot...
 taskkill /FI "WINDOWTITLE eq MalaBoT Console" /F >nul 2>&1
-wmic process where "name='python.exe' and commandline like '%%bot.py%%'" delete >nul 2>&1
-wmic process where "name='python3.exe' and commandline like '%%bot.py%%'" delete >nul 2>&1
+wmic process where "name='python.exe' and commandline like '%bot.py%'" delete >nul 2>&1
+wmic process where "name='python3.exe' and commandline like '%bot.py%'" delete >nul 2>&1
 timeout /T 2 /NOBREAK >NUL
 
 echo [2/5] Clearing Python cache...
@@ -213,15 +213,16 @@ echo ========================================
 REM Detect bot process by command line (reliable across consoles)
 set "bot_running=0"
 
-for /f "tokens=1 delims=," %%A in ('wmic process where "commandline like '%%bot.py%%'" get processid,name,commandline /format:csv ^| findstr /I "python"') do (
+for /f "tokens=1 delims=," %%A in ('wmic process where "commandline like '%bot.py%'" get processid,name,commandline /format:csv ^| findstr /I "python"') do (
     set "bot_running=1"
 )
+
 
 if "%bot_running%"=="1" (
     echo [STATUS] Bot is RUNNING
     echo.
     echo Running processes:
-    wmic process where "commandline like '%%bot.py%%'" get processid,name,commandline /format:table | findstr /I "python"
+    wmic process where "commandline like '%bot.py%'" get processid,name,commandline /format:table | findstr /I "python"
 ) else (
     echo [STATUS] Bot is NOT RUNNING
 )
@@ -563,9 +564,11 @@ goto :eof
 
 :status_internal
 set "bot_running=0"
+
 tasklist /v /fo table | find /I "MalaBoT Console" >nul 2>&1 && set "bot_running=1"
+
 if %bot_running%==0 (
-    wmic process where "commandline like '%%bot.py%%'" get processid,name,commandline 2>nul | find /I "bot.py" >nul && set "bot_running=1"
+    wmic process where "commandline like '%bot.py%'" get processid,name,commandline 2>nul | find /I "bot.py" >nul && set "bot_running=1"
 )
 
 if %bot_running%==1 (
@@ -574,7 +577,6 @@ if %bot_running%==1 (
     echo [STATUS] Bot is NOT RUNNING
 )
 goto :eof
-
 
 :logs_internal
 if exist "data\logs\bot.log" (
