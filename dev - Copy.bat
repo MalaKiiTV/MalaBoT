@@ -3,7 +3,6 @@ REM COMPLETELY FIXED Development Script for MalaBoT
 REM This script handles the complete local development workflow
 
 setlocal enabledelayedexpansion
-chcp 65001 >nul
 
 REM Set window title
 title MalaBoT Development Tools
@@ -66,12 +65,6 @@ echo 15. Install/Update Dependencies
 echo 16. Create .env file from template
 echo 17. Test Bot Configuration
 echo.
-echo ADVANCED OPS:
-echo 18. Full Local Clean Update
-echo 19. Remote Deploy to Droplet
-echo 20. Backup Now
-echo 21. Verify Environment
-echo.
 echo 0. Exit
 echo.
 echo ========================================
@@ -95,10 +88,6 @@ if "%choice%"=="15" goto installdeps
 if "%choice%"=="16" goto createenv
 if "%choice%"=="17" goto testconfig
 if "%choice%"=="0" goto exit
-if "%choice%"=="18" goto fullupdate
-if "%choice%"=="19" goto remotedeploy
-if "%choice%"=="20" goto backupnow
-if "%choice%"=="21" goto verifyenv
 
 echo Invalid choice. Please try again.
 timeout /T 2 /NOBREAK >NUL
@@ -141,7 +130,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo [4/4] Starting MalaBoT...
-start "MalaBoT Console" cmd /k "title MalaBoT Console && python bot.py"
+start "MalaBoT-Discord-Bot" cmd /k "title MalaBoT Console && python bot.py"
 echo [SUCCESS] Bot started in new window!
 echo [INFO] Use option 5 to view live logs
 timeout /T 3 /NOBREAK >NUL
@@ -150,30 +139,27 @@ goto menu
 :stop
 echo.
 echo [INFO] Stopping MalaBoT...
-REM Try to close the bot window cleanly
-taskkill /FI "WINDOWTITLE eq MalaBoT Console" /F >nul 2>&1
+REM Kill specific bot processes by window title
+taskkill /FI "WINDOWTITLE eq MalaBoT-Discord-Bot*" /F 2>NUL
 if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Bot stopped via window title
 ) else (
-    REM Fallback: Try both python.exe and python3.exe for safety
-    wmic process where "name='python.exe' and commandline like '%%bot.py%%'" delete >nul 2>&1
-    wmic process where "name='python3.exe' and commandline like '%%bot.py%%'" delete >nul 2>&1
+    REM Fallback: Kill python processes running bot.py
+    wmic process where "name='python.exe' and commandline like '%bot.py%'" delete 2>NUL
     if %ERRORLEVEL% EQU 0 (
         echo [SUCCESS] Bot stopped via process detection
     ) else (
-        echo [WARNING] No running bot process found
+        echo [INFO] No bot process found
     )
 )
-timeout /T 2 /NOBREAK >nul
+timeout /T 2 /NOBREAK >NUL
 goto menu
-
 
 :restart
 echo.
 echo [1/5] Stopping bot...
-taskkill /FI "WINDOWTITLE eq MalaBoT Console" /F >nul 2>&1
-wmic process where "name='python.exe' and commandline like '%%bot.py%%'" delete >nul 2>&1
-wmic process where "name='python3.exe' and commandline like '%%bot.py%%'" delete >nul 2>&1
+taskkill /FI "WINDOWTITLE eq MalaBoT-Discord-Bot*" /F 2>NUL
+wmic process where "name='python.exe' and commandline like '%bot.py%'" delete 2>NUL
 timeout /T 2 /NOBREAK >NUL
 
 echo [2/5] Clearing Python cache...
@@ -196,7 +182,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo [4/5] Starting bot...
-start "MalaBoT Console" cmd /k "title MalaBoT Console && python bot.py"
+start "MalaBoT-Discord-Bot" cmd /k "title MalaBoT Console && python bot.py"
 
 echo [5/5] Bot restarted successfully!
 echo [INFO] Use option 5 to view live logs
@@ -208,29 +194,25 @@ echo.
 echo ========================================
 echo Bot Status:
 echo ========================================
-
-REM Look for any window that has "MalaBoT-Discord-Bot" in its title
-tasklist /v /fo csv | findstr /i "MalaBoT Console" >nul
+tasklist /FI "WINDOWTITLE eq MalaBoT-Discord-Bot*" | find "cmd.exe" >NUL
 if %ERRORLEVEL% EQU 0 (
     echo [STATUS] Bot is RUNNING
     echo.
     echo Running processes:
-    tasklist /v /fo csv | findstr /i "MalaBoT Console"
+    tasklist /FI "WINDOWTITLE eq MalaBoT-Discord-Bot*"
 ) else (
-    wmic process where "name='python.exe' and commandline like '%%bot.py%%'" get processid,name,commandline 2>nul | find "bot.py" >nul
+    wmic process where "name='python.exe' and commandline like '%bot.py%'" get processid,name,commandline 2>NUL | find "bot.py" >NUL
     if %ERRORLEVEL% EQU 0 (
         echo [STATUS] Bot is RUNNING (process detected)
         echo.
-        wmic process where "name='python.exe' and commandline like '%%bot.py%%'" get processid,name,commandline
+        wmic process where "name='python.exe' and commandline like '%bot.py%'" get processid,name,commandline
     ) else (
         echo [STATUS] Bot is NOT RUNNING
     )
 )
-
 echo.
 echo ========================================
 echo Recent log entries (last 10 lines):
-
 if exist "data\logs\bot.log" (
     powershell -Command "Get-Content 'data\logs\bot.log' | Select-Object -Last 10"
 ) else (
@@ -544,7 +526,7 @@ goto menu
 
 REM Internal helper functions
 :stop_internal
-taskkill /FI "WINDOWTITLE eq MalaBoT Console" /F 2>NUL
+taskkill /FI "WINDOWTITLE eq MalaBoT-Discord-Bot*" /F 2>NUL
 wmic process where "name='python.exe' and commandline like '%bot.py%'" delete 2>NUL
 goto :eof
 
@@ -553,15 +535,15 @@ for /r %%F in (*.pyc) do del "%%F" 2>NUL
 for /d /r %%D in (__pycache__) do rmdir /S /Q "%%D" 2>NUL
 if not exist "data" mkdir "data"
 if not exist "data\logs" mkdir "data\logs"
-start "MalaBoT Console" cmd /k "title MalaBoT Console && python bot.py"
+start "MalaBoT-Discord-Bot" cmd /k "title MalaBoT Console && python bot.py"
 goto :eof
 
 :status_internal
-tasklist /v /fo csv | findstr /i "MalaBoT Console" >NUL
+tasklist /FI "WINDOWTITLE eq MalaBoT-Discord-Bot*" | find "cmd.exe" >NUL
 if %ERRORLEVEL% EQU 0 (
     echo [STATUS] Bot is RUNNING
 ) else (
-    wmic process where "name='python.exe' and commandline like '%%bot.py%%'" get processid,name,commandline 2>NUL | find "bot.py" >NUL
+    wmic process where "name='python.exe' and commandline like '%bot.py%'" get processid,name,commandline 2>NUL | find "bot.py" >NUL
     if %ERRORLEVEL% EQU 0 (
         echo [STATUS] Bot is RUNNING
     ) else (
@@ -579,92 +561,6 @@ if exist "data\logs\bot.log" (
 goto :eof
 
 :exit
-:fullupdate
 echo.
-echo ========================================
-echo Full Local Clean Update
-echo ========================================
-echo [1/6] Stopping bot...
-call :stop_internal
-echo [2/6] Backing up logs and DB...
-call :backupnow
-echo [3/6] Git reset/pull...
-git reset --hard
-git pull origin main
-echo [4/6] Installing/Updating dependencies...
-call :installdeps
-echo [5/6] Clearing caches...
-call :clearcache
-echo [6/6] Restarting bot...
-call :start_internal
-timeout /T 3 /NOBREAK >NUL
-call :status_internal
-echo [SUCCESS] Full update complete!
-pause
-goto menu
-
-:remotedeploy
-echo.
-echo ========================================
-echo Remote Deploy to Droplet
-echo ========================================
-set DROPLET_USER=malabot
-set DROPLET_IP=165.232.156.230
-set DROPLET_DIR=/home/malabot/MalaBoT
-echo [1/4] Pushing local changes to GitHub...
-git push origin main
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] git push failed. Commit first.
-    pause
-    goto menu
-)
-echo [2/4] SSH into droplet and update...
-ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git reset --hard && git pull origin main"
-echo [3/4] Restart bot remotely...
-ssh %DROPLET_USER%@%DROPLET_IP% "pkill -f bot.py || true; nohup python3 bot.py > data/logs/latest.log 2>&1 &"
-echo [4/4] Checking latest remote logs...
-ssh %DROPLET_USER%@%DROPLET_IP% "tail -n 20 %DROPLET_DIR%/data/logs/latest.log"
-echo [DONE] Remote deploy complete.
-pause
-goto menu
-
-:backupnow
-echo.
-echo ========================================
-echo Backup Now
-echo ========================================
-set "TS=%date:~-4%%date:~-10,2%%date:~-7,2%-%time:~0,2%%time:~3,2%"
-set "TS=%TS: =0%"
-if not exist "backups\logs" mkdir "backups\logs"
-if not exist "backups\db" mkdir "backups\db"
-if exist "data\logs" xcopy "data\logs" "backups\logs\%TS%\" /E /Q /Y >nul
-if exist "data\bot.db" copy /Y "data\bot.db" "backups\db\bot_%TS%.db" >nul
-echo [SUCCESS] Backup saved with tag %TS%.
-goto :eof
-
-:verifyenv
-echo.
-echo ========================================
-echo Verify Environment
-echo ========================================
-if not exist .env (
-    echo [ERROR] .env not found!
-    pause
-    goto menu
-)
-python - <<PY
-from config.settings import settings
-try:
-    errs = settings.validate()
-    if errs:
-        print("[ERROR] Config validation failed:")
-        [print(" -", e) for e in errs]
-    else:
-        print("[OK] Environment validated successfully.")
-        print("BOT_NAME:", settings.BOT_NAME)
-        print("BOT_PREFIX:", settings.BOT_PREFIX)
-except Exception as e:
-    print("[ERROR] Failed to verify environment:", e)
-PY
-pause
-goto menu
+echo [INFO] Exiting...
+exit /b 0
