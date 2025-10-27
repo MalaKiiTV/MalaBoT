@@ -209,27 +209,25 @@ echo ========================================
 echo Bot Status:
 echo ========================================
 
-REM === Safe timestamp ===
+REM === Safe timestamp (never crashes) ===
 for /f "tokens=2 delims==." %%A in ('wmic os get localdatetime /value 2^>nul') do set "ts_raw=%%A"
 if not defined ts_raw (
     set "ts=Unknown"
 ) else (
-    set "ts=%ts_raw:~0,4%-%ts_raw:~4,2%-%ts_raw:~6,2% %ts_raw:~8,2%:%ts_raw:~10,2%:%ts_raw:~12,2%"
+    set "ts=%ts_raw:~0,4%-%ts_raw:~4,2%-%ts_raw:~6,2% %ts_raw:~8,2%:%ts_raw:~10,2%"
 )
 echo Checked: %ts%
 echo ========================================
 
-REM === Detect running bot by actual command line ===
+REM === Detect bot.py running safely ===
 set "bot_running=0"
-for /f %%A in ('powershell -NoProfile -Command "(Get-CimInstance Win32_Process | Where-Object { $_.Name -match ''^python(\.exe)?$'' -and $_.CommandLine -match ''bot\.py'' }).Count"') do set "bot_cnt=%%A"
-if not "%bot_cnt%"=="" if %bot_cnt% GEQ 1 set "bot_running=1"
+for /f %%A in ('powershell -NoLogo -NoProfile -Command "if ((Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object { $_.Path -and (Get-Item $_.Path).Name -match 'python' } | Where-Object { $_.CommandLine -match 'bot\.py' }).Count -gt 0) { Write-Host 1 } else { Write-Host 0 }"') do set "bot_running=%%A"
 
 if "%bot_running%"=="1" (
     echo [STATUS] Bot is RUNNING
     echo.
-    echo Running processes (pid name):
-    powershell -NoProfile -Command ^
-        "Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(?i)python(\.exe)?$' -and $_.CommandLine -match 'bot\.py' } | ForEach-Object { '{0} {1}' -f $_.ProcessId, $_.Name }"
+    echo Running processes:
+    powershell -NoLogo -NoProfile -Command "Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match 'bot\.py' } | Select-Object Id,ProcessName | Format-Table -AutoSize"
 ) else (
     echo [STATUS] Bot is NOT RUNNING
 )
@@ -250,6 +248,7 @@ echo ========================================
 echo.
 pause
 goto menu
+
 
 :logs
 echo.
