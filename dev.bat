@@ -232,10 +232,11 @@ echo Recent log entries (last 10 lines):
 echo ========================================
 
 if exist "data\logs\bot.log" (
+    echo [INFO] Displaying last 10 log lines...
     powershell -NoLogo -NoProfile -Command ^
-        "$log = Get-Content 'data/logs/bot.log' -Tail 10 -Encoding UTF8; ^
-         $clean = $log -replace '[^\x20-\x7E]+',''; ^
-         Write-Output ($clean -join [Environment]::NewLine)"
+        "Try { $lines = Get-Content 'data/logs/bot.log' -Tail 10 -Encoding UTF8; ^
+        foreach ($line in $lines) { Write-Host ($line -replace '[^\x20-\x7E]','') } } ^
+        Catch { Write-Host '[ERROR] Unable to read log file.' }"
 ) else (
     echo [INFO] No log file found - bot may not have started yet
 )
@@ -244,6 +245,7 @@ echo ========================================
 echo.
 pause
 goto menu
+
 
 
 
