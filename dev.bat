@@ -212,16 +212,16 @@ echo ========================================
 
 REM Detect bot process by title or command line
 set "bot_running=0"
-tasklist /v /fo table | find /I "MalaBoT Console" >nul 2>&1 && set "bot_running=1"
+tasklist /v /fo table | findstr /I "MalaBoT Console" >nul && set "bot_running=1"
 if %bot_running%==0 (
-    wmic process where "commandline like '%%bot.py%%'" get processid,name,commandline 2>nul | find /I "bot.py" >nul && set "bot_running=1"
+    wmic process where "commandline like '%%bot.py%%'" get processid,name,commandline 2>nul | findstr /I "bot.py" >nul && set "bot_running=1"
 )
 
-if %bot_running%==1 (
+if "%bot_running%"=="1" (
     echo [STATUS] Bot is RUNNING
     echo.
     echo Running processes:
-    tasklist /v /fo table | find /I "bot.py"
+    tasklist /v /fo table | findstr /I "bot.py"
 ) else (
     echo [STATUS] Bot is NOT RUNNING
 )
@@ -234,9 +234,7 @@ echo ========================================
 if exist "data\logs\bot.log" (
     echo [INFO] Displaying last 10 log lines...
     powershell -NoLogo -NoProfile -Command ^
-        "Try { $lines = Get-Content 'data/logs/bot.log' -Tail 10 -Encoding UTF8; ^
-        foreach ($line in $lines) { Write-Host ($line -replace '[^\x20-\x7E]','') } } ^
-        Catch { Write-Host '[ERROR] Unable to read log file.' }"
+        "Try {Get-Content 'data/logs/bot.log' -Tail 10 -Encoding UTF8 | ForEach-Object {$_ -replace '[^\x20-\x7E]',''} } Catch {Write-Host '[ERROR] Unable to read log file.'}"
 ) else (
     echo [INFO] No log file found - bot may not have started yet
 )
@@ -245,8 +243,6 @@ echo ========================================
 echo.
 pause
 goto menu
-
-
 
 
 :logs
