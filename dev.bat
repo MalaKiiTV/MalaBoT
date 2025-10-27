@@ -4,7 +4,6 @@ REM This script handles the complete local development workflow
 
 setlocal enabledelayedexpansion
 chcp 65001 >nul
-reg add "HKCU\Console\%~n0" /v FaceName /t REG_SZ /d "Consolas" /f >nul 2>&1
 
 REM Set window title
 title MalaBoT Development Tools
@@ -220,17 +219,17 @@ if not defined ts_raw (
 echo Checked: %ts%
 echo ========================================
 
-REM === Detect running bot process safely ===
+REM === Detect running bot by actual command line ===
 set "bot_running=0"
-for /f "usebackq tokens=1" %%A in (`tasklist /fi "imagename eq python.exe" /fo table ^| find /i "bot.py"`) do (
-    set "bot_running=1"
-)
+for /f %%A in ('powershell -NoProfile -Command "(Get-CimInstance Win32_Process | Where-Object { $_.Name -match ''^python(\.exe)?$'' -and $_.CommandLine -match ''bot\.py'' }).Count"') do set "bot_cnt=%%A"
+if not "%bot_cnt%"=="" if %bot_cnt% GEQ 1 set "bot_running=1"
 
 if "%bot_running%"=="1" (
     echo [STATUS] Bot is RUNNING
     echo.
-    echo Running processes:
-    tasklist /fi "imagename eq python.exe" /v | find /i "bot.py"
+    echo Running processes (pid name):
+    powershell -NoProfile -Command ^
+        "Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(?i)python(\.exe)?$' -and $_.CommandLine -match 'bot\.py' } | ForEach-Object { '{0} {1}' -f $_.ProcessId, $_.Name }"
 ) else (
     echo [STATUS] Bot is NOT RUNNING
 )
@@ -251,8 +250,6 @@ echo ========================================
 echo.
 pause
 goto menu
-
-
 
 :logs
 echo.
@@ -667,17 +664,13 @@ echo.
 echo ========================================
 echo Verify Environment
 echo ========================================
-
 if not exist .env (
     echo [ERROR] .env not found!
     pause
     goto menu
 )
-
-python -c "from config.settings import settings; \
-errs = settings.validate(); \
-print('[OK] Environment validated successfully.') if not errs else [print('[ERROR] Config validation failed:'), [print(' -', e) for e in errs]]"
-
+python -c "from config.settings import settings; errs=settings.validate(); print('[OK] Environment validated successfully.') if not errs else (print('[ERROR] Config validation failed:'), [print(' -', e) for e in errs])"
 pause
 goto menu
+
 
