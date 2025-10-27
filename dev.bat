@@ -1,5 +1,5 @@
 @echo off
-REM Fixed Development Script for MalaBoT
+REM COMPLETELY FIXED Development Script for MalaBoT
 REM This script handles the complete local development workflow
 
 setlocal enabledelayedexpansion
@@ -29,6 +29,11 @@ if %ERRORLEVEL% NEQ 0 (
     )
 )
 
+REM Create necessary directories
+if not exist "data" mkdir "data"
+if not exist "data\logs" mkdir "data\logs"
+if not exist "backups" mkdir "backups"
+
 :menu
 cls
 echo ========================================
@@ -40,23 +45,25 @@ echo 1. Start Bot (with cache clear)
 echo 2. Stop Bot
 echo 3. Restart Bot (with cache clear)
 echo 4. Check Bot Status
-echo 5. Clear All Caches
+echo 5. View Live Logs
+echo 6. Clear All Caches
 echo.
 echo GIT OPERATIONS:
-echo 6. Check Git Status
-echo 7. Stage All Changes
-echo 8. Commit Changes
-echo 9. Push to GitHub
-echo 10. Pull from GitHub
-echo 11. View Commit History
+echo 7. Check Git Status
+echo 8. Stage All Changes
+echo 9. Commit Changes
+echo 10. Push to GitHub
+echo 11. Pull from GitHub
+echo 12. View Commit History
 echo.
 echo COMPLETE WORKFLOWS:
-echo 12. Update Workflow (Pull -> Restart -> Status)
-echo 13. Deploy Workflow (Stage -> Commit -> Push)
+echo 13. Update Workflow (Pull -> Restart -> Status)
+echo 14. Deploy Workflow (Stage -> Commit -> Push)
 echo.
 echo UTILITIES:
-echo 14. Install/Update Dependencies
-echo 15. Create .env file from template
+echo 15. Install/Update Dependencies
+echo 16. Create .env file from template
+echo 17. Test Bot Configuration
 echo.
 echo 0. Exit
 echo.
@@ -67,17 +74,19 @@ if "%choice%"=="1" goto start
 if "%choice%"=="2" goto stop
 if "%choice%"=="3" goto restart
 if "%choice%"=="4" goto status
-if "%choice%"=="5" goto clearcache
-if "%choice%"=="6" goto gitstatus
-if "%choice%"=="7" goto gitstage
-if "%choice%"=="8" goto gitcommit
-if "%choice%"=="9" goto gitpush
-if "%choice%"=="10" goto gitpull
-if "%choice%"=="11" goto githistory
-if "%choice%"=="12" goto updateworkflow
-if "%choice%"=="13" goto deployworkflow
-if "%choice%"=="14" goto installdeps
-if "%choice%"=="15" goto createenv
+if "%choice%"=="5" goto logs
+if "%choice%"=="6" goto clearcache
+if "%choice%"=="7" goto gitstatus
+if "%choice%"=="8" goto gitstage
+if "%choice%"=="9" goto gitcommit
+if "%choice%"=="10" goto gitpush
+if "%choice%"=="11" goto gitpull
+if "%choice%"=="12" goto githistory
+if "%choice%"=="13" goto updateworkflow
+if "%choice%"=="14" goto deployworkflow
+if "%choice%"=="15" goto installdeps
+if "%choice%"=="16" goto createenv
+if "%choice%"=="17" goto testconfig
 if "%choice%"=="0" goto exit
 
 echo Invalid choice. Please try again.
@@ -86,18 +95,22 @@ goto menu
 
 :start
 echo.
-echo [1/3] Clearing Python cache...
+echo [1/4] Clearing Python cache...
 for /r %%F in (*.pyc) do del "%%F" 2>NUL
 for /d /r %%D in (__pycache__) do rmdir /S /Q "%%D" 2>NUL
 
-echo [2/3] Checking for .env file...
+echo [2/4] Checking for .env file...
 if not exist .env (
     echo [WARNING] .env file not found!
     echo [INFO] Creating from template...
     if exist .env.example (
         copy .env.example .env >NUL
-        echo [INFO] Please edit .env file with your bot token and settings
+        echo [INFO] .env file created from template!
+        echo [IMPORTANT] Please edit .env file with your bot token and settings:
+        echo          - DISCORD_TOKEN: Your Discord bot token
+        echo          - OWNER_IDS: Your Discord user ID
         pause
+        goto menu
     ) else (
         echo [ERROR] .env.example file not found!
         pause
@@ -105,9 +118,21 @@ if not exist .env (
     )
 )
 
-echo [3/3] Starting MalaBoT...
-start "MalaBoT - Discord Bot" cmd /k "python bot.py"
+echo [3/4] Testing configuration...
+python -c "from config.settings import settings; errors = settings.validate(); print(f'Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Configuration test failed!
+    echo [INFO] Please check your .env file and ensure:
+    echo        - DISCORD_TOKEN is set correctly
+    echo        - OWNER_IDS contains your Discord user ID
+    pause
+    goto menu
+)
+
+echo [4/4] Starting MalaBoT...
+start "MalaBoT-Discord-Bot" cmd /k "title MalaBoT Console && python bot.py"
 echo [SUCCESS] Bot started in new window!
+echo [INFO] Use option 5 to view live logs
 timeout /T 3 /NOBREAK >NUL
 goto menu
 
@@ -115,14 +140,14 @@ goto menu
 echo.
 echo [INFO] Stopping MalaBoT...
 REM Kill specific bot processes by window title
-taskkill /FI "WINDOWTITLE eq MalaBoT - Discord Bot*" /F 2>NUL
+taskkill /FI "WINDOWTITLE eq MalaBoT-Discord-Bot*" /F 2>NUL
 if %ERRORLEVEL% EQU 0 (
-    echo [SUCCESS] Bot stopped
+    echo [SUCCESS] Bot stopped via window title
 ) else (
     REM Fallback: Kill python processes running bot.py
     wmic process where "name='python.exe' and commandline like '%bot.py%'" delete 2>NUL
     if %ERRORLEVEL% EQU 0 (
-        echo [SUCCESS] Bot stopped (fallback method)
+        echo [SUCCESS] Bot stopped via process detection
     ) else (
         echo [INFO] No bot process found
     )
@@ -132,19 +157,35 @@ goto menu
 
 :restart
 echo.
-echo [1/4] Stopping bot...
-taskkill /FI "WINDOWTITLE eq MalaBoT - Discord Bot*" /F 2>NUL
+echo [1/5] Stopping bot...
+taskkill /FI "WINDOWTITLE eq MalaBoT-Discord-Bot*" /F 2>NUL
 wmic process where "name='python.exe' and commandline like '%bot.py%'" delete 2>NUL
 timeout /T 2 /NOBREAK >NUL
 
-echo [2/4] Clearing Python cache...
+echo [2/5] Clearing Python cache...
 for /r %%F in (*.pyc) do del "%%F" 2>NUL
 for /d /r %%D in (__pycache__) do rmdir /S /Q "%%D" 2>NUL
 
-echo [3/4] Starting bot...
-start "MalaBoT - Discord Bot" cmd /k "python bot.py"
+echo [3/5] Testing configuration...
+if not exist .env (
+    echo [ERROR] .env file missing! Use option 16 to create it.
+    pause
+    goto menu
+)
 
-echo [4/4] Bot restarted successfully!
+python -c "from config.settings import settings; errors = settings.validate(); print(f'Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Configuration test failed!
+    echo [INFO] Check your .env file settings
+    pause
+    goto menu
+)
+
+echo [4/5] Starting bot...
+start "MalaBoT-Discord-Bot" cmd /k "title MalaBoT Console && python bot.py"
+
+echo [5/5] Bot restarted successfully!
+echo [INFO] Use option 5 to view live logs
 timeout /T 3 /NOBREAK >NUL
 goto menu
 
@@ -153,12 +194,12 @@ echo.
 echo ========================================
 echo Bot Status:
 echo ========================================
-tasklist /FI "WINDOWTITLE eq MalaBoT - Discord Bot*" | find "cmd.exe" >NUL
+tasklist /FI "WINDOWTITLE eq MalaBoT-Discord-Bot*" | find "cmd.exe" >NUL
 if %ERRORLEVEL% EQU 0 (
     echo [STATUS] Bot is RUNNING
     echo.
     echo Running processes:
-    tasklist /FI "WINDOWTITLE eq MalaBoT - Discord Bot*"
+    tasklist /FI "WINDOWTITLE eq MalaBoT-Discord-Bot*"
 ) else (
     wmic process where "name='python.exe' and commandline like '%bot.py%'" get processid,name,commandline 2>NUL | find "bot.py" >NUL
     if %ERRORLEVEL% EQU 0 (
@@ -171,22 +212,55 @@ if %ERRORLEVEL% EQU 0 (
 )
 echo.
 echo ========================================
+echo Recent log entries (last 10 lines):
+if exist "data\logs\bot.log" (
+    powershell -Command "Get-Content 'data\logs\bot.log' | Select-Object -Last 10"
+) else (
+    echo [INFO] No log file found - bot may not have started yet
+)
+echo ========================================
 pause
+goto menu
+
+:logs
+echo.
+echo [INFO] Opening live log viewer...
+echo [INFO] Press Ctrl+C to stop viewing logs
+echo.
+
+if exist "data\logs\bot.log" (
+    powershell -Command "Get-Content 'data\logs\bot.log' -Wait -Tail 20"
+) else (
+    echo [WARNING] Log file not found at: data\logs\bot.log
+    echo [INFO] Waiting for log file to be created...
+    timeout /T 5 /NOBREAK >NUL
+    if exist "data\logs\bot.log" (
+        powershell -Command "Get-Content 'data\logs\bot.log' -Wait -Tail 20"
+    ) else (
+        echo [ERROR] Log file still not found - check if bot is running
+    )
+)
 goto menu
 
 :clearcache
 echo.
 echo [INFO] Clearing all caches...
-echo [1/3] Clearing Python cache...
+echo [1/4] Clearing Python cache...
 for /r %%F in (*.pyc) do del "%%F" 2>NUL
 for /d /r %%D in (__pycache__) do rmdir /S /Q "%%D" 2>NUL
 
-echo [2/3] Clearing pytest cache...
+echo [2/4] Clearing pytest cache...
 rmdir /S /Q .pytest_cache 2>NUL
 
-echo [3/3] Cleaning temporary files...
+echo [3/4] Cleaning temporary files...
 del /F /Q *.tmp 2>NUL
-del /F /Q *.log 2>NUL
+
+echo [4/4] Cleaning old logs (keeping last 5)...
+if exist "data\logs\*.log" (
+    for /f "skip=5 delims=" %%F in ('dir /B /O-D data\logs\*.log 2^>NUL') do (
+        del "data\logs\%%F" 2>NUL
+    )
+)
 
 echo [SUCCESS] All caches cleared!
 timeout /T 2 /NOBREAK >NUL
@@ -277,7 +351,7 @@ echo Starting Update Workflow
 echo ========================================
 echo.
 
-echo [1/4] Pulling latest changes...
+echo [1/5] Pulling latest changes...
 git pull origin main
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to pull from GitHub!
@@ -285,17 +359,21 @@ if %ERRORLEVEL% NEQ 0 (
     goto menu
 )
 
-echo [2/4] Installing/Updating dependencies...
+echo [2/5] Installing/Updating dependencies...
 pip install -r requirements.txt
 
-echo [3/4] Restarting bot...
+echo [3/5] Restarting bot...
 call :stop_internal
 timeout /T 2 /NOBREAK >NUL
 call :start_internal
 
-echo [4/4] Checking status...
+echo [4/5] Checking status...
 timeout /T 3 /NOBREAK >NUL
 call :status_internal
+
+echo [5/5] Opening logs...
+timeout /T 2 /NOBREAK >NUL
+call :logs_internal
 
 echo.
 echo ========================================
@@ -380,8 +458,9 @@ if exist .env.example (
     echo [SUCCESS] .env file created from template!
     echo.
     echo [IMPORTANT] Please edit .env file with your bot token and settings:
-    echo - DISCORD_BOT_TOKEN: Your Discord bot token
-    echo - Other required configuration values
+    echo - DISCORD_TOKEN: Your Discord bot token
+    echo - OWNER_IDS: Your Discord user ID (comma-separated if multiple)
+    echo - BOT_PREFIX: Command prefix (default: /)
     echo.
     echo Open .env file and add your credentials before starting the bot.
 ) else (
@@ -389,34 +468,78 @@ if exist .env.example (
     echo [INFO] Creating basic .env file template...
     (
         echo # Discord Bot Configuration
-        echo DISCORD_BOT_TOKEN=your_bot_token_here
+        echo DISCORD_TOKEN=your_bot_token_here
+        echo BOT_PREFIX=/
+        echo BOT_NAME=MalaBoT
+        echo BOT_VERSION=1.0.0
+        echo OWNER_IDS=your_discord_user_id_here
         echo.
         echo # Bot Settings
-        echo BOT_PREFIX=!
-        echo BOT_STATUS=online
+        echo LOG_LEVEL=INFO
+        echo LOG_FILE=data/logs/bot.log
         echo.
-        echo # Add other configuration as needed
+        echo # Feature Flags
+        echo ENABLE_MODERATION=true
+        echo ENABLE_FUN=true
+        echo ENABLE_UTILITY=true
     ) > .env
     echo [SUCCESS] Basic .env file created!
-    echo [IMPORTANT] Please edit and add your bot token!
+    echo [IMPORTANT] Please edit and add your bot token and user ID!
+)
+pause
+goto menu
+
+:testconfig
+echo.
+echo [INFO] Testing bot configuration...
+if not exist .env (
+    echo [ERROR] .env file not found! Use option 16 to create it.
+    pause
+    goto menu
+)
+
+python -c "
+try:
+    from config.settings import settings
+    errors = settings.validate()
+    if errors:
+        print('[ERROR] Configuration errors:')
+        for error in errors:
+            print(f'  - {error}')
+    else:
+        print('[SUCCESS] Configuration is valid!')
+        print(f'[INFO] Bot Name: {settings.BOT_NAME}')
+        print(f'[INFO] Bot Prefix: {settings.BOT_PREFIX}')
+        print(f'[INFO] Log Level: {settings.LOG_LEVEL}')
+        print(f'[INFO] Log File: {settings.LOG_FILE}')
+except Exception as e:
+    print(f'[ERROR] Failed to load configuration: {e}')
+"
+
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Configuration test failed!
+) else (
+    echo [SUCCESS] Configuration test completed!
 )
 pause
 goto menu
 
 REM Internal helper functions
 :stop_internal
-taskkill /FI "WINDOWTITLE eq MalaBoT - Discord Bot*" /F 2>NUL
+taskkill /FI "WINDOWTITLE eq MalaBoT-Discord-Bot*" /F 2>NUL
 wmic process where "name='python.exe' and commandline like '%bot.py%'" delete 2>NUL
 goto :eof
 
 :start_internal
 for /r %%F in (*.pyc) do del "%%F" 2>NUL
 for /d /r %%D in (__pycache__) do rmdir /S /Q "%%D" 2>NUL
-start "MalaBoT - Discord Bot" cmd /k "python bot.py"
+if not exist "data" mkdir "data"
+if not exist "data\logs" mkdir "data\logs"
+start "MalaBoT-Discord-Bot" cmd /k "title MalaBoT Console && python bot.py"
 goto :eof
 
 :status_internal
-tasklist /FI "WINDOWTITLE eq MalaBoT - Discord Bot*" | find "cmd.exe" >NUL
+tasklist /FI "WINDOWTITLE eq MalaBoT-Discord-Bot*" | find "cmd.exe" >NUL
 if %ERRORLEVEL% EQU 0 (
     echo [STATUS] Bot is RUNNING
 ) else (
@@ -426,6 +549,14 @@ if %ERRORLEVEL% EQU 0 (
     ) else (
         echo [STATUS] Bot is NOT RUNNING
     )
+)
+goto :eof
+
+:logs_internal
+if exist "data\logs\bot.log" (
+    powershell -Command "Get-Content 'data\logs\bot.log' | Select-Object -Last 10"
+) else (
+    echo [INFO] No log file found
 )
 goto :eof
 
