@@ -253,9 +253,11 @@ The bot will start in safe mode to prevent further issues.
             # Safe mode: load only essential cogs
             essential_cogs = [
                 'cogs.utility',
+                'cogs.moderation',
                 'cogs.xp',
                 'cogs.birthdays',
-                'cogs.owner'
+                'cogs.owner',
+                'cogs.verification'
             ]
             
             self.logger.info("Loading essential cogs in safe mode...")
