@@ -210,12 +210,11 @@ echo ========================================
 echo Bot Status:
 echo ========================================
 
-REM === Safe universal timestamp (no crash, all locales) ===
-for /f "tokens=2 delims==." %%A in ('wmic os get localdatetime /value 2^>nul') do set "ts=%%A"
-set "ts=%ts:~0,4%-%ts:~4,2%-%ts:~6,2% %ts:~8,2%:%ts:~10,2%"
+REM === Safe universal timestamp (verified for this system) ===
+for /f "tokens=2 delims==." %%A in ('wmic os get localdatetime /value 2^>nul') do set "ts_raw=%%A"
+set "ts=%ts_raw:~0,4%-%ts_raw:~4,2%-%ts_raw:~6,2% %ts_raw:~8,2%:%ts_raw:~10,2%:%ts_raw:~12,2%"
 echo Checked: %ts%
 echo ========================================
-
 
 REM Detect bot process by command line (reliable across consoles)
 set "bot_running=0"
@@ -656,8 +655,11 @@ echo.
 echo ========================================
 echo Backup Now
 echo ========================================
-set "TS=%date:~-4%%date:~-10,2%%date:~-7,2%-%time:~0,2%%time:~3,2%"
-set "TS=%TS: =0%"
+
+REM === Safe universal timestamp (locale-proof) ===
+for /f "tokens=2 delims==." %%A in ('wmic os get localdatetime /value 2^>nul') do set "dt=%%A"
+set "TS=%dt:~0,4%-%dt:~4,2%-%dt:~6,2%_%dt:~8,2%-%dt:~10,2%"
+
 if not exist "backups\logs" mkdir "backups\logs"
 if not exist "backups\db" mkdir "backups\db"
 if exist "data\logs" xcopy "data\logs" "backups\logs\%TS%\" /E /Q /Y >nul
@@ -665,29 +667,23 @@ if exist "data\bot.db" copy /Y "data\bot.db" "backups\db\bot_%TS%.db" >nul
 echo [SUCCESS] Backup saved with tag %TS%.
 goto :eof
 
+
 :verifyenv
 echo.
 echo ========================================
 echo Verify Environment
 echo ========================================
+
 if not exist .env (
     echo [ERROR] .env not found!
     pause
     goto menu
 )
-python - <<PY
-from config.settings import settings
-try:
-    errs = settings.validate()
-    if errs:
-        print("[ERROR] Config validation failed:")
-        [print(" -", e) for e in errs]
-    else:
-        print("[OK] Environment validated successfully.")
-        print("BOT_NAME:", settings.BOT_NAME)
-        print("BOT_PREFIX:", settings.BOT_PREFIX)
-except Exception as e:
-    print("[ERROR] Failed to verify environment:", e)
-PY
+
+python -c "from config.settings import settings; \
+errs = settings.validate(); \
+print('[OK] Environment validated successfully.') if not errs else [print('[ERROR] Config validation failed:'), [print(' -', e) for e in errs]]"
+
 pause
 goto menu
+
