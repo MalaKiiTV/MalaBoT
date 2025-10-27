@@ -578,9 +578,9 @@ The bot will start in safe mode to prevent further issues.
                 name="your server • /help"
             )
         )
-    
+
     async def _sync_commands(self):
-        """Sync slash commands to Discord."""
+        """Sync slash commands to Discord (instant in debug guilds)."""
         try:
             # Sync to debug guilds first (for instant updates)
             if settings.DEBUG_GUILDS:
@@ -589,16 +589,17 @@ The bot will start in safe mode to prevent further issues.
                         guild = discord.Object(id=guild_id)
                         self.tree.copy_global_to(guild=guild)
                         await self.tree.sync(guild=guild)
-                        self.logger.info(f"Commands synced to debug guild {guild_id}")
+                        self.logger.info(f"✅ Commands synced instantly to debug guild: {guild_id}")
                     except Exception as e:
-                        self.logger.error(f"Failed to sync to debug guild {guild_id}: {e}")
-            
-            # Global sync
+                        self.logger.error(f"❌ Failed to sync to debug guild {guild_id}: {e}")
+
+            # Global sync (takes up to 1 hour to propagate)
             await self.tree.sync()
-            self.logger.info("Commands synced globally")
-            
+            self.logger.info("🌐 Global commands synced successfully")
+
         except Exception as e:
-            self.logger.error(f"Failed to sync commands: {e}")
+            self.logger.error(f"❌ Command sync failed: {e}")
+
     
     async def on_guild_join(self, guild: discord.Guild):
         """Called when bot joins a new guild."""
