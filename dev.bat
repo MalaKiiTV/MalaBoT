@@ -4,6 +4,7 @@ REM This script handles the complete local development workflow
 
 setlocal enabledelayedexpansion
 chcp 65001 >nul
+reg add "HKCU\Console\%~n0" /v FaceName /t REG_SZ /d "Consolas" /f >nul 2>&1
 
 REM Set window title
 title MalaBoT Development Tools
@@ -209,36 +210,42 @@ echo ========================================
 echo Bot Status:
 echo ========================================
 
-REM Look for any window that has "MalaBoT-Discord-Bot" in its title
-tasklist /v /fo csv | findstr /i "MalaBoT Console" >nul
-if %ERRORLEVEL% EQU 0 (
+REM Detect bot process by title or command line
+set "bot_running=0"
+tasklist /v /fo table | find /I "MalaBoT Console" >nul 2>&1 && set "bot_running=1"
+if %bot_running%==0 (
+    wmic process where "commandline like '%%bot.py%%'" get processid,name,commandline 2>nul | find /I "bot.py" >nul && set "bot_running=1"
+)
+
+if %bot_running%==1 (
     echo [STATUS] Bot is RUNNING
     echo.
     echo Running processes:
-    tasklist /v /fo csv | findstr /i "MalaBoT Console"
+    tasklist /v /fo table | find /I "bot.py"
 ) else (
-    wmic process where "name='python.exe' and commandline like '%%bot.py%%'" get processid,name,commandline 2>nul | find "bot.py" >nul
-    if %ERRORLEVEL% EQU 0 (
-        echo [STATUS] Bot is RUNNING (process detected)
-        echo.
-        wmic process where "name='python.exe' and commandline like '%%bot.py%%'" get processid,name,commandline
-    ) else (
-        echo [STATUS] Bot is NOT RUNNING
-    )
+    echo [STATUS] Bot is NOT RUNNING
 )
 
 echo.
 echo ========================================
 echo Recent log entries (last 10 lines):
+echo ========================================
 
 if exist "data\logs\bot.log" (
-    powershell -Command "Get-Content 'data\logs\bot.log' | Select-Object -Last 10"
+    powershell -NoLogo -NoProfile -Command ^
+        "$log = Get-Content 'data/logs/bot.log' -Tail 10 -Encoding UTF8; ^
+         $clean = $log -replace '[^\x20-\x7E]+',''; ^
+         Write-Output ($clean -join [Environment]::NewLine)"
 ) else (
     echo [INFO] No log file found - bot may not have started yet
 )
+
 echo ========================================
+echo.
 pause
 goto menu
+
+
 
 :logs
 echo.
@@ -557,18 +564,19 @@ start "MalaBoT Console" cmd /k "title MalaBoT Console && python bot.py"
 goto :eof
 
 :status_internal
-tasklist /v /fo csv | findstr /i "MalaBoT Console" >NUL
-if %ERRORLEVEL% EQU 0 (
+set "bot_running=0"
+tasklist /v /fo table | find /I "MalaBoT Console" >nul 2>&1 && set "bot_running=1"
+if %bot_running%==0 (
+    wmic process where "commandline like '%%bot.py%%'" get processid,name,commandline 2>nul | find /I "bot.py" >nul && set "bot_running=1"
+)
+
+if %bot_running%==1 (
     echo [STATUS] Bot is RUNNING
 ) else (
-    wmic process where "name='python.exe' and commandline like '%%bot.py%%'" get processid,name,commandline 2>NUL | find "bot.py" >NUL
-    if %ERRORLEVEL% EQU 0 (
-        echo [STATUS] Bot is RUNNING
-    ) else (
-        echo [STATUS] Bot is NOT RUNNING
-    )
+    echo [STATUS] Bot is NOT RUNNING
 )
 goto :eof
+
 
 :logs_internal
 if exist "data\logs\bot.log" (
