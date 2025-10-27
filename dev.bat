@@ -212,16 +212,16 @@ echo ========================================
 
 REM Detect bot process by title or command line
 set "bot_running=0"
-tasklist /v /fo table | findstr /I "MalaBoT Console" >nul && set "bot_running=1"
-if %bot_running%==0 (
-    wmic process where "commandline like '%%bot.py%%'" get processid,name,commandline 2>nul | findstr /I "bot.py" >nul && set "bot_running=1"
-)
+
+for /f "tokens=1 delims=," %%A in ('tasklist /FI "IMAGENAME eq python.exe" /V /FO CSV ^| findstr /I "bot.py"') do set "bot_running=1"
+for /f "tokens=1 delims=," %%A in ('tasklist /FI "IMAGENAME eq python3.exe" /V /FO CSV ^| findstr /I "bot.py"') do set "bot_running=1"
 
 if "%bot_running%"=="1" (
     echo [STATUS] Bot is RUNNING
     echo.
     echo Running processes:
-    tasklist /v /fo table | findstr /I "bot.py"
+    tasklist /FI "IMAGENAME eq python.exe" /V /FO TABLE | findstr /I "bot.py"
+    tasklist /FI "IMAGENAME eq python3.exe" /V /FO TABLE | findstr /I "bot.py"
 ) else (
     echo [STATUS] Bot is NOT RUNNING
 )
@@ -243,7 +243,6 @@ echo ========================================
 echo.
 pause
 goto menu
-
 
 :logs
 echo.
