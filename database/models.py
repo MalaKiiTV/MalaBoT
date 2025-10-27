@@ -141,6 +141,21 @@ class DatabaseManager:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+                # Verification table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS verifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id INTEGER NOT NULL,
+                activision_id TEXT NOT NULL,
+                platform TEXT,
+                screenshot_url TEXT,
+                status TEXT DEFAULT 'pending',
+                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reviewed_by INTEGER DEFAULT NULL,
+                reviewed_at TIMESTAMP DEFAULT NULL,
+                notes TEXT DEFAULT NULL
+            )
+        """)
         
         await conn.commit()
         
@@ -495,6 +510,7 @@ class DatabaseManager:
             INSERT INTO health_logs (check_type, status, details, value)
             VALUES (?, ?, ?, ?)
         """, (check_type, status, details, value))
+        
         await conn.commit()
     
     async def get_recent_health_logs(self, hours: int = 24) -> List[Dict[str, Any]]:

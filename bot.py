@@ -81,7 +81,7 @@ class MalaBoT(commands.Bot):
         
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
-    
+
     async def setup_hook(self):
         """Called when the bot is starting up."""
         try:
@@ -107,10 +107,10 @@ class MalaBoT(commands.Bot):
             await self._start_background_tasks()
             
             self.logger.info("Bot setup completed successfully")
-               
-               # Send online message if configured
-               if self.get_cog('Owner'):
-                   await self.get_cog('Owner').send_online_message()
+            
+            # Send online message if configured
+            if self.get_cog('Owner'):
+                await self.get_cog('Owner').send_online_message()
             
         except Exception as e:
             log_critical("Failed during bot setup", e)
@@ -271,7 +271,8 @@ The bot will start in safe mode to prevent further issues.
                 'cogs.xp',
                 'cogs.birthdays',
                 'cogs.welcome',
-                'cogs.owner'
+                'cogs.owner',
+                'cogs.verification'
             ]
             
             self.logger.info("Loading all cogs...")
