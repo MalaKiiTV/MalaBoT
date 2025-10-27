@@ -210,6 +210,13 @@ echo ========================================
 echo Bot Status:
 echo ========================================
 
+REM === Safe universal timestamp (no crash, all locales) ===
+for /f "tokens=2 delims==." %%A in ('wmic os get localdatetime /value 2^>nul') do set "ts=%%A"
+set "ts=%ts:~0,4%-%ts:~4,2%-%ts:~6,2% %ts:~8,2%:%ts:~10,2%"
+echo Checked: %ts%
+echo ========================================
+
+
 REM Detect bot process by command line (reliable across consoles)
 set "bot_running=0"
 
