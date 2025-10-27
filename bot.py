@@ -1,6 +1,6 @@
 """
 MalaBoT - Multifunctional Discord Bot
-Main entry point and core bot framework.
+Main entry point and core bot frameworks.
 """
 
 import asyncio
