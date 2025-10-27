@@ -86,36 +86,36 @@ class MalaBoT(commands.Bot):
         """Called when the bot is starting up."""
         try:
             self.start_time = datetime.now()
-            
+
             # Run startup verification if enabled
             if settings.ENABLE_STARTUP_VERIFICATION:
                 await self._startup_verification()
-            
+
             # Initialize database
             await self._initialize_database()
-            
+
             # Check for crash flags and determine if safe mode is needed
             await self._check_crash_flags()
-            
+
             # Load cogs based on mode
             await self._load_cogs()
-            
+
             # Initialize scheduler
             await self._initialize_scheduler()
-            
+
             # Start background tasks
             await self._start_background_tasks()
-            
+
             self.logger.info("Bot setup completed successfully")
-            
+
             # Send online message if configured
             if self.get_cog('Owner'):
                 await self.get_cog('Owner').send_online_message()
-            
+
         except Exception as e:
             log_critical("Failed during bot setup", e)
             raise
-    
+
     async def _startup_verification(self):
         """Verify startup environment and auto-repair if needed."""
         self.logger.info("Running startup verification...")
