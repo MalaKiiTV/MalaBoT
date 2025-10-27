@@ -210,25 +210,27 @@ echo ========================================
 echo Bot Status:
 echo ========================================
 
-REM === Safe universal timestamp (verified for this system) ===
+REM === Safe timestamp ===
 for /f "tokens=2 delims==." %%A in ('wmic os get localdatetime /value 2^>nul') do set "ts_raw=%%A"
-set "ts=%ts_raw:~0,4%-%ts_raw:~4,2%-%ts_raw:~6,2% %ts_raw:~8,2%:%ts_raw:~10,2%:%ts_raw:~12,2%"
+if not defined ts_raw (
+    set "ts=Unknown"
+) else (
+    set "ts=%ts_raw:~0,4%-%ts_raw:~4,2%-%ts_raw:~6,2% %ts_raw:~8,2%:%ts_raw:~10,2%:%ts_raw:~12,2%"
+)
 echo Checked: %ts%
 echo ========================================
 
-REM Detect bot process by command line (reliable across consoles)
+REM === Detect running bot process safely ===
 set "bot_running=0"
-
-for /f "tokens=1 delims=," %%A in ('wmic process where "commandline like '%bot.py%'" get processid,name,commandline /format:csv 2^>nul ^| findstr /I "python"') do (
+for /f "usebackq tokens=1" %%A in (`tasklist /fi "imagename eq python.exe" /fo table ^| find /i "bot.py"`) do (
     set "bot_running=1"
 )
-
 
 if "%bot_running%"=="1" (
     echo [STATUS] Bot is RUNNING
     echo.
     echo Running processes:
-    wmic process where "commandline like '%bot.py%'" get processid,name,commandline /format:table | findstr /I "python"
+    tasklist /fi "imagename eq python.exe" /v | find /i "bot.py"
 ) else (
     echo [STATUS] Bot is NOT RUNNING
 )
@@ -238,18 +240,9 @@ echo ========================================
 echo Recent log entries (last 10 lines):
 echo ========================================
 
-echo [INFO] Displaying last 10 log lines...
-
-REM Run PowerShell hidden so it doesn't change console font
 if exist "data\logs\bot.log" (
-    powershell -WindowStyle Hidden -NoLogo -NoProfile -Command ^
-        "Try {Get-Content 'data/logs/bot.log' -Tail 10 -Encoding UTF8 | ForEach-Object {$_ -replace '[^\x20-\x7E]',''} | Out-File -Encoding UTF8 'data/logs/_temp_view.txt'} Catch {'' | Out-File -Encoding UTF8 'data/logs/_temp_view.txt'}"
-    if exist "data\logs\_temp_view.txt" (
-        type data\logs\_temp_view.txt
-        del data\logs\_temp_view.txt >nul 2>&1
-    ) else (
-        echo [ERROR] Unable to read log file.
-    )
+    echo [INFO] Displaying last 10 log lines...
+    powershell -NoLogo -NoProfile -Command "try {Get-Content 'data/logs/bot.log' -Tail 10 | ForEach-Object { $_ -replace '[^\x20-\x7E]', '' }} catch { Write-Host '[ERROR] Failed to read log file.' }"
 ) else (
     echo [INFO] No log file found - bot may not have started yet
 )
@@ -258,6 +251,7 @@ echo ========================================
 echo.
 pause
 goto menu
+
 
 
 :logs
