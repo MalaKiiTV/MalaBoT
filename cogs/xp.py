@@ -54,7 +54,7 @@ class XP(commands.Cog):
             # Check for level up
             user_data = await self.bot.db_manager.get_user(message.author.id)
             if user_data:
-                current_level = xp_helper.get_level_from_xp(user_data.get('total_xp', 0))
+                current_level = xp_helper.calculate_level_from_xp(user_data.get('total_xp', 0))
                 if current_level > user_data.get('level', 0):
                     await self._handle_level_up(message.author, message.guild, current_level, user_data.get('level', 0))
             
@@ -106,7 +106,7 @@ class XP(commands.Cog):
             
             # Calculate rank info
             current_xp = user_data.get('total_xp', 0)
-            current_level = xp_helper.get_level_from_xp(current_xp)
+            current_level = xp_helper.calculate_level_from_xp(current_xp)
             level_xp = xp_helper.get_xp_for_level(current_level)
             next_level_xp = xp_helper.get_xp_for_level(current_level + 1)
             xp_to_next = next_level_xp - current_xp
