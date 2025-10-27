@@ -64,6 +64,12 @@ echo UTILITIES:
 echo 15. Install/Update Dependencies
 echo 16. Create .env file from template
 echo 17. Test Bot Configuration
+echo ADVANCED OPS:
+echo 18. Full Local Clean Update
+echo 19. Remote Deploy to Droplet
+echo 20. Backup Now
+echo 21. Verify Environment
+
 echo.
 echo 0. Exit
 echo.
@@ -88,6 +94,10 @@ if "%choice%"=="15" goto installdeps
 if "%choice%"=="16" goto createenv
 if "%choice%"=="17" goto testconfig
 if "%choice%"=="0" goto exit
+if "%choice%"=="18" goto fullupdate
+if "%choice%"=="19" goto remotedeploy
+if "%choice%"=="20" goto backupnow
+if "%choice%"=="21" goto verifyenv
 
 echo Invalid choice. Please try again.
 timeout /T 2 /NOBREAK >NUL
@@ -564,3 +574,93 @@ goto :eof
 echo.
 echo [INFO] Exiting...
 exit /b 0
+
+:fullupdate
+echo.
+echo ========================================
+echo Full Local Clean Update
+echo ========================================
+echo [1/6] Stopping bot...
+call :stop_internal
+echo [2/6] Backing up logs and DB...
+call :backupnow
+echo [3/6] Git reset/pull...
+git reset --hard
+git pull origin main
+echo [4/6] Installing/Updating dependencies...
+call :installdeps
+echo [5/6] Clearing caches...
+call :clearcache
+echo [6/6] Restarting bot...
+call :start_internal
+timeout /T 3 /NOBREAK >NUL
+call :status_internal
+echo [SUCCESS] Full update complete!
+pause
+goto menu
+
+:remotedeploy
+echo.
+echo ========================================
+echo Remote Deploy to Droplet
+echo ========================================
+set DROPLET_USER=malabot
+set DROPLET_IP=165.232.156.230
+set DROPLET_DIR=/home/malabot/MalaBoT
+echo [1/4] Pushing local changes to GitHub...
+git push origin main
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] git push failed. Commit first.
+    pause
+    goto menu
+)
+echo [2/4] SSH into droplet and update...
+ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git reset --hard && git pull origin main"
+echo [3/4] Restart bot remotely...
+ssh %DROPLET_USER%@%DROPLET_IP% "pkill -f bot.py || true; nohup python3 bot.py > data/logs/latest.log 2>&1 &"
+echo [4/4] Checking latest remote logs...
+ssh %DROPLET_USER%@%DROPLET_IP% "tail -n 20 %DROPLET_DIR%/data/logs/latest.log"
+echo [DONE] Remote deploy complete.
+pause
+goto menu
+
+:backupnow
+echo.
+echo ========================================
+echo Backup Now
+echo ========================================
+set "TS=%date:~-4%%date:~-10,2%%date:~-7,2%-%time:~0,2%%time:~3,2%"
+set "TS=%TS: =0%"
+if not exist "backups\logs" mkdir "backups\logs"
+if not exist "backups\db" mkdir "backups\db"
+if exist "data\logs" xcopy "data\logs" "backups\logs\%TS%\" /E /Q /Y >nul
+if exist "data\bot.db" copy /Y "data\bot.db" "backups\db\bot_%TS%.db" >nul
+echo [SUCCESS] Backup saved with tag %TS%.
+goto :eof
+
+:verifyenv
+echo.
+echo ========================================
+echo Verify Environment
+echo ========================================
+if not exist .env (
+    echo [ERROR] .env not found!
+    pause
+    goto menu
+)
+python - <<PY
+from config.settings import settings
+try:
+    errs = settings.validate()
+    if errs:
+        print("[ERROR] Config validation failed:")
+        [print(" -", e) for e in errs]
+    else:
+        print("[OK] Environment validated successfully.")
+        print("BOT_NAME:", settings.BOT_NAME)
+        print("BOT_PREFIX:", settings.BOT_PREFIX)
+except Exception as e:
+    print("[ERROR] Failed to verify environment:", e)
+PY
+pause
+goto menu
