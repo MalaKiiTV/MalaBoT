@@ -210,18 +210,18 @@ echo ========================================
 echo Bot Status:
 echo ========================================
 
-REM Detect bot process by title or command line
+REM Detect bot process by command line (reliable across consoles)
 set "bot_running=0"
 
-for /f "tokens=1 delims=," %%A in ('tasklist /FI "IMAGENAME eq python.exe" /V /FO CSV ^| findstr /I "bot.py"') do set "bot_running=1"
-for /f "tokens=1 delims=," %%A in ('tasklist /FI "IMAGENAME eq python3.exe" /V /FO CSV ^| findstr /I "bot.py"') do set "bot_running=1"
+for /f "tokens=1 delims=," %%A in ('wmic process where "commandline like '%%bot.py%%'" get processid,name,commandline /format:csv ^| findstr /I "python"') do (
+    set "bot_running=1"
+)
 
 if "%bot_running%"=="1" (
     echo [STATUS] Bot is RUNNING
     echo.
     echo Running processes:
-    tasklist /FI "IMAGENAME eq python.exe" /V /FO TABLE | findstr /I "bot.py"
-    tasklist /FI "IMAGENAME eq python3.exe" /V /FO TABLE | findstr /I "bot.py"
+    wmic process where "commandline like '%%bot.py%%'" get processid,name,commandline /format:table | findstr /I "python"
 ) else (
     echo [STATUS] Bot is NOT RUNNING
 )
@@ -243,6 +243,7 @@ echo ========================================
 echo.
 pause
 goto menu
+
 
 :logs
 echo.
