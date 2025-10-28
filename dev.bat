@@ -356,7 +356,7 @@ goto menu
 echo.
 echo [INFO] Pushing to GitHub...
 REM First try to pull any remote changes
-git pull origin main --rebase >nul 2>&1
+git pull origin main --rebase --no-edit >nul 2>&1
 REM Then push using token authentication
 git push https://x-access-token:%GITHUB_TOKEN%@github.com/MalaKiiTV/MalaBoT.git main
 if %ERRORLEVEL% EQU 0 (
@@ -372,7 +372,7 @@ goto menu
 :gitpull
 echo.
 echo [INFO] Pulling from GitHub...
-git pull origin main
+git pull origin main --no-edit
 if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Pulled from GitHub successfully!
 ) else (
@@ -400,7 +400,7 @@ echo ========================================
 echo.
 
 echo [1/5] Pulling latest changes...
-git pull origin main
+git pull origin main --no-edit
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to pull from GitHub!
     pause
@@ -582,7 +582,7 @@ echo [2/6] Backing up logs and DB...
 call :backupnow
 echo [3/6] Git reset/pull...
 git reset --hard
-git pull origin main
+git pull origin main --no-edit
 echo [4/6] Installing dependencies...
 call :installdeps_silent
 echo [5/6] Clearing caches...
@@ -605,7 +605,7 @@ set DROPLET_IP=165.232.156.230
 set DROPLET_DIR=/home/malabot/MalaBoT
 echo [1/4] Pushing local changes to GitHub...
 REM First pull any remote changes
-git pull origin main --rebase >nul 2>&1
+git pull origin main --rebase --no-edit >nul 2>&1
 REM Then push using token authentication
 git push https://x-access-token:%GITHUB_TOKEN%@github.com/MalaKiiTV/MalaBoT.git main
 if %ERRORLEVEL% NEQ 0 (
