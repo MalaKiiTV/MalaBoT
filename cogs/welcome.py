@@ -64,7 +64,7 @@ class Welcome(commands.Cog):
         except Exception as e:
             self.logger.error(f"Error in on_member_join: {e}")
     
-    @app_commands.command(name="welcome", description="Welcome system configuration (Admin only)")
+    @app_commands.command(name="welcome", description="Welcome system configuration (Owner only)")
     @app_commands.default_permissions(administrator=True)
     @app_commands.describe(
         action="What welcome action would you like to perform?"
@@ -82,7 +82,7 @@ class Welcome(commands.Cog):
             if not (is_admin(interaction.user) or interaction.user.id in settings.OWNER_IDS):
                 embed = embed_helper.error_embed(
                     title="Permission Denied",
-                    description="This command is only available to server administrators."
+                    description="This command is only available to bot owners."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return

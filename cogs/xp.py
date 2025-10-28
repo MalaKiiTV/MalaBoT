@@ -300,7 +300,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in daily command: {e}")
             await self._error_response(interaction, "Failed to claim daily bonus")
     
-    @app_commands.command(name="xpadd", description="Add XP to a user (Administrator only)")
+    @app_commands.command(name="xpadd", description="Add XP to a user (Mod only)")
     @app_commands.describe(
         user="User to add XP to",
         amount="Amount of XP to add"
@@ -317,7 +317,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xpadd command: {e}")
             await self._error_response(interaction, "Failed to add XP")
     
-    @app_commands.command(name="xpremove", description="Remove XP from a user (Administrator only)")
+    @app_commands.command(name="xpremove", description="Remove XP from a user (Mod only)")
     @app_commands.describe(
         user="User to remove XP from",
         amount="Amount of XP to remove"
@@ -334,7 +334,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xpremove command: {e}")
             await self._error_response(interaction, "Failed to remove XP")
     
-    @app_commands.command(name="xpset", description="Set user XP to a specific amount (Administrator only)")
+    @app_commands.command(name="xpset", description="Set user XP to a specific amount (Mod only)")
     @app_commands.describe(
         user="User to set XP for",
         amount="Amount of XP to set"
@@ -351,7 +351,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xpset command: {e}")
             await self._error_response(interaction, "Failed to set XP")
     
-    @app_commands.command(name="xpreset", description="Reset user XP to 0 (Administrator only)")
+    @app_commands.command(name="xpreset", description="Reset user XP to 0 (Mod only)")
     @app_commands.describe(
         user="User to reset XP for"
     )
@@ -368,7 +368,7 @@ class XP(commands.Cog):
             await self._error_response(interaction, "Failed to reset XP")
     
 
-    @app_commands.command(name="xpconfig", description="Configure XP settings (Administrator only)")
+    @app_commands.command(name="xpconfig", description="Configure XP settings (Mod only)")
     @app_commands.describe(
         setting="Setting to configure",
         value="New value for the setting"
