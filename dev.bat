@@ -63,9 +63,15 @@ echo  9.  Check Git Status            - View modified/staged files
 echo 10. Stage All Changes            - Stage all files for commit
 echo 11. Commit Changes               - Commit staged files with message
 echo 12. Push to GitHub               - Push commits to remote
-echo 13. Remote Deploy to Droplet    - Deploy to production server
+echo 13. Remote Deploy to Droplet    - Deploy to production server (PM2)
 echo 14. Pull from GitHub             - Get latest changes from remote
 echo 15. View Commit History          - Show last 10 commits
+echo.
+echo [DROPLET MANAGEMENT]
+echo 21. View Droplet Status          - Check PM2 bot status on droplet
+echo 22. View Droplet Logs            - View live logs from droplet
+echo 23. Restart Droplet Bot          - Restart bot on droplet
+echo 24. Stop Droplet Bot             - Stop bot on droplet
 echo.
 echo [UTILITIES]
 echo 16. Install Dependencies         - Install/update Python packages
@@ -102,6 +108,10 @@ if "%choice%"=="17" goto testconfig
 if "%choice%"=="18" goto backupnow
 if "%choice%"=="19" goto verifyenv
 if "%choice%"=="20" goto clearall
+if "%choice%"=="21" goto droplet_status
+if "%choice%"=="22" goto droplet_logs
+if "%choice%"=="23" goto droplet_restart
+if "%choice%"=="24" goto droplet_stop
 if "%choice%"=="0" goto exit
 
 echo Invalid choice. Please try again.
@@ -548,12 +558,12 @@ goto menu
 :remotedeploy
 echo.
 echo ========================================
-echo Remote Deploy to Droplet
+echo Remote Deploy to Droplet (PM2)
 echo ========================================
 set DROPLET_USER=malabot
 set DROPLET_IP=165.232.156.230
 set DROPLET_DIR=/home/malabot/MalaBoT
-echo [1/4] Pushing local changes to GitHub...
+echo [1/5] Pushing local changes to GitHub...
 REM First pull any remote changes
 git pull origin main --rebase --no-edit >nul 2>&1
 REM Then push using default git credentials
@@ -563,13 +573,24 @@ if %ERRORLEVEL% NEQ 0 (
     pause
     goto menu
 )
-echo [2/4] SSH into droplet and update...
+echo [2/5] SSH into droplet and update code...
 ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git reset --hard && git pull origin main"
-echo [3/4] Restart bot remotely...
-ssh %DROPLET_USER%@%DROPLET_IP% "pkill -f bot.py || true; nohup python3 bot.py > data/logs/latest.log 2>&1 &"
-echo [4/4] Checking latest remote logs...
-ssh %DROPLET_USER%@%DROPLET_IP% "tail -n 20 %DROPLET_DIR%/data/logs/latest.log"
-echo [DONE] Remote deploy complete.
+echo [3/5] Installing/updating dependencies...
+ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && pip3 install -r requirements.txt --quiet"
+echo [4/5] Restarting bot with PM2...
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 restart malabot || pm2 start %DROPLET_DIR%/bot.py --name malabot --interpreter python3"
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to restart bot with PM2
+    pause
+    goto menu
+)
+echo [5/5] Checking bot status...
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list && pm2 logs malabot --lines 20 --nostream"
+echo.
+echo [SUCCESS] Remote deploy complete!
+echo Bot is running on droplet with PM2
+echo.
+
 pause
 goto menu
 
@@ -666,6 +687,78 @@ echo Next steps:
 echo   1. Start your bot (option 1)
 echo   2. Wait 30 seconds for commands to sync
 echo   3. Test commands in Discord
+echo.
+pause
+goto menu
+
+:droplet_status
+echo.
+echo ========================================
+echo Droplet Status (PM2)
+echo ========================================
+set DROPLET_USER=malabot
+set DROPLET_IP=165.232.156.230
+echo Checking bot status on droplet...
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list && echo. && pm2 info malabot"
+echo.
+pause
+goto menu
+
+:droplet_logs
+echo.
+echo ========================================
+echo Droplet Logs (Live)
+echo ========================================
+set DROPLET_USER=malabot
+set DROPLET_IP=165.232.156.230
+echo Viewing live logs from droplet...
+echo Press Ctrl+C to stop viewing logs
+echo.
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 logs malabot"
+goto menu
+
+:droplet_restart
+echo.
+echo ========================================
+echo Restart Droplet Bot
+echo ========================================
+set DROPLET_USER=malabot
+set DROPLET_IP=165.232.156.230
+echo Restarting bot on droplet...
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 restart malabot"
+if %ERRORLEVEL% EQU 0 (
+    echo [SUCCESS] Bot restarted successfully
+    ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list"
+) else (
+    echo [ERROR] Failed to restart bot
+)
+echo.
+pause
+goto menu
+
+:droplet_stop
+echo.
+echo ========================================
+echo Stop Droplet Bot
+echo ========================================
+set DROPLET_USER=malabot
+set DROPLET_IP=165.232.156.230
+echo.
+echo WARNING: This will stop the bot on the droplet!
+set /p confirm="Are you sure? (y/n): "
+if /i not "%confirm%"=="y" (
+    echo Cancelled.
+    pause
+    goto menu
+)
+echo Stopping bot on droplet...
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 stop malabot"
+if %ERRORLEVEL% EQU 0 (
+    echo [SUCCESS] Bot stopped
+    ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list"
+) else (
+    echo [ERROR] Failed to stop bot
+)
 echo.
 pause
 goto menu
