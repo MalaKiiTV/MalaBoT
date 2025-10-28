@@ -69,15 +69,12 @@ echo 15. View Commit History          - Show last 10 commits
 echo.
 echo [UTILITIES]
 echo 16. Install Dependencies         - Install/update Python packages
-echo 17. Create .env File             - Create config from template
-echo 18. Test Configuration           - Validate .env settings
+echo 17. Test Configuration           - Validate .env settings
 echo.
 echo [ADVANCED OPS]
-echo 19. Full Clean Update            - Backup + Reset + Pull + Restart
-echo 20. Backup Now                   - Backup logs and database
-echo 21. Verify Environment           - Check configuration validity
-echo 22. Clear All                    - Clear commands + caches + logs + temp
-echo 23. Fix /verify Command          - Fix command structure in Discord
+echo 18. Backup Now                   - Backup logs and database
+echo 19. Verify Environment           - Check configuration validity
+echo 20. Clear All                    - Clear commands + caches + logs + temp
 echo.
 echo [EXIT]
 echo  0. Exit                         - Close development tools
@@ -101,13 +98,10 @@ if "%choice%"=="13" goto remotedeploy
 if "%choice%"=="14" goto gitpull
 if "%choice%"=="15" goto githistory
 if "%choice%"=="16" goto installdeps
-if "%choice%"=="17" goto createenv
-if "%choice%"=="18" goto testconfig
-if "%choice%"=="19" goto fullupdate
-if "%choice%"=="20" goto backupnow
-if "%choice%"=="21" goto verifyenv
-if "%choice%"=="22" goto clearall
-if "%choice%"=="23" goto fixverify
+if "%choice%"=="17" goto testconfig
+if "%choice%"=="18" goto backupnow
+if "%choice%"=="19" goto verifyenv
+if "%choice%"=="20" goto clearall
 if "%choice%"=="0" goto exit
 
 echo Invalid choice. Please try again.
@@ -506,55 +500,11 @@ goto menu
 pip install -r requirements.txt
 goto :eof
 
-:createenv
-echo.
-if exist .env (
-    echo [WARNING] .env file already exists!
-    set /p overwrite="Do you want to overwrite it? (Y/N): "
-    if /i not "%overwrite%"=="Y" goto menu
-)
-
-if exist .env.example (
-    copy .env.example .env
-    echo [SUCCESS] .env file created from template!
-    echo.
-    echo [IMPORTANT] Please edit .env file with your bot token and settings:
-    echo - DISCORD_TOKEN: Your Discord bot token
-    echo - OWNER_IDS: Your Discord user ID
-    echo - BOT_PREFIX: Command prefix (default: /)
-    echo.
-    echo Open .env file and add your credentials before starting the bot.
-) else (
-    echo [ERROR] .env.example file not found!
-    echo [INFO] Creating basic .env file template...
-    (
-        echo # Discord Bot Configuration
-        echo DISCORD_TOKEN=your_bot_token_here
-        echo BOT_PREFIX=/
-        echo BOT_NAME=MalaBoT
-        echo BOT_VERSION=1.0.0
-        echo OWNER_IDS=your_discord_user_id_here
-        echo.
-        echo # Bot Settings
-        echo LOG_LEVEL=INFO
-        echo LOG_FILE=data/logs/bot.log
-        echo.
-        echo # Feature Flags
-        echo ENABLE_MODERATION=true
-        echo ENABLE_FUN=true
-        echo ENABLE_UTILITY=true
-    ) > .env
-    echo [SUCCESS] Basic .env file created!
-    echo [IMPORTANT] Please edit and add your bot token and user ID!
-)
-pause
-goto menu
-
 :testconfig
 echo.
 echo [INFO] Testing bot configuration...
 if not exist .env (
-    echo [ERROR] .env file not found! Use option 16 to create it.
+    echo [ERROR] .env file not found! Create .env file first.
     pause
     goto menu
 )
@@ -584,26 +534,7 @@ if %ERRORLEVEL% NEQ 0 (
 pause
 goto menu
 
-:fullupdate
-echo.
-echo ========================================
-echo Full Local Clean Update
-echo ========================================
-echo [1/6] Stopping bot...
-call :stop_internal
-echo [2/6] Backing up logs and DB...
-call :backupnow
-echo [3/6] Git reset/pull...
-git reset --hard
-git pull origin main --no-edit
-echo [4/6] Installing dependencies...
-call :installdeps_silent
-echo [5/6] Clearing caches...
-call :clearcache
-echo [6/6] Restarting bot...
-call :start_internal
-timeout /T 3 /NOBREAK >NUL
-call :status_basic
+
 echo [SUCCESS] Full update complete!
 pause
 goto menu
@@ -729,52 +660,6 @@ echo Next steps:
 echo   1. Start your bot (option 1)
 echo   2. Wait 30 seconds for commands to sync
 echo   3. Test commands in Discord
-echo.
-pause
-goto menu
-
-:fixverify
-echo.
-echo ========================================
-echo Fix /verify Command Structure
-echo ========================================
-echo.
-echo This will fix the /verify command to show as a parent
-echo command with subcommands (submit, review, setup) instead
-echo of separate individual commands.
-echo.
-set /p confirm="Continue? (yes/no): "
-if /i "%confirm%"=="yes" goto fixverify_continue
-if /i "%confirm%"=="y" goto fixverify_continue
-echo [CANCELLED] Operation cancelled.
-timeout /T 2 /NOBREAK >NUL
-goto menu
-
-:fixverify_continue
-echo.
-echo [1/2] Stopping bot...
-call :stop_internal
-timeout /T 2 /NOBREAK >NUL
-
-echo [2/2] Running verify command fix...
-python fix_verify_command.py
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Fix script failed
-    pause
-    goto menu
-)
-
-echo.
-echo ========================================
-echo [SUCCESS] /verify Command Structure Fixed!
-echo ========================================
-echo.
-echo Next steps:
-echo   1. Start your bot (option 1)
-echo   2. Wait 30 seconds
-echo   3. In Discord, type /verify and press space
-echo   4. You should see: submit, review, setup
-echo   5. If not, restart Discord (Ctrl+R)
 echo.
 pause
 goto menu
