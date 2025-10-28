@@ -1,2 +1,0 @@
-[fix-verify-command 6620c9e] Fix /verify command: Add platform dropdown selection menu
- 1 file changed, 125 insertions(+), 56 deletions(-)

@@ -1,6 +1,0 @@
-remote: 
-remote: Create a pull request for 'fix-verify-command' on GitHub by visiting:        
-remote:      https://github.com/MalaKiiTV/MalaBoT/pull/new/fix-verify-command        
-remote: 
-To https://github.com/MalaKiiTV/MalaBoT.git
- * [new branch]      fix-verify-command -> fix-verify-command
