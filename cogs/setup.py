@@ -16,43 +16,10 @@ from config.constants import COLORS
 
 
 # ============================================================
-# COMMON TIMEZONE OPTIONS
-# ============================================================
-
-TIMEZONE_OPTIONS = [
-    discord.SelectOption(label="UTC-12 (Baker Island)", value="UTC-12"),
-    discord.SelectOption(label="UTC-11 (American Samoa)", value="UTC-11"),
-    discord.SelectOption(label="UTC-10 (Hawaii)", value="UTC-10"),
-    discord.SelectOption(label="UTC-9 (Alaska)", value="UTC-9"),
-    discord.SelectOption(label="UTC-8 (Pacific Time)", value="UTC-8"),
-    discord.SelectOption(label="UTC-7 (Mountain Time)", value="UTC-7"),
-    discord.SelectOption(label="UTC-6 (Central Time)", value="UTC-6"),
-    discord.SelectOption(label="UTC-5 (Eastern Time)", value="UTC-5"),
-    discord.SelectOption(label="UTC-4 (Atlantic Time)", value="UTC-4"),
-    discord.SelectOption(label="UTC-3 (Brazil)", value="UTC-3"),
-    discord.SelectOption(label="UTC-2 (Mid-Atlantic)", value="UTC-2"),
-    discord.SelectOption(label="UTC-1 (Azores)", value="UTC-1"),
-    discord.SelectOption(label="UTC+0 (London/GMT)", value="UTC+0"),
-    discord.SelectOption(label="UTC+1 (Paris/Berlin)", value="UTC+1"),
-    discord.SelectOption(label="UTC+2 (Cairo/Athens)", value="UTC+2"),
-    discord.SelectOption(label="UTC+3 (Moscow)", value="UTC+3"),
-    discord.SelectOption(label="UTC+4 (Dubai)", value="UTC+4"),
-    discord.SelectOption(label="UTC+5 (Pakistan)", value="UTC+5"),
-    discord.SelectOption(label="UTC+6 (Bangladesh)", value="UTC+6"),
-    discord.SelectOption(label="UTC+7 (Bangkok)", value="UTC+7"),
-    discord.SelectOption(label="UTC+8 (Singapore/Beijing)", value="UTC+8"),
-    discord.SelectOption(label="UTC+9 (Tokyo/Seoul)", value="UTC+9"),
-    discord.SelectOption(label="UTC+10 (Sydney)", value="UTC+10"),
-    discord.SelectOption(label="UTC+11 (Solomon Islands)", value="UTC+11"),
-    discord.SelectOption(label="UTC+12 (New Zealand)", value="UTC+12"),
-]
-
-
-# ============================================================
 # VERIFICATION SYSTEM COMPONENTS
 # ============================================================
 
-class VerifyChannelSelect(discord.ui.ChannelSelect):
+class ChannelSelect(discord.ui.ChannelSelect):
     """Channel selector for verification review channel"""
     def __init__(self, db_manager, guild_id: int):
         super().__init__(
@@ -95,7 +62,7 @@ class VerifyChannelSelect(discord.ui.ChannelSelect):
             )
 
 
-class VerifiedRoleSelect(discord.ui.RoleSelect):
+class RoleSelect(discord.ui.RoleSelect):
     """Role selector for verified role"""
     def __init__(self, db_manager, guild_id: int):
         super().__init__(
@@ -137,127 +104,56 @@ class VerifiedRoleSelect(discord.ui.RoleSelect):
             )
 
 
-class StaffRoleSelect(discord.ui.RoleSelect):
-    """Role selector for staff role (who can review verifications)"""
+class VerificationModRoleSelect(discord.ui.RoleSelect):
+    """Role selector for verification mod role"""
     def __init__(self, db_manager, guild_id: int):
         super().__init__(
-            placeholder="Select staff role...",
-            min_values=1,
+            placeholder="Select verification mod role (optional)...",
+            min_values=0,
             max_values=1
         )
         self.db = db_manager
         self.guild_id = guild_id
 
     async def callback(self, interaction: discord.Interaction):
+        if not self.values:
+            # Clear the role if none selected
+            await self.db.set_setting(f"verification_mod_role_{self.guild_id}", None)
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Verification Mod Role Cleared",
+                    "✅ Verification mod role has been cleared. General mod role will be used.",
+                    COLORS["success"],
+                ),
+                ephemeral=True,
+            )
+            return
+            
         role = self.values[0]
         try:
-            await self.db.set_setting(f"staff_role_{self.guild_id}", role.id)
+            await self.db.set_setting(f"verification_mod_role_{self.guild_id}", role.id)
             await self.db.log_event(
                 category="VERIFY",
-                action="CONFIG_STAFF_ROLE",
+                action="CONFIG_MOD_ROLE",
                 user_id=interaction.user.id,
-                details=f"Set staff role to {role.name}",
+                details=f"Set verification mod role to {role.name}",
                 guild_id=self.guild_id,
             )
             await interaction.response.send_message(
                 embed=create_embed(
-                    "Staff Role Set",
-                    f"✅ Only users with {role.mention} can review verifications",
+                    "Verification Mod Role Set",
+                    f"✅ Users with {role.mention} can review verifications\n\n"
+                    f"If not set, the general mod role will be used.",
                     COLORS["success"],
                 ),
                 ephemeral=True,
             )
         except Exception as e:
-            log_system(f"Error setting staff role: {e}", level="error")
+            log_system(f"Error setting verification mod role: {e}", level="error")
             await interaction.response.send_message(
                 embed=create_embed(
                     "Error",
-                    "Failed to set staff role. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
-
-
-class CheaterRoleSelect(discord.ui.RoleSelect):
-    """Role selector for cheater role"""
-    def __init__(self, db_manager, guild_id: int):
-        super().__init__(
-            placeholder="Select cheater role...",
-            min_values=1,
-            max_values=1
-        )
-        self.db = db_manager
-        self.guild_id = guild_id
-
-    async def callback(self, interaction: discord.Interaction):
-        role = self.values[0]
-        try:
-            await self.db.set_setting(f"cheater_role_{self.guild_id}", role.id)
-            await self.db.log_event(
-                category="VERIFY",
-                action="CONFIG_CHEATER_ROLE",
-                user_id=interaction.user.id,
-                details=f"Set cheater role to {role.name}",
-                guild_id=self.guild_id,
-            )
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Cheater Role Set",
-                    f"✅ Cheaters will be assigned {role.mention} and isolated",
-                    COLORS["success"],
-                ),
-                ephemeral=True,
-            )
-        except Exception as e:
-            log_system(f"Error setting cheater role: {e}", level="error")
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "Failed to set cheater role. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
-
-
-class CheaterChannelSelect(discord.ui.ChannelSelect):
-    """Channel selector for cheater jail channel"""
-    def __init__(self, db_manager, guild_id: int):
-        super().__init__(
-            placeholder="Select cheater jail channel...",
-            min_values=1,
-            max_values=1,
-            channel_types=[discord.ChannelType.text]
-        )
-        self.db = db_manager
-        self.guild_id = guild_id
-
-    async def callback(self, interaction: discord.Interaction):
-        channel = self.values[0]
-        try:
-            await self.db.set_setting(f"cheater_channel_{self.guild_id}", channel.id)
-            await self.db.log_event(
-                category="VERIFY",
-                action="SETUP_CHEATER_CHANNEL",
-                user_id=interaction.user.id,
-                details=f"Set cheater jail to #{channel.name}",
-                guild_id=self.guild_id,
-            )
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Cheater Jail Set",
-                    f"✅ Cheaters will be sent to {channel.mention}",
-                    COLORS["success"],
-                ),
-                ephemeral=True,
-            )
-        except Exception as e:
-            log_system(f"Error setting cheater jail: {e}", level="error")
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "Failed to set cheater jail. Please try again.",
+                    "Failed to set verification mod role. Please try again.",
                     COLORS["error"],
                 ),
                 ephemeral=True,
@@ -271,229 +167,47 @@ class VerificationSetupView(View):
         self.db = db_manager
         self.guild = guild
         
-        # Add all selectors
-        self.add_item(VerifyChannelSelect(db_manager, guild.id))
-        self.add_item(VerifiedRoleSelect(db_manager, guild.id))
-        self.add_item(StaffRoleSelect(db_manager, guild.id))
-        self.add_item(CheaterRoleSelect(db_manager, guild.id))
-        self.add_item(CheaterChannelSelect(db_manager, guild.id))
+        # Add channel and role selects
+        self.add_item(ChannelSelect(db_manager, guild.id))
+        self.add_item(RoleSelect(db_manager, guild.id))
+        self.add_item(VerificationModRoleSelect(db_manager, guild.id))
 
+    @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
+    async def view_config(self, interaction: discord.Interaction, button: Button):
+        """View current verification configuration"""
+        verify_channel_id = await self.db.get_setting(f"verify_channel_{self.guild.id}")
+        verify_role_id = await self.db.get_setting(f"verify_role_{self.guild.id}")
 
-# ============================================================
-# BIRTHDAY SYSTEM COMPONENTS
-# ============================================================
+        config_text = ""
+        if verify_channel_id:
+            config_text += f"**Review Channel:** <#{verify_channel_id}>\n"
+        else:
+            config_text += "**Review Channel:** Not configured\n"
 
-class BirthdayRoleSelect(discord.ui.RoleSelect):
-    """Role selector for birthday role"""
-    def __init__(self, db_manager, guild_id: int):
-        super().__init__(
-            placeholder="Select birthday role...",
-            min_values=1,
-            max_values=1
+        if verify_role_id:
+            config_text += f"**Verified Role:** <@&{verify_role_id}>\n"
+        else:
+            config_text += "**Verified Role:** Not configured\n"
+
+        embed = discord.Embed(
+            title="Current Verification Configuration",
+            description=config_text,
+            color=COLORS["info"],
         )
-        self.db = db_manager
-        self.guild_id = guild_id
-
-    async def callback(self, interaction: discord.Interaction):
-        role = self.values[0]
-        try:
-            await self.db.set_setting(f"birthday_role_{self.guild_id}", role.id)
-            await self.db.log_event(
-                category="BIRTHDAY",
-                action="CONFIG_ROLE",
-                user_id=interaction.user.id,
-                details=f"Set birthday role to {role.name}",
-                guild_id=self.guild_id,
-            )
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Birthday Role Set",
-                    f"✅ Users will receive {role.mention} on their birthday",
-                    COLORS["success"],
-                ),
-                ephemeral=True,
-            )
-        except Exception as e:
-            log_system(f"Error setting birthday role: {e}", level="error")
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "Failed to set birthday role. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
-
-
-class BirthdayChannelSelect(discord.ui.ChannelSelect):
-    """Channel selector for birthday announcements"""
-    def __init__(self, db_manager, guild_id: int):
-        super().__init__(
-            placeholder="Select birthday announcement channel...",
-            min_values=1,
-            max_values=1,
-            channel_types=[discord.ChannelType.text]
-        )
-        self.db = db_manager
-        self.guild_id = guild_id
-
-    async def callback(self, interaction: discord.Interaction):
-        channel = self.values[0]
-        try:
-            await self.db.set_setting(f"birthday_channel_{self.guild_id}", channel.id)
-            await self.db.log_event(
-                category="BIRTHDAY",
-                action="SETUP_CHANNEL",
-                user_id=interaction.user.id,
-                details=f"Set birthday channel to #{channel.name}",
-                guild_id=self.guild_id,
-            )
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Birthday Channel Set",
-                    f"✅ Birthday announcements will be posted to {channel.mention}",
-                    COLORS["success"],
-                ),
-                ephemeral=True,
-            )
-        except Exception as e:
-            log_system(f"Error setting birthday channel: {e}", level="error")
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "Failed to set birthday channel. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
-
-
-class BirthdayTimeSelect(Select):
-    """Time selector for birthday announcements"""
-    def __init__(self, db_manager, guild_id: int):
-        options = [
-            discord.SelectOption(label="12:00 AM (Midnight)", value="00:00"),
-            discord.SelectOption(label="1:00 AM", value="01:00"),
-            discord.SelectOption(label="2:00 AM", value="02:00"),
-            discord.SelectOption(label="3:00 AM", value="03:00"),
-            discord.SelectOption(label="4:00 AM", value="04:00"),
-            discord.SelectOption(label="5:00 AM", value="05:00"),
-            discord.SelectOption(label="6:00 AM", value="06:00"),
-            discord.SelectOption(label="7:00 AM", value="07:00"),
-            discord.SelectOption(label="8:00 AM", value="08:00"),
-            discord.SelectOption(label="9:00 AM", value="09:00"),
-            discord.SelectOption(label="10:00 AM", value="10:00"),
-            discord.SelectOption(label="11:00 AM", value="11:00"),
-            discord.SelectOption(label="12:00 PM (Noon)", value="12:00"),
-            discord.SelectOption(label="1:00 PM", value="13:00"),
-            discord.SelectOption(label="2:00 PM", value="14:00"),
-            discord.SelectOption(label="3:00 PM", value="15:00"),
-            discord.SelectOption(label="4:00 PM", value="16:00"),
-            discord.SelectOption(label="5:00 PM", value="17:00"),
-            discord.SelectOption(label="6:00 PM", value="18:00"),
-            discord.SelectOption(label="7:00 PM", value="19:00"),
-            discord.SelectOption(label="8:00 PM", value="20:00"),
-            discord.SelectOption(label="9:00 PM", value="21:00"),
-            discord.SelectOption(label="10:00 PM", value="22:00"),
-            discord.SelectOption(label="11:00 PM", value="23:00"),
-        ]
-        super().__init__(
-            placeholder="Select announcement time...",
-            min_values=1,
-            max_values=1,
-            options=options
-        )
-        self.db = db_manager
-        self.guild_id = guild_id
-
-    async def callback(self, interaction: discord.Interaction):
-        time = self.values[0]
-        try:
-            await self.db.set_setting(f"birthday_time_{self.guild_id}", time)
-            await self.db.log_event(
-                category="BIRTHDAY",
-                action="SET_TIME",
-                user_id=interaction.user.id,
-                details=f"Set birthday announcement time to {time}",
-                guild_id=self.guild_id,
-            )
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Birthday Time Set",
-                    f"✅ Birthday announcements will be posted at **{time}** (server timezone)",
-                    COLORS["success"],
-                ),
-                ephemeral=True,
-            )
-        except Exception as e:
-            log_system(f"Error setting birthday time: {e}", level="error")
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "Failed to set birthday time. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
-
-
-class BirthdaySetupView(View):
-    """View for birthday system setup"""
-    def __init__(self, db_manager, guild: discord.Guild):
-        super().__init__(timeout=300)
-        self.db = db_manager
-        self.guild = guild
-        
-        # Add all selectors
-        self.add_item(BirthdayChannelSelect(db_manager, guild.id))
-        self.add_item(BirthdayRoleSelect(db_manager, guild.id))
-        self.add_item(BirthdayTimeSelect(db_manager, guild.id))
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 # ============================================================
-# XP SYSTEM COMPONENTS
+# GENERAL SETTINGS COMPONENTS
 # ============================================================
 
-class XPAmountModal(Modal, title="Configure XP Amounts"):
-    """Modal for setting XP amounts"""
-    message_xp = TextInput(
-        label="XP per Message",
-        placeholder="e.g., 10",
+class TimezoneModal(Modal, title="Set Timezone"):
+    """Modal for setting server timezone"""
+    timezone = TextInput(
+        label="Timezone",
+        placeholder="e.g., UTC-6, America/New_York, Europe/London",
         required=True,
-        max_length=5,
-        default="10"
-    )
-    
-    voice_xp = TextInput(
-        label="XP per Minute in Voice",
-        placeholder="e.g., 5",
-        required=True,
-        max_length=5,
-        default="5"
-    )
-    
-    reaction_xp = TextInput(
-        label="XP per Reaction Received",
-        placeholder="e.g., 2",
-        required=True,
-        max_length=5,
-        default="2"
-    )
-    
-    command_xp = TextInput(
-        label="XP per Command Used",
-        placeholder="e.g., 3",
-        required=True,
-        max_length=5,
-        default="3"
-    )
-    
-    daily_bonus = TextInput(
-        label="Daily Bonus XP",
-        placeholder="e.g., 50",
-        required=True,
-        max_length=5,
-        default="50"
+        max_length=50,
     )
 
     def __init__(self, db_manager, guild_id: int):
@@ -503,107 +217,18 @@ class XPAmountModal(Modal, title="Configure XP Amounts"):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            # Validate inputs are numbers
-            message_xp = int(self.message_xp.value)
-            voice_xp = int(self.voice_xp.value)
-            reaction_xp = int(self.reaction_xp.value)
-            command_xp = int(self.command_xp.value)
-            daily_bonus = int(self.daily_bonus.value)
-            
-            # Store settings
-            await self.db.set_setting(f"xp_message_{self.guild_id}", message_xp)
-            await self.db.set_setting(f"xp_voice_{self.guild_id}", voice_xp)
-            await self.db.set_setting(f"xp_reaction_{self.guild_id}", reaction_xp)
-            await self.db.set_setting(f"xp_command_{self.guild_id}", command_xp)
-            await self.db.set_setting(f"xp_daily_{self.guild_id}", daily_bonus)
-            
-            await self.db.log_event(
-                category="XP",
-                action="CONFIG_AMOUNTS",
-                user_id=interaction.user.id,
-                details=f"Set XP amounts: msg={message_xp}, voice={voice_xp}, reaction={reaction_xp}, cmd={command_xp}, daily={daily_bonus}",
-                guild_id=self.guild_id,
-            )
-            
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "XP Amounts Configured",
-                    f"✅ XP amounts set:\n"
-                    f"• Messages: **{message_xp} XP**\n"
-                    f"• Voice (per minute): **{voice_xp} XP**\n"
-                    f"• Reactions: **{reaction_xp} XP**\n"
-                    f"• Commands: **{command_xp} XP**\n"
-                    f"• Daily Bonus: **{daily_bonus} XP**",
-                    COLORS["success"],
-                ),
-                ephemeral=True,
-            )
-        except ValueError:
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "All XP amounts must be valid numbers. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
-        except Exception as e:
-            log_system(f"Error setting XP amounts: {e}", level="error")
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "Failed to set XP amounts. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
-
-
-class XPSetupView(View):
-    """View for XP system setup"""
-    def __init__(self, db_manager, guild_id: int):
-        super().__init__(timeout=300)
-        self.db = db_manager
-        self.guild_id = guild_id
-
-    @discord.ui.button(label="Configure XP Amounts", style=discord.ButtonStyle.primary, emoji="⚙️")
-    async def configure_xp(self, interaction: discord.Interaction, button: Button):
-        """Configure XP amounts"""
-        modal = XPAmountModal(self.db, self.guild_id)
-        await interaction.response.send_modal(modal)
-
-
-# ============================================================
-# GENERAL SETTINGS COMPONENTS
-# ============================================================
-
-class TimezoneSelect(Select):
-    """Timezone selector dropdown"""
-    def __init__(self, db_manager, guild_id: int):
-        super().__init__(
-            placeholder="Select your timezone...",
-            min_values=1,
-            max_values=1,
-            options=TIMEZONE_OPTIONS
-        )
-        self.db = db_manager
-        self.guild_id = guild_id
-
-    async def callback(self, interaction: discord.Interaction):
-        timezone = self.values[0]
-        try:
-            await self.db.set_setting(f"timezone_{self.guild_id}", timezone)
+            await self.db.set_setting(f"timezone_{self.guild_id}", self.timezone.value)
             await self.db.log_event(
                 category="SETTINGS",
                 action="SET_TIMEZONE",
                 user_id=interaction.user.id,
-                details=f"Set timezone to {timezone}",
+                details=f"Set timezone to {self.timezone.value}",
                 guild_id=self.guild_id,
             )
             await interaction.response.send_message(
                 embed=create_embed(
                     "Timezone Set",
-                    f"✅ Server timezone set to **{timezone}**\n\nThis affects birthday announcements and scheduled tasks.",
+                    f"✅ Server timezone set to **{self.timezone.value}**\n\nThis affects birthday announcements and scheduled tasks.",
                     COLORS["success"],
                 ),
                 ephemeral=True,
@@ -614,49 +239,6 @@ class TimezoneSelect(Select):
                 embed=create_embed(
                     "Error",
                     "Failed to set timezone. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
-
-
-class OnlineMessageChannelSelect(discord.ui.ChannelSelect):
-    """Channel selector for online message"""
-    def __init__(self, db_manager, guild_id: int):
-        super().__init__(
-            placeholder="Select channel for online message...",
-            min_values=1,
-            max_values=1,
-            channel_types=[discord.ChannelType.text]
-        )
-        self.db = db_manager
-        self.guild_id = guild_id
-
-    async def callback(self, interaction: discord.Interaction):
-        channel = self.values[0]
-        try:
-            await self.db.set_setting(f"online_channel_{self.guild_id}", channel.id)
-            await self.db.log_event(
-                category="SETTINGS",
-                action="SET_ONLINE_CHANNEL",
-                user_id=interaction.user.id,
-                details=f"Set online message channel to #{channel.name}",
-                guild_id=self.guild_id,
-            )
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Online Message Channel Set",
-                    f"✅ Bot online messages will be posted to {channel.mention}\n\nNow set the message text using the button below.",
-                    COLORS["success"],
-                ),
-                ephemeral=True,
-            )
-        except Exception as e:
-            log_system(f"Error setting online channel: {e}", level="error")
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "Failed to set online channel. Please try again.",
                     COLORS["error"],
                 ),
                 ephemeral=True,
@@ -708,72 +290,76 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
             )
 
 
-class GeneralStaffRoleSelect(discord.ui.RoleSelect):
-    """Role selector for staff role (global setting)"""
-    def __init__(self, db_manager, guild_id: int):
-        super().__init__(
-            placeholder="Select staff role...",
-            min_values=1,
-            max_values=1
-        )
-        self.db = db_manager
-        self.guild_id = guild_id
-
-    async def callback(self, interaction: discord.Interaction):
-        role = self.values[0]
-        try:
-            await self.db.set_setting(f"staff_role_{self.guild_id}", role.id)
-            await self.db.log_event(
-                category="SETTINGS",
-                action="SET_STAFF_ROLE",
-                user_id=interaction.user.id,
-                details=f"Set staff role to {role.name}",
-                guild_id=self.guild_id,
-            )
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Staff Role Set",
-                    f"✅ Staff role set to {role.mention}\n\n"
-                    f"Users with this role can:\n"
-                    f"• Review verifications (`/verify review`)\n"
-                    f"• Review appeals (`/appeal review`)\n"
-                    f"• Use moderation commands\n"
-                    f"• Manage XP (`/xpadd`, `/xpremove`, etc.)",
-                    COLORS["success"],
-                ),
-                ephemeral=True,
-            )
-        except Exception as e:
-            log_system(f"Error setting staff role: {e}", level="error")
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "Failed to set staff role. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
-
-
 class GeneralSettingsView(View):
-    """View for general settings"""
+    """View for general settings setup"""
     def __init__(self, db_manager, guild_id: int):
         super().__init__(timeout=300)
         self.db = db_manager
         self.guild_id = guild_id
-        
-        # Add timezone selector
-        self.add_item(TimezoneSelect(db_manager, guild_id))
-        # Add online message channel selector
-        self.add_item(OnlineMessageChannelSelect(db_manager, guild_id))
-        # Add staff role selector
-        self.add_item(GeneralStaffRoleSelect(db_manager, guild_id))
 
-    @discord.ui.button(label="Set Online Message Text", style=discord.ButtonStyle.primary, emoji="💬")
+    @discord.ui.button(label="Set Timezone", style=discord.ButtonStyle.primary, emoji="🌍")
+    async def set_timezone(self, interaction: discord.Interaction, button: Button):
+        """Set server timezone"""
+        modal = TimezoneModal(self.db, self.guild_id)
+        await interaction.response.send_modal(modal)
+
+    @discord.ui.button(label="Set Online Message", style=discord.ButtonStyle.primary, emoji="💬")
     async def set_online_message(self, interaction: discord.Interaction, button: Button):
-        """Set bot online message text"""
+        """Set bot online message"""
         modal = OnlineMessageModal(self.db, self.guild_id)
         await interaction.response.send_modal(modal)
+
+    @discord.ui.button(label="Set Mod Role", style=discord.ButtonStyle.primary, emoji="🛡️")
+    async def set_mod_role(self, interaction: discord.Interaction, button: Button):
+        """Set mod role for command permissions"""
+        select = RoleSelect(
+            placeholder="Select the mod role...",
+            min_values=1,
+            max_values=1
+        )
+        
+        async def role_callback(interaction: discord.Interaction):
+            role = select.values[0]
+            await self.db.set_setting(f"mod_role_{self.guild_id}", str(role.id))
+            
+            embed = discord.Embed(
+                title="✅ Mod Role Set",
+                description=f"Mod role has been set to {role.mention}\n\n"
+                           f"Users with this role can use moderation commands, verify users, review appeals, and manage XP.",
+                color=COLORS["success"],
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        select.callback = role_callback
+        view = View(timeout=60)
+        view.add_item(select)
+        
+        embed = discord.Embed(
+            title="🛡️ Select Mod Role",
+            description="Choose the role that will have moderator permissions for bot commands.",
+            color=COLORS["primary"],
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+    @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
+    async def view_config(self, interaction: discord.Interaction, button: Button):
+        """View current general settings"""
+        timezone = await self.db.get_setting(f"timezone_{self.guild_id}", "UTC-6")
+        online_message = await self.db.get_setting(f"online_message_{self.guild_id}", "Not set")
+        mod_role_id = await self.db.get_setting(f"mod_role_{self.guild_id}")
+        
+        mod_role_text = "Not set"
+        if mod_role_id:
+            mod_role_text = f"<@&amp;{mod_role_id}>"
+
+        config_text = f"**Timezone:** {timezone}\n**Online Message:** {online_message}\n**Mod Role:** {mod_role_text}"
+
+        embed = discord.Embed(
+            title="Current General Settings",
+            description=config_text,
+            color=COLORS["info"],
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 # ============================================================
@@ -853,10 +439,7 @@ class SetupSelect(Select):
                 "Configure your verification system using the dropdowns below:\n\n"
                 "**Required Settings:**\n"
                 "• Review Channel - Where staff sees verification submissions\n"
-                "• Verified Role - Role assigned when user is verified\n"
-                "• Staff Role - Who can review verifications\n"
-                "• Cheater Role - Role assigned to cheaters\n"
-                "• Cheater Jail - Channel where cheaters are isolated\n\n"
+                "• Verified Role - Role assigned when user is verified\n\n"
                 "**User Workflow:**\n"
                 "1. User runs `/verify submit`\n"
                 "2. Enters Activision ID in modal\n"
@@ -865,7 +448,7 @@ class SetupSelect(Select):
                 "5. Staff reviews with `/verify review @user verified/cheater/unverified`\n\n"
                 "**Review Decisions:**\n"
                 "• Verified - Assigns verified role\n"
-                "• Cheater - Assigns cheater role and isolates to jail\n"
+                "• Cheater - Bans user from server\n"
                 "• Unverified - Leaves user unverified"
             ),
             color=COLORS["info"],
@@ -895,18 +478,15 @@ class SetupSelect(Select):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     async def setup_birthday(self, interaction: discord.Interaction):
-        """Setup birthday system with interactive configuration"""
-        view = BirthdaySetupView(interaction.client.db_manager, interaction.guild)
-        
+        """Setup birthday system"""
         embed = discord.Embed(
             title="🎂 Birthday System Setup",
             description=(
-                "Configure your birthday system using the dropdowns below:\n\n"
-                "**Required Settings:**\n"
-                "• Birthday Channel - Where announcements are posted\n"
-                "• Birthday Role - Role given on user's birthday\n"
-                "• Announcement Time - What time to post announcements\n\n"
-                "**Note:** Timezone must be configured in General Settings first!\n\n"
+                "Configure your birthday system:\n\n"
+                "**Commands to use:**\n"
+                "`/bday setchannel #channel` - Set birthday announcement channel\n"
+                "`/bday setposttime <time>` - Set announcement time (e.g., 08:00 AM)\n"
+                "`/settimezone <timezone>` - Set server timezone (e.g., UTC-6)\n\n"
                 "**User Commands:**\n"
                 "`/bday set <MM-DD>` - Users set their birthday\n"
                 "`/bday view [@user]` - View birthday\n"
@@ -915,35 +495,31 @@ class SetupSelect(Select):
             ),
             color=COLORS["birthday"],
         )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
     async def setup_xp(self, interaction: discord.Interaction):
-        """Setup XP system with interactive configuration"""
-        view = XPSetupView(interaction.client.db_manager, interaction.guild.id)
-        
+        """Setup XP system"""
         embed = discord.Embed(
             title="🏆 XP System Setup",
             description=(
-                "Configure your XP system using the button below:\n\n"
-                "**Configurable XP Amounts:**\n"
-                "• XP per Message\n"
-                "• XP per Minute in Voice Chat\n"
-                "• XP per Reaction Received\n"
-                "• XP per Command Used\n"
-                "• Daily Bonus XP\n\n"
-                "**User Commands:**\n"
-                "`/xp rank [@user]` - View XP rank\n"
-                "`/xp leaderboard` - View server leaderboard\n"
-                "`/xp daily` - Claim daily XP bonus\n\n"
+                "Configure your XP system:\n\n"
                 "**Admin Commands:**\n"
                 "`/xpadmin add @user <amount>` - Add XP to user\n"
                 "`/xpadmin remove @user <amount>` - Remove XP from user\n"
                 "`/xpadmin set @user <amount>` - Set user's XP\n"
-                "`/xpadmin reset @user` - Reset user's XP"
+                "`/xpadmin reset @user` - Reset user's XP\n\n"
+                "**User Commands:**\n"
+                "`/xp rank [@user]` - View XP rank\n"
+                "`/xp leaderboard` - View server leaderboard\n"
+                "`/xp daily` - Claim daily XP bonus\n\n"
+                "**XP Settings:**\n"
+                "• Users gain 5-15 XP per message\n"
+                "• 60 second cooldown between XP gains\n"
+                "• Daily check-in: 50 XP + streak bonus"
             ),
             color=COLORS["xp"],
         )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
     async def setup_general(self, interaction: discord.Interaction):
         """Setup general settings with interactive configuration"""
@@ -952,13 +528,12 @@ class SetupSelect(Select):
         embed = discord.Embed(
             title="⚙️ General Settings Setup",
             description=(
-                "Configure general bot settings using the dropdowns and buttons below:\n\n"
+                "Configure general bot settings using the buttons below:\n\n"
                 "**Available Settings:**\n"
                 "• **Timezone** - Affects birthday announcements and scheduled tasks\n"
-                "• **Online Message Channel** - Where bot posts when coming online\n"
-                "• **Online Message Text** - Message sent when bot comes online\n"
-                "• **Staff Role** - Role that can use moderation and verification commands\n\n"
-                "Select options from the dropdowns and use the button to configure."
+                "• **Bot Online Message** - Message sent when bot comes online\n"
+                "• **Mod Role** - Role that can use moderation commands\n\n"
+                "Click the buttons below to configure each setting."
             ),
             color=COLORS["primary"],
         )
@@ -973,23 +548,10 @@ class SetupSelect(Select):
         # Fetch all settings
         verify_channel_id = await db.get_setting(f"verify_channel_{guild_id}")
         verify_role_id = await db.get_setting(f"verify_role_{guild_id}")
-        staff_role_id = await db.get_setting(f"staff_role_{guild_id}")
-        cheater_role_id = await db.get_setting(f"cheater_role_{guild_id}")
-        cheater_channel_id = await db.get_setting(f"cheater_channel_{guild_id}")
         welcome_channel_id = await db.get_setting(f"welcome_channel_{guild_id}")
         birthday_channel_id = await db.get_setting(f"birthday_channel_{guild_id}")
-        birthday_role_id = await db.get_setting(f"birthday_role_{guild_id}")
-        birthday_time = await db.get_setting(f"birthday_time_{guild_id}", "08:00")
         timezone = await db.get_setting(f"timezone_{guild_id}", "UTC-6")
-        online_channel_id = await db.get_setting(f"online_channel_{guild_id}")
         online_message = await db.get_setting(f"online_message_{guild_id}", "Not set")
-        
-        # XP settings
-        message_xp = await db.get_setting(f"xp_message_{guild_id}", 10)
-        voice_xp = await db.get_setting(f"xp_voice_{guild_id}", 5)
-        reaction_xp = await db.get_setting(f"xp_reaction_{guild_id}", 2)
-        command_xp = await db.get_setting(f"xp_command_{guild_id}", 3)
-        daily_bonus = await db.get_setting(f"xp_daily_{guild_id}", 50)
 
         embed = discord.Embed(
             title="📋 Current Bot Configuration",
@@ -1002,13 +564,7 @@ class SetupSelect(Select):
         if verify_channel_id:
             verify_text += f"Review Channel: <#{verify_channel_id}>\n"
         if verify_role_id:
-            verify_text += f"Verified Role: <@&amp;{verify_role_id}>\n"
-        if staff_role_id:
-            verify_text += f"Staff Role: <@&amp;{staff_role_id}>\n"
-        if cheater_role_id:
-            verify_text += f"Cheater Role: <@&amp;{cheater_role_id}>\n"
-        if cheater_channel_id:
-            verify_text += f"Cheater Jail: <#{cheater_channel_id}>\n"
+            verify_text += f"Verified Role: <@&{verify_role_id}>\n"
         if not verify_text:
             verify_text = "Not configured"
         embed.add_field(name="✅ Verification", value=verify_text, inline=False)
@@ -1025,28 +581,12 @@ class SetupSelect(Select):
         birthday_text = ""
         if birthday_channel_id:
             birthday_text += f"Channel: <#{birthday_channel_id}>\n"
-        if birthday_role_id:
-            birthday_text += f"Role: <@&amp;{birthday_role_id}>\n"
-        birthday_text += f"Time: {birthday_time}\n"
-        if not birthday_channel_id and not birthday_role_id:
+        else:
             birthday_text = "Not configured"
         embed.add_field(name="🎂 Birthday", value=birthday_text, inline=False)
 
-        # XP settings
-        xp_text = (
-            f"Messages: {message_xp} XP\n"
-            f"Voice: {voice_xp} XP/min\n"
-            f"Reactions: {reaction_xp} XP\n"
-            f"Commands: {command_xp} XP\n"
-            f"Daily: {daily_bonus} XP"
-        )
-        embed.add_field(name="🏆 XP System", value=xp_text, inline=False)
-
         # General settings
-        general_text = f"Timezone: {timezone}\n"
-        if online_channel_id:
-            general_text += f"Online Channel: <#{online_channel_id}>\n"
-        general_text += f"Online Message: {online_message}"
+        general_text = f"Timezone: {timezone}\nOnline Message: {online_message}"
         embed.add_field(name="⚙️ General", value=general_text, inline=False)
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -1063,10 +603,19 @@ class Setup(commands.Cog):
         self.bot = bot
         self.db = bot.db_manager
 
-    @app_commands.command(name="setup", description="Configure bot settings (admin only)")
-    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.command(name="setup", description="Configure bot settings (owner only)")
     async def setup(self, interaction: discord.Interaction):
         """Main setup command with interactive menu"""
+        # Check if user is owner
+        from utils.helpers import is_owner
+        if not is_owner(interaction.user):
+            embed = discord.Embed(
+                title="🚫 Permission Denied",
+                description="This command is only available to bot owners.",
+                color=COLORS["error"],
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
         embed = discord.Embed(
             title="🤖 MalaBoT Setup",
             description=(

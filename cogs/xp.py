@@ -14,7 +14,7 @@ from typing import Optional
 from utils.logger import get_logger
 from utils.helpers import (
     embed_helper, xp_helper, time_helper, cooldown_helper,
-    create_embed, is_admin, is_owner, permission_helper
+    create_embed, is_owner, permission_helper, check_mod_permission
 )
 from config.constants import COLORS, XP_TABLE, XP_PER_MESSAGE_MIN, XP_PER_MESSAGE_MAX, XP_COOLDOWN_SECONDS, DAILY_CHECKIN_XP, STREAK_BONUS_PERCENT
 from config.settings import settings
@@ -308,15 +308,8 @@ class XP(commands.Cog):
     async def xpadd(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Add XP to a user."""
         try:
-            # Check permissions (staff role or admin)
-            from utils.helpers import is_staff
-            has_staff = await is_staff(interaction, self.db)
-            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user) or has_staff):
-                embed = embed_helper.error_embed(
-                    title="Permission Denied",
-                    description="This command requires Administrator permission or Staff role."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+            # Check mod permissions
+            if not await check_mod_permission(interaction, self.bot.db_manager):
                 return
             
             await self._xpadmin_add(interaction, user, amount)
@@ -332,15 +325,8 @@ class XP(commands.Cog):
     async def xpremove(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Remove XP from a user."""
         try:
-            # Check permissions (staff role or admin)
-            from utils.helpers import is_staff
-            has_staff = await is_staff(interaction, self.db)
-            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user) or has_staff):
-                embed = embed_helper.error_embed(
-                    title="Permission Denied",
-                    description="This command requires Administrator permission or Staff role."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+            # Check mod permissions
+            if not await check_mod_permission(interaction, self.bot.db_manager):
                 return
             
             await self._xpadmin_remove(interaction, user, amount)
@@ -356,15 +342,8 @@ class XP(commands.Cog):
     async def xpset(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Set user XP to a specific amount."""
         try:
-            # Check permissions (staff role or admin)
-            from utils.helpers import is_staff
-            has_staff = await is_staff(interaction, self.db)
-            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user) or has_staff):
-                embed = embed_helper.error_embed(
-                    title="Permission Denied",
-                    description="This command requires Administrator permission or Staff role."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+            # Check mod permissions
+            if not await check_mod_permission(interaction, self.bot.db_manager):
                 return
             
             await self._xpadmin_set(interaction, user, amount)
@@ -379,15 +358,8 @@ class XP(commands.Cog):
     async def xpreset(self, interaction: discord.Interaction, user: discord.Member):
         """Reset user XP to 0."""
         try:
-            # Check permissions (staff role or admin)
-            from utils.helpers import is_staff
-            has_staff = await is_staff(interaction, self.db)
-            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user) or has_staff):
-                embed = embed_helper.error_embed(
-                    title="Permission Denied",
-                    description="This command requires Administrator permission or Staff role."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+            # Check mod permissions
+            if not await check_mod_permission(interaction, self.bot.db_manager):
                 return
             
             await self._xpadmin_reset(interaction, user)
@@ -411,15 +383,8 @@ class XP(commands.Cog):
     async def xpconfig(self, interaction: discord.Interaction, setting: str = None, value: int = None):
         """Configure XP settings."""
         try:
-            # Check permissions (staff role or admin)
-            from utils.helpers import is_staff
-            has_staff = await is_staff(interaction, self.db)
-            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user) or has_staff):
-                embed = embed_helper.error_embed(
-                    title="Permission Denied",
-                    description="This command requires Administrator permission or Staff role."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+            # Check mod permissions
+            if not await check_mod_permission(interaction, self.bot.db_manager):
                 return
             
             from config.constants import (

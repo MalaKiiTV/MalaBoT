@@ -135,57 +135,6 @@ class PermissionHelper:
     def is_admin(member: discord.Member) -> bool:
         """Check if member has administrator permissions."""
         return member.guild_permissions.administrator
-    
-    @staticmethod
-    async def is_staff(interaction: discord.Interaction, db_manager) -> bool:
-        """
-        Check if user has staff role or admin permissions.
-        Admins always have staff permissions.
-        """
-        # Check admin first (admins bypass staff role requirement)
-        if interaction.user.guild_permissions.administrator:
-            return True
-        
-        # Check staff role
-        guild_id = interaction.guild.id
-        staff_role_id = await db_manager.get_setting(f"staff_role_{guild_id}")
-        
-        if staff_role_id:
-            staff_role = interaction.guild.get_role(int(staff_role_id))
-            if staff_role and staff_role in interaction.user.roles:
-                return True
-        
-        return False
-    
-    @staticmethod
-    async def check_staff_permission(interaction: discord.Interaction, db_manager) -> bool:
-        """
-        Check staff permission and send error message if user lacks permission.
-        Returns True if user has permission, False otherwise.
-        """
-        if await PermissionHelper.is_staff(interaction, db_manager):
-            return True
-        
-        # Get staff role for error message
-        guild_id = interaction.guild.id
-        staff_role_id = await db_manager.get_setting(f"staff_role_{guild_id}")
-        
-        if staff_role_id:
-            staff_role = interaction.guild.get_role(int(staff_role_id))
-            role_mention = staff_role.mention if staff_role else "the configured staff role"
-            error_msg = f"❌ You need {role_mention} or Administrator permission to use this command."
-        else:
-            error_msg = "❌ You need Administrator permission to use this command.\n\n**Tip:** Configure a staff role in `/setup` → General Settings"
-        
-        await interaction.response.send_message(
-            embed=create_embed(
-                "Permission Denied",
-                error_msg,
-                COLORS["error"],
-            ),
-            ephemeral=True,
-        )
-        return False
 
 class XPHelper:
     """Helper class for XP-related operations."""
@@ -368,14 +317,93 @@ def is_owner(user: discord.User) -> bool:
 def is_admin(member: discord.Member) -> bool:
     return permission_helper.is_admin(member)
 
-async def is_staff(interaction: discord.Interaction, db_manager) -> bool:
-    return await permission_helper.is_staff(interaction, db_manager)
-
-async def check_staff_permission(interaction: discord.Interaction, db_manager) -> bool:
-    return await permission_helper.check_staff_permission(interaction, db_manager)
-
 def get_system_info() -> Dict[str, Any]:
     return system_helper.get_system_info()
+
+async def is_mod(interaction: discord.Interaction, db_manager, specific_mod_role_key: str = None) -> bool:
+    """
+    Check if user has mod permissions.
+    
+    Args:
+        interaction: The Discord interaction
+        db_manager: Database manager instance
+        specific_mod_role_key: Optional specific mod role key (e.g., 'verification_mod_role')
+                               If provided, checks this role first, then falls back to general mod role
+    
+    Returns:
+        bool: True if user is owner or has mod role
+    """
+    # Owner always has access
+    if is_owner(interaction.user):
+        return True
+    
+    guild_id = interaction.guild_id
+    if not guild_id:
+        return False
+    
+    # Check specific mod role first if provided
+    if specific_mod_role_key:
+        specific_role_id = await db_manager.get_setting(f"{specific_mod_role_key}_{guild_id}")
+        if specific_role_id:
+            specific_role = interaction.guild.get_role(int(specific_role_id))
+            if specific_role and specific_role in interaction.user.roles:
+                return True
+    
+    # Fall back to general mod role
+    mod_role_id = await db_manager.get_setting(f"mod_role_{guild_id}")
+    if not mod_role_id:
+        return False
+    
+    mod_role = interaction.guild.get_role(int(mod_role_id))
+    if not mod_role:
+        return False
+    
+    return mod_role in interaction.user.roles
+
+async def check_mod_permission(interaction: discord.Interaction, db_manager, specific_mod_role_key: str = None) -> bool:
+    """
+    Check mod permission and send error message if denied.
+    
+    Args:
+        interaction: The Discord interaction
+        db_manager: Database manager instance
+        specific_mod_role_key: Optional specific mod role key
+    
+    Returns:
+        bool: True if user has permission, False otherwise (and sends error message)
+    """
+    if await is_mod(interaction, db_manager, specific_mod_role_key):
+        return True
+    
+    # Get role names for error message
+    role_names = []
+    guild_id = interaction.guild_id
+    
+    if specific_mod_role_key:
+        specific_role_id = await db_manager.get_setting(f"{specific_mod_role_key}_{guild_id}")
+        if specific_role_id:
+            specific_role = interaction.guild.get_role(int(specific_role_id))
+            if specific_role:
+                role_names.append(specific_role.name)
+    
+    mod_role_id = await db_manager.get_setting(f"mod_role_{guild_id}")
+    if mod_role_id:
+        mod_role = interaction.guild.get_role(int(mod_role_id))
+        if mod_role:
+            role_names.append(mod_role.name)
+    
+    role_list = "\n".join([f"• {name}" for name in role_names]) if role_names else "• No mod role configured"
+    
+    embed = embed_helper.error_embed(
+        title="🚫 Permission Denied",
+        description=f"This command is only available to:\n\n"
+                   f"• Bot Owners\n"
+                   f"• Users with mod role:\n{role_list}\n\n"
+                   f"Your current permissions:\n"
+                   f"• Bot Owner: {'✅' if is_owner(interaction.user) else '❌'}"
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+    return False
 
 async def safe_send_message(channel, content=None, embed=None, ephemeral=False, **kwargs):
     """Safely send a message to a channel with error handling."""
