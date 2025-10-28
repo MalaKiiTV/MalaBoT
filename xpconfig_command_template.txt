@@ -1,0 +1,78 @@
+
+# Add this command to cogs/xp.py:
+
+@app_commands.command(name="xpconfig", description="Configure XP settings for this server (Administrator only)")
+@app_commands.describe(
+    setting="Setting to configure",
+    value="New value for the setting"
+)
+@app_commands.choices(setting=[
+    app_commands.Choice(name="XP per message (min)", value="xp_min"),
+    app_commands.Choice(name="XP per message (max)", value="xp_max"),
+    app_commands.Choice(name="XP cooldown (seconds)", value="cooldown"),
+    app_commands.Choice(name="Daily bonus XP", value="daily_xp"),
+    app_commands.Choice(name="Streak bonus (%)", value="streak_bonus"),
+])
+async def xpconfig(self, interaction: discord.Interaction, setting: str, value: int):
+    """Configure XP settings for this server."""
+    try:
+        # Check permissions
+        if not interaction.user.guild_permissions.administrator:
+            embed = embed_helper.error_embed(
+                title="Permission Denied",
+                description="This command requires Administrator permission."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        # Validate value
+        if value < 0:
+            embed = embed_helper.error_embed(
+                title="Invalid Value",
+                description="Value must be positive."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        # Update server settings in database
+        conn = await self.bot.db_manager.get_connection()
+        
+        # Map setting to database column
+        column_map = {
+            "xp_min": "xp_per_message_min",
+            "xp_max": "xp_per_message_max",
+            "cooldown": "xp_cooldown_seconds",
+            "daily_xp": "daily_checkin_xp",
+            "streak_bonus": "streak_bonus_percent"
+        }
+        
+        column = column_map[setting]
+        
+        # Insert or update
+        await conn.execute(f"""
+            INSERT INTO server_settings (guild_id, {column})
+            VALUES (?, ?)
+            ON CONFLICT(guild_id) DO UPDATE SET {column} = ?, updated_at = CURRENT_TIMESTAMP
+        """, (interaction.guild.id, value, value))
+        await conn.commit()
+        
+        # Show success
+        setting_names = {
+            "xp_min": "Minimum XP per message",
+            "xp_max": "Maximum XP per message",
+            "cooldown": "XP cooldown",
+            "daily_xp": "Daily bonus XP",
+            "streak_bonus": "Streak bonus percentage"
+        }
+        
+        embed = embed_helper.success_embed(
+            title="XP Settings Updated",
+            description=f"**{setting_names[setting]}** has been set to **{value}**"
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        self.logger.info(f"Admin {interaction.user.name} updated {setting} to {value} in {interaction.guild.name}")
+        
+    except Exception as e:
+        self.logger.error(f"Error in xpconfig command: {e}")
+        await self._error_response(interaction, "Failed to update XP settings")

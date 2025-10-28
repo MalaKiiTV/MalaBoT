@@ -300,7 +300,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in daily command: {e}")
             await self._error_response(interaction, "Failed to claim daily bonus")
     
-    @app_commands.command(name="xpadmin", description="XP administration commands (Bot Owner only)")
+    @app_commands.command(name="xpadmin", description="XP administration commands (Administrator only)")
     @app_commands.describe(
         action="What action would you like to perform?",
         user="User to perform action on",
@@ -315,11 +315,11 @@ class XP(commands.Cog):
     async def xpadmin(self, interaction: discord.Interaction, action: str, user: discord.Member, amount: int = 0):
         """XP administration commands."""
         try:
-            # Check permissions
-            if not is_owner(interaction.user):
+            # Check permissions - Server Administrator or Bot Owner
+            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user)):
                 embed = embed_helper.error_embed(
                     title="Permission Denied",
-                    description="This command is only available to the bot owner."
+                    description="This command requires Administrator permission."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
