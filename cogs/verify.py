@@ -170,8 +170,8 @@ class VerifyGroup(app_commands.Group):
     ):
         try:
             # Check staff permission
-            from utils.helpers import check_staff_permission
-            if not await check_staff_permission(interaction, self.cog.db):
+from utils.helpers import check_mod_permission
+if not await check_mod_permission(interaction, self.cog.db, "verification_mod_role"):
                 return
 
             await interaction.response.defer(ephemeral=True, thinking=True)

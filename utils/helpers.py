@@ -429,3 +429,10 @@ async def safe_send_message(channel, content=None, embed=None, ephemeral=False, 
         # Any other errors
         print(f"Unexpected error when sending message: {e}")
         return None
+    async def is_staff(interaction: discord.Interaction, db_manager) -> bool:
+    """Check if user has staff permissions (alias for is_mod)."""
+    return await is_mod(interaction, db_manager)
+
+async def check_staff_permission(interaction: discord.Interaction, db_manager) -> bool:
+    """Check staff permission and send error message if denied."""
+    return await check_mod_permission(interaction, db_manager)

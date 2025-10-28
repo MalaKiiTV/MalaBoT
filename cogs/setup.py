@@ -312,7 +312,7 @@ class GeneralSettingsView(View):
     @discord.ui.button(label="Set Mod Role", style=discord.ButtonStyle.primary, emoji="🛡️")
     async def set_mod_role(self, interaction: discord.Interaction, button: Button):
         """Set mod role for command permissions"""
-        select = RoleSelect(
+        select = discord.ui.RoleSelect(
             placeholder="Select the mod role...",
             min_values=1,
             max_values=1
