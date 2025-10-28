@@ -7,12 +7,189 @@ Command: /setup
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord.ui import Select, View, Modal, TextInput
+from discord.ui import Select, View, Modal, TextInput, Button
 from typing import Optional
 
 from utils.helpers import create_embed, safe_send_message
 from utils.logger import log_system
 from config.constants import COLORS
+
+
+class VerificationSetupView(View):
+    def __init__(self, db_manager, guild_id: int):
+        super().__init__(timeout=300)
+        self.db = db_manager
+        self.guild_id = guild_id
+
+    @discord.ui.button(label="Set Review Channel", style=discord.ButtonStyle.primary, emoji="📋")
+    async def set_channel(self, interaction: discord.Interaction, button: Button):
+        """Set the review channel"""
+        modal = ReviewChannelModal(self.db, self.guild_id)
+        await interaction.response.send_modal(modal)
+
+    @discord.ui.button(label="Set Verified Role", style=discord.ButtonStyle.success, emoji="✅")
+    async def set_role(self, interaction: discord.Interaction, button: Button):
+        """Set the verified role"""
+        modal = VerifiedRoleModal(self.db, self.guild_id)
+        await interaction.response.send_modal(modal)
+
+    @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
+    async def view_config(self, interaction: discord.Interaction, button: Button):
+        """View current verification configuration"""
+        verify_channel_id = await self.db.get_setting(f"verify_channel_{self.guild_id}")
+        verify_role_id = await self.db.get_setting(f"verify_role_{self.guild_id}")
+
+        config_text = ""
+        if verify_channel_id:
+            config_text += f"**Review Channel:** <#{verify_channel_id}>\n"
+        else:
+            config_text += "**Review Channel:** Not configured\n"
+
+        if verify_role_id:
+            config_text += f"**Verified Role:** <@&{verify_role_id}>\n"
+        else:
+            config_text += "**Verified Role:** Not configured\n"
+
+        embed = discord.Embed(
+            title="Current Verification Configuration",
+            description=config_text,
+            color=COLORS["info"],
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+class ReviewChannelModal(Modal, title="Set Review Channel"):
+    channel_id = TextInput(
+        label="Channel ID",
+        placeholder="Right-click channel → Copy Channel ID",
+        required=True,
+        max_length=20,
+    )
+
+    def __init__(self, db_manager, guild_id: int):
+        super().__init__()
+        self.db = db_manager
+        self.guild_id = guild_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            channel_id = int(self.channel_id.value)
+            channel = interaction.guild.get_channel(channel_id)
+            
+            if not channel:
+                await interaction.response.send_message(
+                    embed=create_embed(
+                        "Error",
+                        "Channel not found. Make sure you copied the correct Channel ID.",
+                        COLORS["error"],
+                    ),
+                    ephemeral=True,
+                )
+                return
+
+            await self.db.set_setting(f"verify_channel_{self.guild_id}", channel_id)
+            await self.db.log_event(
+                category="VERIFY",
+                action="SETUP_CHANNEL",
+                user_id=interaction.user.id,
+                details=f"Set review channel to #{channel.name}",
+                guild_id=self.guild_id,
+            )
+
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Review Channel Set",
+                    f"✅ Verification submissions will be posted to {channel.mention}",
+                    COLORS["success"],
+                ),
+                ephemeral=True,
+            )
+        except ValueError:
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Error",
+                    "Invalid Channel ID. Please enter numbers only.",
+                    COLORS["error"],
+                ),
+                ephemeral=True,
+            )
+        except Exception as e:
+            log_system(f"Error setting review channel: {e}", level="error")
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Error",
+                    "Failed to set review channel. Please try again.",
+                    COLORS["error"],
+                ),
+                ephemeral=True,
+            )
+
+
+class VerifiedRoleModal(Modal, title="Set Verified Role"):
+    role_id = TextInput(
+        label="Role ID",
+        placeholder="Right-click role → Copy Role ID",
+        required=True,
+        max_length=20,
+    )
+
+    def __init__(self, db_manager, guild_id: int):
+        super().__init__()
+        self.db = db_manager
+        self.guild_id = guild_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            role_id = int(self.role_id.value)
+            role = interaction.guild.get_role(role_id)
+            
+            if not role:
+                await interaction.response.send_message(
+                    embed=create_embed(
+                        "Error",
+                        "Role not found. Make sure you copied the correct Role ID.",
+                        COLORS["error"],
+                    ),
+                    ephemeral=True,
+                )
+                return
+
+            await self.db.set_setting(f"verify_role_{self.guild_id}", role_id)
+            await self.db.log_event(
+                category="VERIFY",
+                action="CONFIG_ROLE",
+                user_id=interaction.user.id,
+                details=f"Set verified role to {role.name}",
+                guild_id=self.guild_id,
+            )
+
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Verified Role Set",
+                    f"✅ Users will receive {role.mention} when verified",
+                    COLORS["success"],
+                ),
+                ephemeral=True,
+            )
+        except ValueError:
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Error",
+                    "Invalid Role ID. Please enter numbers only.",
+                    COLORS["error"],
+                ),
+                ephemeral=True,
+            )
+        except Exception as e:
+            log_system(f"Error setting verified role: {e}", level="error")
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Error",
+                    "Failed to set verified role. Please try again.",
+                    COLORS["error"],
+                ),
+                ephemeral=True,
+            )
 
 
 class SetupSelect(Select):
@@ -79,29 +256,30 @@ class SetupSelect(Select):
             await self.view_config(interaction)
 
     async def setup_verification(self, interaction: discord.Interaction):
-        """Setup verification system"""
+        """Setup verification system with interactive configuration"""
+        view = VerificationSetupView(interaction.client.db_manager, interaction.guild.id)
+        
         embed = discord.Embed(
             title="✅ Verification System Setup",
             description=(
-                "Configure your verification system:\n\n"
+                "Configure your verification system using the buttons below:\n\n"
                 "**Required Settings:**\n"
                 "• Review Channel - Where staff sees verification submissions\n"
                 "• Verified Role - Role assigned when user is verified\n\n"
-                "**Optional Settings:**\n"
-                "• Unverified Role - Role for users awaiting verification\n\n"
-                "**Commands to use:**\n"
-                "`/verify setup #channel` - Set review channel\n"
-                "`/verify config @VerifiedRole @UnverifiedRole` - Set roles\n\n"
                 "**User Workflow:**\n"
                 "1. User runs `/verify submit`\n"
                 "2. Enters Activision ID in modal\n"
                 "3. Uploads screenshot\n"
                 "4. Selects platform from dropdown\n"
-                "5. Staff reviews with `/verify review @user approve/reject/ban`"
+                "5. Staff reviews with `/verify review @user verified/cheater/unverified`\n\n"
+                "**Review Decisions:**\n"
+                "• Verified - Assigns verified role\n"
+                "• Cheater - Bans user from server\n"
+                "• Unverified - Leaves user unverified"
             ),
             color=COLORS["info"],
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     async def setup_welcome(self, interaction: discord.Interaction):
         """Setup welcome system"""

@@ -207,28 +207,33 @@ class Verify(commands.Cog):
     @app_commands.checks.has_permissions(manage_roles=True)
     @app_commands.describe(
         user="The user to review",
-        decision="approve, reject, or ban",
+        decision="verified, cheater, or unverified",
         notes="Optional notes about the decision"
     )
+    @app_commands.choices(decision=[
+        app_commands.Choice(name="Verified", value="verified"),
+        app_commands.Choice(name="Cheater", value="cheater"),
+        app_commands.Choice(name="Unverified", value="unverified"),
+    ])
     async def review(
         self,
         interaction: discord.Interaction,
         user: discord.User,
-        decision: str,
+        decision: app_commands.Choice[str],
         notes: str = None,
     ):
         try:
             await interaction.response.defer(ephemeral=True, thinking=True)
-            decision = decision.lower()
+            decision_value = decision.value
 
-            if decision not in ["approve", "reject", "ban"]:
-                await safe_send_message(interaction, content="Use `approve`, `reject`, or `ban`.", ephemeral=True)
+            if decision_value not in ["verified", "cheater", "unverified"]:
+                await safe_send_message(interaction, content="Use `verified`, `cheater`, or `unverified`.", ephemeral=True)
                 return
 
             conn = await self.db.get_connection()
             await conn.execute(
                 "UPDATE verifications SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, notes = ? WHERE discord_id = ?",
-                (decision, interaction.user.id, notes, user.id),
+                (decision_value, interaction.user.id, notes, user.id),
             )
             await conn.commit()
 
@@ -236,7 +241,7 @@ class Verify(commands.Cog):
             member = guild.get_member(user.id)
             result_text = ""
 
-            if decision == "approve" and member:
+            if decision_value == "verified" and member:
                 # Get verified role from settings
                 guild_id = interaction.guild.id
                 verified_role_id = await self.db.get_setting(f"verify_role_{guild_id}")
@@ -245,40 +250,40 @@ class Verify(commands.Cog):
                     verified_role = guild.get_role(int(verified_role_id))
                     if verified_role:
                         await member.add_roles(verified_role)
-                        result_text = f"✅ Approved {member.mention} and assigned {verified_role.mention} role."
+                        result_text = f"✅ Verified {member.mention} and assigned {verified_role.mention} role."
                     else:
-                        result_text = f"✅ Approved {member.mention} but verified role not found. Please run `/verify config` to set it up."
+                        result_text = f"✅ Verified {member.mention} but verified role not found. Please run `/setup verify` to configure."
                 else:
-                    result_text = f"✅ Approved {member.mention} but no verified role configured. Please run `/verify config` to set it up."
+                    result_text = f"✅ Verified {member.mention} but no verified role configured. Please run `/setup verify` to configure."
                     
-            elif decision == "reject" and member:
-                result_text = f"❌ Rejected {user.mention}. They remain unverified."
+            elif decision_value == "unverified" and member:
+                result_text = f"❌ Marked {user.mention} as unverified. They remain unverified."
                 
-            elif decision == "ban" and member:
+            elif decision_value == "cheater" and member:
                 try:
-                    await member.ban(reason=f"Verification ban by {interaction.user}: {notes or 'Confirmed cheater'}")
-                    result_text = f"🔨 Banned {user.mention} from the server."
+                    await member.ban(reason=f"Verification: Confirmed cheater by {interaction.user}: {notes or 'No additional notes'}")
+                    result_text = f"🔨 Banned {user.mention} from the server for cheating."
                 except discord.Forbidden:
                     result_text = f"❌ Failed to ban {user.mention}. Missing permissions."
 
             await safe_send_message(interaction, content=result_text, ephemeral=True)
 
-            log_system(f"[VERIFY_REVIEW] {interaction.user} {decision.upper()} {user} ({notes or 'no notes'})")
+            log_system(f"[VERIFY_REVIEW] {interaction.user} {decision_value.upper()} {user} ({notes or 'no notes'})")
             await self.db.log_event(
                 category="VERIFY",
                 action="REVIEW",
                 user_id=user.id,
                 target_id=interaction.user.id,
-                details=f"{decision.upper()} - {notes or 'No notes'}",
+                details=f"{decision_value.upper()} - {notes or 'No notes'}",
             )
 
-            # DM user about decision (except for bans)
-            if decision != "ban":
+            # DM user about decision (except for cheater bans)
+            if decision_value != "cheater":
                 try:
                     dm_embed = create_embed(
                         "Verification Update",
-                        f"Your verification was **{decision.upper()}**.\nNotes: {notes or 'None provided.'}",
-                        COLORS["info"] if decision == "approve" else COLORS["error"],
+                        f"Your verification was **{decision_value.upper()}**.\nNotes: {notes or 'None provided.'}",
+                        COLORS["info"] if decision_value == "verified" else COLORS["error"],
                     )
                     await user.send(embed=dm_embed)
                 except discord.Forbidden:
@@ -287,105 +292,6 @@ class Verify(commands.Cog):
         except Exception as e:
             log_system(f"Verification review error: {e}", level="error")
             await safe_send_message(interaction, content="An error occurred while processing review.", ephemeral=True)
-
-    # ============================================================
-    # SUBCOMMAND — SETUP VERIFICATION CHANNEL
-    # ============================================================
-    @verify_group.command(name="setup", description="Set up the verification review channel (admin only).")
-    @app_commands.checks.has_permissions(administrator=True)
-    @app_commands.describe(channel="Channel where verification submissions will be posted for review")
-    async def setup(self, interaction: discord.Interaction, channel: discord.TextChannel):
-        try:
-            await self.db.set_setting(f"verify_channel_{interaction.guild.id}", channel.id)
-            await self.db.log_event(
-                category="VERIFY",
-                action="SETUP_CHANNEL",
-                user_id=interaction.user.id,
-                details=f"Set review channel to #{channel.name}",
-                guild_id=interaction.guild.id,
-            )
-            await safe_send_message(
-                interaction,
-                embed=create_embed(
-                    "Verification Setup Complete",
-                    f"✅ Review channel set to {channel.mention}.\n\nNext, run `/verify config` to configure roles.",
-                    COLORS["success"],
-                ),
-                ephemeral=True,
-            )
-            log_system(f"[VERIFY_SETUP] {interaction.guild.name} -> {channel.name}")
-
-        except Exception as e:
-            log_system(f"verify_setup error: {e}", level="error")
-            await safe_send_message(
-                interaction,
-                embed=create_embed(
-                    "Error",
-                    "Unable to set review channel. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
-
-    # ============================================================
-    # SUBCOMMAND — CONFIG VERIFICATION ROLES
-    # ============================================================
-    @verify_group.command(name="config", description="Configure verification roles (admin only).")
-    @app_commands.checks.has_permissions(administrator=True)
-    @app_commands.describe(
-        verified_role="Role to assign when user is verified",
-        unverified_role="Role for users awaiting verification (optional)"
-    )
-    async def config(
-        self,
-        interaction: discord.Interaction,
-        verified_role: discord.Role,
-        unverified_role: discord.Role = None,
-    ):
-        try:
-            guild_id = interaction.guild.id
-            
-            # Save verified role
-            await self.db.set_setting(f"verify_role_{guild_id}", verified_role.id)
-            
-            # Save unverified role if provided
-            if unverified_role:
-                await self.db.set_setting(f"unverified_role_{guild_id}", unverified_role.id)
-            
-            await self.db.log_event(
-                category="VERIFY",
-                action="CONFIG_ROLES",
-                user_id=interaction.user.id,
-                details=f"Verified: {verified_role.name}, Unverified: {unverified_role.name if unverified_role else 'None'}",
-                guild_id=guild_id,
-            )
-            
-            config_text = f"✅ **Verified Role:** {verified_role.mention}"
-            if unverified_role:
-                config_text += f"\n✅ **Unverified Role:** {unverified_role.mention}"
-            
-            await safe_send_message(
-                interaction,
-                embed=create_embed(
-                    "Verification Roles Configured",
-                    config_text,
-                    COLORS["success"],
-                ),
-                ephemeral=True,
-            )
-            log_system(f"[VERIFY_CONFIG] {interaction.guild.name} -> Verified: {verified_role.name}")
-
-        except Exception as e:
-            log_system(f"verify_config error: {e}", level="error")
-            await safe_send_message(
-                interaction,
-                embed=create_embed(
-                    "Error",
-                    "Unable to configure roles. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
 
 
 async def setup(bot: commands.Bot):
