@@ -63,19 +63,19 @@ class BotControlGroup(app_commands.Group):
     """Bot control commands group"""
     
     def __init__(self, cog):
-        super().__init__(name="bot", description="Bot control commands (Admin only)")
+        super().__init__(name="bot", description="Bot control commands (Server Owner only)")
         self.cog = cog
     
-    @app_commands.command(name="send", description="Send a message as the bot to a channel (Admin only)")
+    @app_commands.command(name="send", description="Send a message as the bot to a channel (Server Owner only)")
     @app_commands.describe(channel="The channel to send the message to")
     async def send(self, interaction: discord.Interaction, channel: discord.TextChannel):
         """Send a message as the bot to a specific channel"""
         
-        # Check admin permissions
-        if not interaction.user.guild_permissions.administrator:
+        # Check server owner permissions
+        if interaction.guild.owner_id != interaction.user.id:
             embed = create_embed(
                 "🚫 Permission Denied",
-                "This command is only available to server administrators.",
+                "This command is only available to the server owner.",
                 COLORS["error"]
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)

@@ -603,15 +603,14 @@ class Setup(commands.Cog):
         self.bot = bot
         self.db = bot.db_manager
 
-    @app_commands.command(name="setup", description="Configure bot settings (owner only)")
+    @app_commands.command(name="setup", description="Configure bot settings (Server Owner only)")
     async def setup(self, interaction: discord.Interaction):
         """Main setup command with interactive menu"""
-        # Check if user is owner
-        from utils.helpers import is_owner
-        if not is_owner(interaction.user):
+        # Check if user is server owner
+        if interaction.guild.owner_id != interaction.user.id:
             embed = discord.Embed(
                 title="🚫 Permission Denied",
-                description="This command is only available to bot owners.",
+                description="This command is only available to the server owner.",
                 color=COLORS["error"],
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)

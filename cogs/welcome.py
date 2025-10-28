@@ -10,7 +10,7 @@ from typing import Optional
 
 from utils.logger import get_logger
 from utils.helpers import (
-    embed_helper, is_admin, safe_send_message, create_embed
+    embed_helper, safe_send_message, create_embed
 )
 from config.constants import COLORS, DEFAULT_WELCOME_TITLE, DEFAULT_WELCOME_MESSAGE
 from config.settings import settings
@@ -64,8 +64,7 @@ class Welcome(commands.Cog):
         except Exception as e:
             self.logger.error(f"Error in on_member_join: {e}")
     
-    @app_commands.command(name="welcome", description="Welcome system configuration (Owner only)")
-    @app_commands.default_permissions(administrator=True)
+    @app_commands.command(name="welcome", description="Welcome system configuration (Server Owner only)")
     @app_commands.describe(
         action="What welcome action would you like to perform?"
     )
