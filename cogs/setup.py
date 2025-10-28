@@ -278,48 +278,6 @@ class VerificationSetupView(View):
         self.add_item(CheaterRoleSelect(db_manager, guild.id))
         self.add_item(CheaterChannelSelect(db_manager, guild.id))
 
-    @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
-    async def view_config(self, interaction: discord.Interaction, button: Button):
-        """View current verification configuration"""
-        verify_channel_id = await self.db.get_setting(f"verify_channel_{self.guild.id}")
-        verify_role_id = await self.db.get_setting(f"verify_role_{self.guild.id}")
-        staff_role_id = await self.db.get_setting(f"staff_role_{self.guild.id}")
-        cheater_role_id = await self.db.get_setting(f"cheater_role_{self.guild.id}")
-        cheater_channel_id = await self.db.get_setting(f"cheater_channel_{self.guild.id}")
-
-        config_text = ""
-        if verify_channel_id:
-            config_text += f"**Review Channel:** <#{verify_channel_id}>\n"
-        else:
-            config_text += "**Review Channel:** Not configured\n"
-
-        if verify_role_id:
-            config_text += f"**Verified Role:** <@&amp;{verify_role_id}>\n"
-        else:
-            config_text += "**Verified Role:** Not configured\n"
-
-        if staff_role_id:
-            config_text += f"**Staff Role:** <@&amp;{staff_role_id}>\n"
-        else:
-            config_text += "**Staff Role:** Not configured\n"
-
-        if cheater_role_id:
-            config_text += f"**Cheater Role:** <@&amp;{cheater_role_id}>\n"
-        else:
-            config_text += "**Cheater Role:** Not configured\n"
-
-        if cheater_channel_id:
-            config_text += f"**Cheater Jail:** <#{cheater_channel_id}>\n"
-        else:
-            config_text += "**Cheater Jail:** Not configured\n"
-
-        embed = discord.Embed(
-            title="Current Verification Configuration",
-            description=config_text,
-            color=COLORS["info"],
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
 
 # ============================================================
 # BIRTHDAY SYSTEM COMPONENTS
@@ -491,35 +449,6 @@ class BirthdaySetupView(View):
         self.add_item(BirthdayRoleSelect(db_manager, guild.id))
         self.add_item(BirthdayTimeSelect(db_manager, guild.id))
 
-    @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
-    async def view_config(self, interaction: discord.Interaction, button: Button):
-        """View current birthday configuration"""
-        birthday_channel_id = await self.db.get_setting(f"birthday_channel_{self.guild.id}")
-        birthday_role_id = await self.db.get_setting(f"birthday_role_{self.guild.id}")
-        birthday_time = await self.db.get_setting(f"birthday_time_{self.guild.id}", "08:00")
-        timezone = await self.db.get_setting(f"timezone_{self.guild.id}", "UTC-6")
-
-        config_text = ""
-        if birthday_channel_id:
-            config_text += f"**Announcement Channel:** <#{birthday_channel_id}>\n"
-        else:
-            config_text += "**Announcement Channel:** Not configured\n"
-
-        if birthday_role_id:
-            config_text += f"**Birthday Role:** <@&amp;{birthday_role_id}>\n"
-        else:
-            config_text += "**Birthday Role:** Not configured\n"
-
-        config_text += f"**Announcement Time:** {birthday_time}\n"
-        config_text += f"**Timezone:** {timezone}\n"
-
-        embed = discord.Embed(
-            title="Current Birthday Configuration",
-            description=config_text,
-            color=COLORS["info"],
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
 
 # ============================================================
 # XP SYSTEM COMPONENTS
@@ -642,30 +571,6 @@ class XPSetupView(View):
         """Configure XP amounts"""
         modal = XPAmountModal(self.db, self.guild_id)
         await interaction.response.send_modal(modal)
-
-    @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
-    async def view_config(self, interaction: discord.Interaction, button: Button):
-        """View current XP configuration"""
-        message_xp = await self.db.get_setting(f"xp_message_{self.guild_id}", 10)
-        voice_xp = await self.db.get_setting(f"xp_voice_{self.guild_id}", 5)
-        reaction_xp = await self.db.get_setting(f"xp_reaction_{self.guild_id}", 2)
-        command_xp = await self.db.get_setting(f"xp_command_{self.guild_id}", 3)
-        daily_bonus = await self.db.get_setting(f"xp_daily_{self.guild_id}", 50)
-
-        config_text = (
-            f"**Messages:** {message_xp} XP\n"
-            f"**Voice (per minute):** {voice_xp} XP\n"
-            f"**Reactions:** {reaction_xp} XP\n"
-            f"**Commands:** {command_xp} XP\n"
-            f"**Daily Bonus:** {daily_bonus} XP"
-        )
-
-        embed = discord.Embed(
-            title="Current XP Configuration",
-            description=config_text,
-            color=COLORS["info"],
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 # ============================================================
@@ -820,27 +725,6 @@ class GeneralSettingsView(View):
         """Set bot online message text"""
         modal = OnlineMessageModal(self.db, self.guild_id)
         await interaction.response.send_modal(modal)
-
-    @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
-    async def view_config(self, interaction: discord.Interaction, button: Button):
-        """View current general settings"""
-        timezone = await self.db.get_setting(f"timezone_{self.guild_id}", "UTC-6")
-        online_channel_id = await self.db.get_setting(f"online_channel_{self.guild_id}")
-        online_message = await self.db.get_setting(f"online_message_{self.guild_id}", "Not set")
-
-        config_text = f"**Timezone:** {timezone}\n"
-        if online_channel_id:
-            config_text += f"**Online Message Channel:** <#{online_channel_id}>\n"
-        else:
-            config_text += "**Online Message Channel:** Not configured\n"
-        config_text += f"**Online Message:** {online_message}"
-
-        embed = discord.Embed(
-            title="Current General Settings",
-            description=config_text,
-            color=COLORS["info"],
-        )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 # ============================================================
