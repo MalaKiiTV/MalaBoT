@@ -170,17 +170,17 @@ class VerifyGroup(app_commands.Group):
     ):
         try:
             # Check staff permission
-from utils.helpers import check_mod_permission
-if not await check_mod_permission(interaction, self.cog.db, "verification_mod_role"):
-                return
+                from utils.helpers import check_mod_permission
+                if not await check_mod_permission(interaction, self.cog.db, "verification_mod_role"):
+                    return
 
-            await interaction.response.defer(ephemeral=True, thinking=True)
-            guild_id = interaction.guild.id
-            decision_value = decision.value
+                await interaction.response.defer(ephemeral=True, thinking=True)
+                guild_id = interaction.guild.id
+                decision_value = decision.value
 
-            if decision_value not in ["verified", "cheater", "unverified"]:
+                if decision_value not in ["verified", "cheater", "unverified"]:
                 await safe_send_message(interaction, content="Use `verified`, `cheater`, or `unverified`.", ephemeral=True)
-                return
+                    return
 
             conn = await self.cog.db.get_connection()
             await conn.execute(
