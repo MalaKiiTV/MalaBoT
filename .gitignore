@@ -55,6 +55,7 @@ Thumbs.db
 *.temp
 cache/
 .tmp/
+outputs/
 
 # Crash flags
 data/flags/
