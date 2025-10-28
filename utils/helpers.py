@@ -71,6 +71,12 @@ class EmbedHelper:
         """Create an info embed with blue color."""
         return EmbedHelper.create_embed(title, description, COLORS['info'])
 
+    @staticmethod
+    def roast_embed(title: str, description: str) -> discord.Embed:
+        """Create a roast embed with orange color."""
+        return EmbedHelper.create_embed(title, description, COLORS['warning'])
+
+
 class TimeHelper:
     """Helper class for time-related operations."""
     

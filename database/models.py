@@ -453,6 +453,26 @@ class DatabaseManager:
             for row in rows
         ]
     
+    async def get_user_rank(self, user_id: int, guild_id: int) -> Optional[int]:
+        """Get user's rank in the server based on XP."""
+        conn = await self.get_connection()
+        
+        # Get all users ordered by XP
+        cursor = await conn.execute("""
+            SELECT user_id, xp
+            FROM users
+            ORDER BY xp DESC
+        """)
+        
+        rows = await cursor.fetchall()
+        
+        # Find user's position
+        for rank, (uid, xp) in enumerate(rows, start=1):
+            if uid == user_id:
+                return rank
+        
+        return None
+
     async def set_daily_claimed(self, user_id: int, guild_id: int):
         """Mark daily reward as claimed for a user."""
         from datetime import date
