@@ -32,7 +32,8 @@ class EmbedHelper:
     """Helper class for creating consistent embeds."""
     
     @staticmethod
-    def create_embed(title: str, description: str, color: int = COLORS['info']) -> discord.Embed:
+    def create_embed(title: str, description: str = None, color: int = COLORS['info'], 
+                     thumbnail: str = None, **kwargs) -> discord.Embed:
         """Create a standardized embed with consistent formatting."""
         embed = discord.Embed(
             title=title,
@@ -40,6 +41,19 @@ class EmbedHelper:
             color=color,
             timestamp=datetime.now()
         )
+        
+        # Add thumbnail if provided
+        if thumbnail:
+            embed.set_thumbnail(url=thumbnail)
+        
+        # Add any additional fields from kwargs
+        if 'footer' in kwargs:
+            embed.set_footer(text=kwargs['footer'])
+        if 'image' in kwargs:
+            embed.set_image(url=kwargs['image'])
+        if 'author' in kwargs:
+            embed.set_author(name=kwargs['author'])
+        
         return embed
     
     @staticmethod
@@ -177,7 +191,21 @@ class CooldownHelper:
             remaining = (self.cooldowns[key] - datetime.now()).total_seconds()
             return max(0, int(remaining))
         return 0
+    
+    def check_cooldown(self, user_id: int, command: str, cooldown_seconds: int) -> bool:
+        """
+        Check if user can use a command (not on cooldown).
+        If not on cooldown, automatically sets the cooldown.
+        Returns True if command can be used, False if on cooldown.
+        """
+        if self.is_on_cooldown(user_id, command):
+            return False
+        
+        # Not on cooldown, set it now
+        self.set_cooldown(user_id, command, cooldown_seconds)
+        return True
 
+    
 class SystemHelper:
     """Helper class for system-related operations."""
     
@@ -211,6 +239,24 @@ class SystemHelper:
             return f"{size_bytes:.2f} TB"
         except:
             return "Unknown"
+    
+    @staticmethod
+    def sanitize_input(text: str, max_length: int = 200) -> str:
+        """Sanitize user input by removing potentially harmful characters and limiting length."""
+        if not text:
+            return ""
+        
+        # Remove null bytes and other control characters
+        text = ''.join(char for char in text if ord(char) >= 32 or char in '\n\r\t')
+        
+        # Limit length
+        if len(text) > max_length:
+            text = text[:max_length]
+        
+        # Strip leading/trailing whitespace
+        text = text.strip()
+        
+        return text
 
 # Convenience instances
 embed_helper = EmbedHelper()

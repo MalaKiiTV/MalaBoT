@@ -403,7 +403,7 @@ class Moderation(commands.Cog):
                     category='MOD',
                     action='KICK',
                     user_id=interaction.user.id,
-                    target_user_id=user.id,
+                    target_id=user.id,
                     guild_id=interaction.guild.id,
                     details=f"Kicked {user.name}#{user.discriminator} - Reason: {reason}"
                 )
@@ -482,7 +482,7 @@ class Moderation(commands.Cog):
                     category='MOD',
                     action='BAN',
                     user_id=interaction.user.id,
-                    target_user_id=user.id,
+                    target_id=user.id,
                     guild_id=interaction.guild.id,
                     details=f"Banned {user.name}#{user.discriminator} - Reason: {reason}"
                 )
@@ -573,7 +573,7 @@ class Moderation(commands.Cog):
                     category='MOD',
                     action='MUTE',
                     user_id=interaction.user.id,
-                    target_user_id=user.id,
+                    target_id=user.id,
                     guild_id=interaction.guild.id,
                     details=f"Muted {user.name}#{user.discriminator} for {duration} minutes - Reason: {reason}"
                 )
@@ -662,7 +662,7 @@ class Moderation(commands.Cog):
                     category='MOD',
                     action='UNMUTE',
                     user_id=interaction.user.id,
-                    target_user_id=user.id,
+                    target_id=user.id,
                     guild_id=interaction.guild.id,
                     details=f"Unmuted {user.name}#{user.discriminator} - Reason: {reason}"
                 )

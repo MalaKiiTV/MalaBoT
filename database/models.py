@@ -432,9 +432,70 @@ class DatabaseManager:
         return [dict(zip(columns, row)) for row in rows]
     
     # Audit Log Methods
-    async def log_event(self, category: str, action: str, user_id: int = None,
-                       target_id: int = None, channel_id: int = None,
-                       details: str = None, guild_id: int = None):
+    async def get_leaderboard(self, guild_id: int, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get XP leaderboard for a guild."""
+        conn = await self.get_connection()
+        cursor = await conn.execute("""
+            SELECT user_id, xp, level, total_messages
+            FROM users
+            ORDER BY xp DESC
+            LIMIT ?
+        """, (limit,))
+        
+        rows = await cursor.fetchall()
+        return [
+            {
+                'user_id': row[0],
+                'xp': row[1],
+                'level': row[2],
+                'total_messages': row[3]
+            }
+            for row in rows
+        ]
+    
+    async def set_daily_claimed(self, user_id: int, guild_id: int):
+        """Mark daily reward as claimed for a user."""
+        from datetime import date
+        conn = await self.get_connection()
+        
+        # Get current user data
+        cursor = await conn.execute("""
+            SELECT daily_streak, last_daily_award_date
+            FROM users
+            WHERE user_id = ?
+        """, (user_id,))
+        
+        row = await cursor.fetchone()
+        
+        if row:
+            current_streak = row[0] or 0
+            last_daily = row[1]
+            
+            # Check if claimed today
+            today = date.today().isoformat()
+            if last_daily == today:
+                return  # Already claimed today
+            
+            # Update streak
+            new_streak = current_streak + 1
+            
+            await conn.execute("""
+                UPDATE users
+                SET daily_streak = ?,
+                    last_daily_award_date = ?
+                WHERE user_id = ?
+            """, (new_streak, today, user_id))
+        else:
+            # Create new user entry
+            today = date.today().isoformat()
+            await conn.execute("""
+                INSERT INTO users (user_id, daily_streak, last_daily_award_date)
+                VALUES (?, 1, ?)
+            """, (user_id, today))
+        
+        await conn.commit()
+
+
         """Log an event to the audit log."""
         conn = await self.get_connection()
         await conn.execute("""
