@@ -15,29 +15,111 @@ from utils.logger import log_system
 from config.constants import COLORS
 
 
-class VerificationSetupView(View):
+# ============================================================
+# VERIFICATION SYSTEM COMPONENTS
+# ============================================================
+
+class ChannelSelect(discord.ui.ChannelSelect):
+    """Channel selector for verification review channel"""
     def __init__(self, db_manager, guild_id: int):
-        super().__init__(timeout=300)
+        super().__init__(
+            placeholder="Select review channel...",
+            min_values=1,
+            max_values=1,
+            channel_types=[discord.ChannelType.text]
+        )
         self.db = db_manager
         self.guild_id = guild_id
 
-    @discord.ui.button(label="Set Review Channel", style=discord.ButtonStyle.primary, emoji="📋")
-    async def set_channel(self, interaction: discord.Interaction, button: Button):
-        """Set the review channel"""
-        modal = ReviewChannelModal(self.db, self.guild_id)
-        await interaction.response.send_modal(modal)
+    async def callback(self, interaction: discord.Interaction):
+        channel = self.values[0]
+        try:
+            await self.db.set_setting(f"verify_channel_{self.guild_id}", channel.id)
+            await self.db.log_event(
+                category="VERIFY",
+                action="SETUP_CHANNEL",
+                user_id=interaction.user.id,
+                details=f"Set review channel to #{channel.name}",
+                guild_id=self.guild_id,
+            )
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Review Channel Set",
+                    f"✅ Verification submissions will be posted to {channel.mention}",
+                    COLORS["success"],
+                ),
+                ephemeral=True,
+            )
+        except Exception as e:
+            log_system(f"Error setting review channel: {e}", level="error")
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Error",
+                    "Failed to set review channel. Please try again.",
+                    COLORS["error"],
+                ),
+                ephemeral=True,
+            )
 
-    @discord.ui.button(label="Set Verified Role", style=discord.ButtonStyle.success, emoji="✅")
-    async def set_role(self, interaction: discord.Interaction, button: Button):
-        """Set the verified role"""
-        modal = VerifiedRoleModal(self.db, self.guild_id)
-        await interaction.response.send_modal(modal)
+
+class RoleSelect(discord.ui.RoleSelect):
+    """Role selector for verified role"""
+    def __init__(self, db_manager, guild_id: int):
+        super().__init__(
+            placeholder="Select verified role...",
+            min_values=1,
+            max_values=1
+        )
+        self.db = db_manager
+        self.guild_id = guild_id
+
+    async def callback(self, interaction: discord.Interaction):
+        role = self.values[0]
+        try:
+            await self.db.set_setting(f"verify_role_{self.guild_id}", role.id)
+            await self.db.log_event(
+                category="VERIFY",
+                action="CONFIG_ROLE",
+                user_id=interaction.user.id,
+                details=f"Set verified role to {role.name}",
+                guild_id=self.guild_id,
+            )
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Verified Role Set",
+                    f"✅ Users will receive {role.mention} when verified",
+                    COLORS["success"],
+                ),
+                ephemeral=True,
+            )
+        except Exception as e:
+            log_system(f"Error setting verified role: {e}", level="error")
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Error",
+                    "Failed to set verified role. Please try again.",
+                    COLORS["error"],
+                ),
+                ephemeral=True,
+            )
+
+
+class VerificationSetupView(View):
+    """View for verification system setup"""
+    def __init__(self, db_manager, guild: discord.Guild):
+        super().__init__(timeout=300)
+        self.db = db_manager
+        self.guild = guild
+        
+        # Add channel and role selects
+        self.add_item(ChannelSelect(db_manager, guild.id))
+        self.add_item(RoleSelect(db_manager, guild.id))
 
     @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
     async def view_config(self, interaction: discord.Interaction, button: Button):
         """View current verification configuration"""
-        verify_channel_id = await self.db.get_setting(f"verify_channel_{self.guild_id}")
-        verify_role_id = await self.db.get_setting(f"verify_role_{self.guild_id}")
+        verify_channel_id = await self.db.get_setting(f"verify_channel_{self.guild.id}")
+        verify_role_id = await self.db.get_setting(f"verify_role_{self.guild.id}")
 
         config_text = ""
         if verify_channel_id:
@@ -58,12 +140,17 @@ class VerificationSetupView(View):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
-class ReviewChannelModal(Modal, title="Set Review Channel"):
-    channel_id = TextInput(
-        label="Channel ID",
-        placeholder="Right-click channel → Copy Channel ID",
+# ============================================================
+# GENERAL SETTINGS COMPONENTS
+# ============================================================
+
+class TimezoneModal(Modal, title="Set Timezone"):
+    """Modal for setting server timezone"""
+    timezone = TextInput(
+        label="Timezone",
+        placeholder="e.g., UTC-6, America/New_York, Europe/London",
         required=True,
-        max_length=20,
+        max_length=50,
     )
 
     def __init__(self, db_manager, guild_id: int):
@@ -73,64 +160,42 @@ class ReviewChannelModal(Modal, title="Set Review Channel"):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            channel_id = int(self.channel_id.value)
-            channel = interaction.guild.get_channel(channel_id)
-            
-            if not channel:
-                await interaction.response.send_message(
-                    embed=create_embed(
-                        "Error",
-                        "Channel not found. Make sure you copied the correct Channel ID.",
-                        COLORS["error"],
-                    ),
-                    ephemeral=True,
-                )
-                return
-
-            await self.db.set_setting(f"verify_channel_{self.guild_id}", channel_id)
+            await self.db.set_setting(f"timezone_{self.guild_id}", self.timezone.value)
             await self.db.log_event(
-                category="VERIFY",
-                action="SETUP_CHANNEL",
+                category="SETTINGS",
+                action="SET_TIMEZONE",
                 user_id=interaction.user.id,
-                details=f"Set review channel to #{channel.name}",
+                details=f"Set timezone to {self.timezone.value}",
                 guild_id=self.guild_id,
             )
-
             await interaction.response.send_message(
                 embed=create_embed(
-                    "Review Channel Set",
-                    f"✅ Verification submissions will be posted to {channel.mention}",
+                    "Timezone Set",
+                    f"✅ Server timezone set to **{self.timezone.value}**\n\nThis affects birthday announcements and scheduled tasks.",
                     COLORS["success"],
                 ),
                 ephemeral=True,
             )
-        except ValueError:
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "Invalid Channel ID. Please enter numbers only.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
         except Exception as e:
-            log_system(f"Error setting review channel: {e}", level="error")
+            log_system(f"Error setting timezone: {e}", level="error")
             await interaction.response.send_message(
                 embed=create_embed(
                     "Error",
-                    "Failed to set review channel. Please try again.",
+                    "Failed to set timezone. Please try again.",
                     COLORS["error"],
                 ),
                 ephemeral=True,
             )
 
 
-class VerifiedRoleModal(Modal, title="Set Verified Role"):
-    role_id = TextInput(
-        label="Role ID",
-        placeholder="Right-click role → Copy Role ID",
+class OnlineMessageModal(Modal, title="Set Bot Online Message"):
+    """Modal for setting bot online message"""
+    message = TextInput(
+        label="Online Message",
+        placeholder="Message to send when bot comes online",
         required=True,
-        max_length=20,
+        max_length=200,
+        style=discord.TextStyle.paragraph
     )
 
     def __init__(self, db_manager, guild_id: int):
@@ -140,57 +205,72 @@ class VerifiedRoleModal(Modal, title="Set Verified Role"):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            role_id = int(self.role_id.value)
-            role = interaction.guild.get_role(role_id)
-            
-            if not role:
-                await interaction.response.send_message(
-                    embed=create_embed(
-                        "Error",
-                        "Role not found. Make sure you copied the correct Role ID.",
-                        COLORS["error"],
-                    ),
-                    ephemeral=True,
-                )
-                return
-
-            await self.db.set_setting(f"verify_role_{self.guild_id}", role_id)
+            await self.db.set_setting(f"online_message_{self.guild_id}", self.message.value)
             await self.db.log_event(
-                category="VERIFY",
-                action="CONFIG_ROLE",
+                category="SETTINGS",
+                action="SET_ONLINE_MESSAGE",
                 user_id=interaction.user.id,
-                details=f"Set verified role to {role.name}",
+                details=f"Set online message",
                 guild_id=self.guild_id,
             )
-
             await interaction.response.send_message(
                 embed=create_embed(
-                    "Verified Role Set",
-                    f"✅ Users will receive {role.mention} when verified",
+                    "Online Message Set",
+                    f"✅ Bot online message set to:\n\n{self.message.value}",
                     COLORS["success"],
                 ),
                 ephemeral=True,
             )
-        except ValueError:
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "Invalid Role ID. Please enter numbers only.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
         except Exception as e:
-            log_system(f"Error setting verified role: {e}", level="error")
+            log_system(f"Error setting online message: {e}", level="error")
             await interaction.response.send_message(
                 embed=create_embed(
                     "Error",
-                    "Failed to set verified role. Please try again.",
+                    "Failed to set online message. Please try again.",
                     COLORS["error"],
                 ),
                 ephemeral=True,
             )
 
+
+class GeneralSettingsView(View):
+    """View for general settings setup"""
+    def __init__(self, db_manager, guild_id: int):
+        super().__init__(timeout=300)
+        self.db = db_manager
+        self.guild_id = guild_id
+
+    @discord.ui.button(label="Set Timezone", style=discord.ButtonStyle.primary, emoji="🌍")
+    async def set_timezone(self, interaction: discord.Interaction, button: Button):
+        """Set server timezone"""
+        modal = TimezoneModal(self.db, self.guild_id)
+        await interaction.response.send_modal(modal)
+
+    @discord.ui.button(label="Set Online Message", style=discord.ButtonStyle.primary, emoji="💬")
+    async def set_online_message(self, interaction: discord.Interaction, button: Button):
+        """Set bot online message"""
+        modal = OnlineMessageModal(self.db, self.guild_id)
+        await interaction.response.send_modal(modal)
+
+    @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
+    async def view_config(self, interaction: discord.Interaction, button: Button):
+        """View current general settings"""
+        timezone = await self.db.get_setting(f"timezone_{self.guild_id}", "UTC-6")
+        online_message = await self.db.get_setting(f"online_message_{self.guild_id}", "Not set")
+
+        config_text = f"**Timezone:** {timezone}\n**Online Message:** {online_message}"
+
+        embed = discord.Embed(
+            title="Current General Settings",
+            description=config_text,
+            color=COLORS["info"],
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+# ============================================================
+# MAIN SETUP SELECT MENU
+# ============================================================
 
 class SetupSelect(Select):
     def __init__(self):
@@ -222,7 +302,7 @@ class SetupSelect(Select):
             discord.SelectOption(
                 label="General Settings",
                 value="general",
-                description="Configure timezone, logging, etc.",
+                description="Configure timezone, online message, etc.",
                 emoji="⚙️"
             ),
             discord.SelectOption(
@@ -257,12 +337,12 @@ class SetupSelect(Select):
 
     async def setup_verification(self, interaction: discord.Interaction):
         """Setup verification system with interactive configuration"""
-        view = VerificationSetupView(interaction.client.db_manager, interaction.guild.id)
+        view = VerificationSetupView(interaction.client.db_manager, interaction.guild)
         
         embed = discord.Embed(
             title="✅ Verification System Setup",
             description=(
-                "Configure your verification system using the buttons below:\n\n"
+                "Configure your verification system using the dropdowns below:\n\n"
                 "**Required Settings:**\n"
                 "• Review Channel - Where staff sees verification submissions\n"
                 "• Verified Role - Role assigned when user is verified\n\n"
@@ -348,26 +428,22 @@ class SetupSelect(Select):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     async def setup_general(self, interaction: discord.Interaction):
-        """Setup general settings"""
+        """Setup general settings with interactive configuration"""
+        view = GeneralSettingsView(interaction.client.db_manager, interaction.guild.id)
+        
         embed = discord.Embed(
             title="⚙️ General Settings Setup",
             description=(
-                "Configure general bot settings:\n\n"
-                "**Commands to use:**\n"
-                "`/settimezone <timezone>` - Set server timezone (e.g., UTC-6, America/New_York)\n\n"
-                "**Available Timezones:**\n"
-                "• UTC-12 to UTC+14\n"
-                "• America/New_York (EST)\n"
-                "• America/Chicago (CST)\n"
-                "• America/Denver (MST)\n"
-                "• America/Los_Angeles (PST)\n"
-                "• Europe/London (GMT)\n"
-                "• And many more...\n\n"
-                "**Note:** Timezone affects birthday announcements and scheduled tasks."
+                "Configure general bot settings using the buttons below:\n\n"
+                "**Available Settings:**\n"
+                "• **Timezone** - Affects birthday announcements and scheduled tasks\n"
+                "• **Bot Online Message** - Message sent when bot comes online\n"
+                "• **Language** - Bot response language (coming soon)\n\n"
+                "Click the buttons below to configure each setting."
             ),
             color=COLORS["primary"],
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     async def view_config(self, interaction: discord.Interaction):
         """View current configuration"""
@@ -378,10 +454,10 @@ class SetupSelect(Select):
         # Fetch all settings
         verify_channel_id = await db.get_setting(f"verify_channel_{guild_id}")
         verify_role_id = await db.get_setting(f"verify_role_{guild_id}")
-        unverified_role_id = await db.get_setting(f"unverified_role_{guild_id}")
         welcome_channel_id = await db.get_setting(f"welcome_channel_{guild_id}")
         birthday_channel_id = await db.get_setting(f"birthday_channel_{guild_id}")
         timezone = await db.get_setting(f"timezone_{guild_id}", "UTC-6")
+        online_message = await db.get_setting(f"online_message_{guild_id}", "Not set")
 
         embed = discord.Embed(
             title="📋 Current Bot Configuration",
@@ -395,8 +471,6 @@ class SetupSelect(Select):
             verify_text += f"Review Channel: <#{verify_channel_id}>\n"
         if verify_role_id:
             verify_text += f"Verified Role: <@&{verify_role_id}>\n"
-        if unverified_role_id:
-            verify_text += f"Unverified Role: <@&{unverified_role_id}>\n"
         if not verify_text:
             verify_text = "Not configured"
         embed.add_field(name="✅ Verification", value=verify_text, inline=False)
@@ -418,7 +492,7 @@ class SetupSelect(Select):
         embed.add_field(name="🎂 Birthday", value=birthday_text, inline=False)
 
         # General settings
-        general_text = f"Timezone: {timezone}"
+        general_text = f"Timezone: {timezone}\nOnline Message: {online_message}"
         embed.add_field(name="⚙️ General", value=general_text, inline=False)
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -449,7 +523,7 @@ class Setup(commands.Cog):
                 "👋 Welcome - Welcome messages for new members\n"
                 "🎂 Birthday - Birthday announcements\n"
                 "🏆 XP - Experience and leveling system\n"
-                "⚙️ General - Timezone and other settings\n"
+                "⚙️ General - Timezone, online message, and other settings\n"
                 "📋 View Config - See current configuration"
             ),
             color=COLORS["primary"],
