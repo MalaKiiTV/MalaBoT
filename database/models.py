@@ -496,6 +496,9 @@ class DatabaseManager:
         await conn.commit()
 
 
+    async def log_event(self, category: str, action: str, user_id: int = None,
+                       target_id: int = None, channel_id: int = None,
+                       details: str = None, guild_id: int = None):
         """Log an event to the audit log."""
         conn = await self.get_connection()
         await conn.execute("""
