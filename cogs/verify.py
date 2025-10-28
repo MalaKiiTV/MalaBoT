@@ -7,13 +7,106 @@ Subcommands: submit, review, setup
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord.ui import Select, View
 from datetime import datetime
+import aiohttp
+import re
 
 from utils.helpers import create_embed, safe_send_message
 from utils.logger import log_system
 from config.constants import COLORS
 
 VERIFIED_ROLE_NAME = "Verified"
+
+# Platform options for dropdown
+PLATFORM_OPTIONS = [
+    discord.SelectOption(label="Xbox", value="xbox", emoji="🎮"),
+    discord.SelectOption(label="PlayStation", value="playstation", emoji="🎮"),
+    discord.SelectOption(label="Steam", value="steam", emoji="💻"),
+    discord.SelectOption(label="Battle.net", value="battlenet", emoji="⚔️"),
+    discord.SelectOption(label="Other", value="other", emoji="❓"),
+]
+
+
+class PlatformSelect(Select):
+    def __init__(self, activision_id: str, screenshot_url: str, user_id: int):
+        super().__init__(
+            placeholder="Select your gaming platform...",
+            min_values=1,
+            max_values=1,
+            options=PLATFORM_OPTIONS,
+        )
+        self.activision_id = activision_id
+        self.screenshot_url = screenshot_url
+        self.user_id = user_id
+
+    async def callback(self, interaction: discord.Interaction):
+        platform = self.values[0]
+        
+        try:
+            bot = interaction.client
+            db = bot.db_manager
+            
+            conn = await db.get_connection()
+            await conn.execute(
+                "INSERT INTO verifications (discord_id, activision_id, platform, screenshot_url) VALUES (?, ?, ?, ?)",
+                (self.user_id, self.activision_id, platform, self.screenshot_url),
+            )
+            await conn.commit()
+
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Verification Submitted ✅",
+                    "Your verification has been sent for staff review. You'll be notified once it's approved or rejected.",
+                    COLORS["success"],
+                ),
+                ephemeral=True,
+            )
+
+            log_system(f"[VERIFY] User {self.user_id} submitted verification for {self.activision_id} on {platform}")
+
+            guild_id = interaction.guild.id if interaction.guild else None
+            review_channel_id = await db.get_setting(f"verify_channel_{guild_id}")
+            review_channel = bot.get_channel(int(review_channel_id)) if review_channel_id else None
+
+            if review_channel:
+                embed = discord.Embed(
+                    title="📸 New Verification Submission",
+                    description=(
+                        f"**User:** <@{self.user_id}>\n"
+                        f"**Activision ID:** `{self.activision_id}`\n"
+                        f"**Platform:** `{platform}`\n"
+                        f"**Submitted:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    ),
+                    color=COLORS["info"],
+                )
+                embed.set_image(url=self.screenshot_url)
+                embed.set_footer(text=f"User ID: {self.user_id}")
+                await review_channel.send(embed=embed)
+
+            await db.log_event(
+                category="VERIFY",
+                action="SUBMIT",
+                user_id=self.user_id,
+                details=f"{self.activision_id} ({platform})",
+            )
+
+        except Exception as e:
+            log_system(f"Platform selection callback error: {e}", level="error")
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Error",
+                    "Something went wrong processing your selection. Please try again.",
+                    COLORS["error"],
+                ),
+                ephemeral=True,
+            )
+
+
+class PlatformView(View):
+    def __init__(self, activision_id: str, screenshot_url: str, user_id: int):
+        super().__init__(timeout=180)
+        self.add_item(PlatformSelect(activision_id, screenshot_url, user_id))
 
 
 class Verify(commands.Cog):
@@ -27,11 +120,32 @@ class Verify(commands.Cog):
     # SUBCOMMAND — SUBMIT VERIFICATION
     # ============================================================
     @verify.command(name="submit", description="Submit your Warzone verification screenshot.")
-    async def submit(self, interaction: discord.Interaction, activision_id: str, platform: str):
+    async def submit(self, interaction: discord.Interaction, activision_id: str):
         try:
             await interaction.response.defer(ephemeral=True, thinking=True)
 
-            if not interaction.attachments:
+            if not interaction.message or not interaction.message.attachments:
+                # Check if there are attachments in the interaction itself
+                if not hasattr(interaction, 'attachments') or not interaction.attachments:
+                    await safe_send_message(
+                        interaction,
+                        embed=create_embed(
+                            "Missing Screenshot",
+                            "Please attach your **Warzone Combat Record screenshot** showing your Activision ID and stats.",
+                            COLORS["error"],
+                        ),
+                        ephemeral=True,
+                    )
+                    return
+
+            # Get screenshot from interaction
+            screenshot = None
+            if hasattr(interaction, 'attachments') and interaction.attachments:
+                screenshot = interaction.attachments[0]
+            elif interaction.message and interaction.message.attachments:
+                screenshot = interaction.message.attachments[0]
+            
+            if not screenshot:
                 await safe_send_message(
                     interaction,
                     embed=create_embed(
@@ -43,62 +157,17 @@ class Verify(commands.Cog):
                 )
                 return
 
-            screenshot = interaction.attachments[0]
-
-            conn = await self.db.get_connection()
-            await conn.execute(
-                "INSERT INTO verifications (discord_id, activision_id, platform, screenshot_url) VALUES (?, ?, ?, ?)",
-                (interaction.user.id, activision_id, platform, screenshot.url),
-            )
-            await conn.commit()
-
-            await safe_send_message(
-                interaction,
+            # Send platform selection dropdown
+            view = PlatformView(activision_id, screenshot.url, interaction.user.id)
+            
+            await interaction.followup.send(
                 embed=create_embed(
-                    "Verification Submitted ✅",
-                    "Your verification has been sent for staff review. You'll be notified once it's approved or rejected.",
-                    COLORS["success"],
+                    "Select Your Platform",
+                    f"**Activision ID:** `{activision_id}`\n\nPlease select your gaming platform from the dropdown below:",
+                    COLORS["info"],
                 ),
+                view=view,
                 ephemeral=True,
-            )
-
-            log_system(f"[VERIFY] {interaction.user} submitted verification for {activision_id}")
-
-            guild_id = interaction.guild.id if interaction.guild else None
-            review_channel_id = await self.db.get_setting(f"verify_channel_{guild_id}")
-            review_channel = self.bot.get_channel(int(review_channel_id)) if review_channel_id else None
-
-            if not review_channel:
-                await safe_send_message(
-                    interaction,
-                    embed=create_embed(
-                        "Setup Required",
-                        "No review channel is configured yet. Run `/verify setup` to set one.",
-                        COLORS["warning"],
-                    ),
-                    ephemeral=True,
-                )
-                return
-
-            embed = discord.Embed(
-                title="📸 New Verification Submission",
-                description=(
-                    f"**User:** {interaction.user.mention}\n"
-                    f"**Activision ID:** `{activision_id}`\n"
-                    f"**Platform:** `{platform}`\n"
-                    f"**Submitted:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-                ),
-                color=COLORS["info"],
-            )
-            embed.set_image(url=screenshot.url)
-            embed.set_footer(text=f"User ID: {interaction.user.id}")
-            await review_channel.send(embed=embed)
-
-            await self.db.log_event(
-                category="VERIFY",
-                action="SUBMIT",
-                user_id=interaction.user.id,
-                details=f"{activision_id} ({platform})",
             )
 
         except Exception as e:
