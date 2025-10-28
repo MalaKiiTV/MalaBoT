@@ -179,7 +179,7 @@ class VerifyGroup(app_commands.Group):
                 decision_value = decision.value
 
                 if decision_value not in ["verified", "cheater", "unverified"]:
-                await safe_send_message(interaction, content="Use `verified`, `cheater`, or `unverified`.", ephemeral=True)
+                    await safe_send_message(interaction, content="Use `verified`, `cheater`, or `unverified`.", ephemeral=True)
                     return
 
             conn = await self.cog.db.get_connection()
