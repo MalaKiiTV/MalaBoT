@@ -377,11 +377,19 @@ goto menu
 :gitpull
 echo.
 echo [INFO] Pulling from GitHub...
+REM Stash any local changes including untracked files
+git add -A >nul 2>&1
+git stash --include-untracked >nul 2>&1
+REM Pull from GitHub
 git pull origin main --no-edit
 if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Pulled from GitHub successfully!
+    REM Try to restore stashed changes
+    git stash pop >nul 2>&1
 ) else (
     echo [ERROR] Failed to pull from GitHub
+    REM Restore stashed changes even on failure
+    git stash pop >nul 2>&1
 )
 timeout /T 3 /NOBREAK >NUL
 goto menu
