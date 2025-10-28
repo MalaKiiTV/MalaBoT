@@ -23,7 +23,7 @@ class Moderation(commands.Cog):
         self.bot = bot
         self.logger = get_logger('moderation')
     
-    @app_commands.command(name="delete", description="Message deletion commands (Owner only)")
+    @app_commands.command(name="delete", description="Message deletion commands (Admin only)")
     @app_commands.default_permissions(administrator=True)
     @app_commands.describe(action="What deletion action would you like to perform?")
     @app_commands.choices(action=[
@@ -345,7 +345,7 @@ class Moderation(commands.Cog):
             self.logger.error(f"Error showing moderation logs: {e}")
             raise
     
-    @app_commands.command(name="kick", description="Kick a user from the server (Owner only)")
+    @app_commands.command(name="kick", description="Kick a user from the server (Admin only)")
     @app_commands.default_permissions(administrator=True)
     @app_commands.describe(user="The user to kick", reason="Reason for kick")
     async def kick(self, interaction: discord.Interaction, user: discord.Member, reason: str = "No reason provided"):
@@ -426,7 +426,7 @@ class Moderation(commands.Cog):
             self.logger.error(f"Error in kick command: {e}")
             await self._error_response(interaction, "Failed to kick user")
 
-    @app_commands.command(name="ban", description="Ban a user from the server (Owner only)")
+    @app_commands.command(name="ban", description="Ban a user from the server (Admin only)")
     @app_commands.default_permissions(administrator=True)
     @app_commands.describe(user="The user to ban", reason="Reason for ban")
     async def ban(self, interaction: discord.Interaction, user: discord.User, reason: str = "No reason provided"):
@@ -507,7 +507,7 @@ class Moderation(commands.Cog):
             self.logger.error(f"Error in ban command: {e}")
             await self._error_response(interaction, "Failed to ban user")
 
-    @app_commands.command(name="mute", description="Mute a user in the server (Owner only)")
+    @app_commands.command(name="mute", description="Mute a user in the server (Admin only)")
     @app_commands.default_permissions(administrator=True)
     @app_commands.describe(user="The user to mute", duration="Mute duration in minutes", reason="Reason for mute")
     async def mute(self, interaction: discord.Interaction, user: discord.Member, duration: int = 10, reason: str = "No reason provided"):
@@ -609,7 +609,7 @@ class Moderation(commands.Cog):
             self.logger.error(f"Error in mute command: {e}")
             await self._error_response(interaction, "Failed to mute user")
 
-    @app_commands.command(name="unmute", description="Unmute a user in the server (Owner only)")
+    @app_commands.command(name="unmute", description="Unmute a user in the server (Admin only)")
     @app_commands.default_permissions(administrator=True)
     @app_commands.describe(user="The user to unmute", reason="Reason for unmute")
     async def unmute(self, interaction: discord.Interaction, user: discord.Member, reason: str = "No reason provided"):

@@ -300,7 +300,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in daily command: {e}")
             await self._error_response(interaction, "Failed to claim daily bonus")
     
-    @app_commands.command(name="xpadd", description="Add XP to a user (Owner only)")
+    @app_commands.command(name="xpadd", description="Add XP to a user (Admin only)")
     @app_commands.describe(
         user="User to add XP to",
         amount="Amount of XP to add"
@@ -308,11 +308,11 @@ class XP(commands.Cog):
     async def xpadd(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Add XP to a user."""
         try:
-            # Check owner permissions
-            if not is_owner(interaction.user):
+            # Check admin permissions
+            if not interaction.user.guild_permissions.administrator:
                 embed = embed_helper.error_embed(
                     title="🚫 Permission Denied",
-                    description="This command is only available to bot owners."
+                    description="This command is only available to server administrators."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
@@ -322,7 +322,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xpadd command: {e}")
             await self._error_response(interaction, "Failed to add XP")
     
-    @app_commands.command(name="xpremove", description="Remove XP from a user (Owner only)")
+    @app_commands.command(name="xpremove", description="Remove XP from a user (Admin only)")
     @app_commands.describe(
         user="User to remove XP from",
         amount="Amount of XP to remove"
@@ -330,11 +330,11 @@ class XP(commands.Cog):
     async def xpremove(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Remove XP from a user."""
         try:
-            # Check owner permissions
-            if not is_owner(interaction.user):
+            # Check admin permissions
+            if not interaction.user.guild_permissions.administrator:
                 embed = embed_helper.error_embed(
                     title="🚫 Permission Denied",
-                    description="This command is only available to bot owners."
+                    description="This command is only available to server administrators."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
@@ -344,7 +344,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xpremove command: {e}")
             await self._error_response(interaction, "Failed to remove XP")
     
-    @app_commands.command(name="xpset", description="Set user XP to a specific amount (Owner only)")
+    @app_commands.command(name="xpset", description="Set user XP to a specific amount (Admin only)")
     @app_commands.describe(
         user="User to set XP for",
         amount="Amount of XP to set"
@@ -352,11 +352,11 @@ class XP(commands.Cog):
     async def xpset(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Set user XP to a specific amount."""
         try:
-            # Check owner permissions
-            if not is_owner(interaction.user):
+            # Check admin permissions
+            if not interaction.user.guild_permissions.administrator:
                 embed = embed_helper.error_embed(
                     title="🚫 Permission Denied",
-                    description="This command is only available to bot owners."
+                    description="This command is only available to server administrators."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
@@ -366,18 +366,18 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xpset command: {e}")
             await self._error_response(interaction, "Failed to set XP")
     
-    @app_commands.command(name="xpreset", description="Reset user XP to 0 (Owner only)")
+    @app_commands.command(name="xpreset", description="Reset user XP to 0 (Admin only)")
     @app_commands.describe(
         user="User to reset XP for"
     )
     async def xpreset(self, interaction: discord.Interaction, user: discord.Member):
         """Reset user XP to 0."""
         try:
-            # Check owner permissions
-            if not is_owner(interaction.user):
+            # Check admin permissions
+            if not interaction.user.guild_permissions.administrator:
                 embed = embed_helper.error_embed(
                     title="🚫 Permission Denied",
-                    description="This command is only available to bot owners."
+                    description="This command is only available to server administrators."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
@@ -388,7 +388,7 @@ class XP(commands.Cog):
             await self._error_response(interaction, "Failed to reset XP")
     
 
-    @app_commands.command(name="xpconfig", description="Configure XP settings (Owner only)")
+    @app_commands.command(name="xpconfig", description="Configure XP settings (Admin only)")
     @app_commands.describe(
         setting="Setting to configure",
         value="New value for the setting"
@@ -403,11 +403,11 @@ class XP(commands.Cog):
     async def xpconfig(self, interaction: discord.Interaction, setting: str = None, value: int = None):
         """Configure XP settings."""
         try:
-            # Check owner permissions
-            if not is_owner(interaction.user):
+            # Check admin permissions
+            if not interaction.user.guild_permissions.administrator:
                 embed = embed_helper.error_embed(
                     title="🚫 Permission Denied",
-                    description="This command is only available to bot owners."
+                    description="This command is only available to server administrators."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
