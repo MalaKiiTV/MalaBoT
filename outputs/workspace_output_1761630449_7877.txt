@@ -1,0 +1,2 @@
+To https://github.com/MalaKiiTV/MalaBoT.git
+   6620c9e..4726e93  fix-verify-command -> fix-verify-command
