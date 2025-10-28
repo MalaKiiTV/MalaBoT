@@ -203,11 +203,17 @@ class VerificationSetupView(View):
 
 class TimezoneModal(Modal, title="Set Timezone"):
     """Modal for setting server timezone"""
-    timezone = TextInput(
-        label="Timezone",
-        placeholder="e.g., UTC-6, America/New_York, Europe/London",
-        required=True,
-        max_length=50,
+    timezone = discord.ui.Select(
+        placeholder="Select your timezone",
+        options=[
+            discord.SelectOption(label="Eastern Time (ET)", value="America/New_York"),
+            discord.SelectOption(label="Central Time (CT)", value="America/Chicago"),
+            discord.SelectOption(label="Mountain Time (MT)", value="America/Denver"),
+            discord.SelectOption(label="Pacific Time (PT)", value="America/Los_Angeles"),
+            discord.SelectOption(label="Alaska Time (AKT)", value="America/Anchorage"),
+            discord.SelectOption(label="Hawaii Time (HT)", value="Pacific/Honolulu"),
+            discord.SelectOption(label="Arizona Time (AZ)", value="America/Phoenix"),
+        ],
     )
 
     def __init__(self, db_manager, guild_id: int):
@@ -217,18 +223,18 @@ class TimezoneModal(Modal, title="Set Timezone"):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            await self.db.set_setting(f"timezone_{self.guild_id}", self.timezone.value)
+            await self.db.set_setting(f"timezone_{self.guild_id}", self.timezone.values[0])
             await self.db.log_event(
                 category="SETTINGS",
                 action="SET_TIMEZONE",
                 user_id=interaction.user.id,
-                details=f"Set timezone to {self.timezone.value}",
+                details=f"Set timezone to {self.timezone.values[0]}",
                 guild_id=self.guild_id,
             )
             await interaction.response.send_message(
                 embed=create_embed(
                     "Timezone Set",
-                    f"✅ Server timezone set to **{self.timezone.value}**\n\nThis affects birthday announcements and scheduled tasks.",
+                    f"✅ Server timezone set to **{self.timezone.values[0]}**\n\nThis affects birthday announcements and scheduled tasks.",
                     COLORS["success"],
                 ),
                 ephemeral=True,
@@ -245,6 +251,19 @@ class TimezoneModal(Modal, title="Set Timezone"):
             )
 
 
+class OnlineMessageChannelSelect(discord.ui.ChannelSelect):
+    """Channel selection for online message"""
+    def __init__(self, db_manager, guild_id: int):
+        super().__init__(placeholder="Select a channel for the online message")
+        self.db = db_manager
+        self.guild_id = guild_id
+
+    async def callback(self, interaction: discord.Interaction):
+        channel = self.values[0]
+        modal = OnlineMessageModal(self.db, self.guild_id, channel.id)
+        await interaction.response.send_modal(modal)
+
+
 class OnlineMessageModal(Modal, title="Set Bot Online Message"):
     """Modal for setting bot online message"""
     message = TextInput(
@@ -255,25 +274,29 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
         style=discord.TextStyle.paragraph
     )
 
-    def __init__(self, db_manager, guild_id: int):
+    def __init__(self, db_manager, guild_id: int, channel_id: int):
         super().__init__()
         self.db = db_manager
         self.guild_id = guild_id
+        self.channel_id = channel_id
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
             await self.db.set_setting(f"online_message_{self.guild_id}", self.message.value)
+            await self.db.set_setting(f"online_message_channel_{self.guild_id}", str(self.channel_id))
             await self.db.log_event(
                 category="SETTINGS",
                 action="SET_ONLINE_MESSAGE",
                 user_id=interaction.user.id,
-                details=f"Set online message",
+                details=f"Set online message in channel {self.channel_id}",
                 guild_id=self.guild_id,
             )
+            channel = interaction.guild.get_channel(self.channel_id)
+            channel_name = channel.name if channel else "Unknown"
             await interaction.response.send_message(
                 embed=create_embed(
                     "Online Message Set",
-                    f"✅ Bot online message set to:\n\n{self.message.value}",
+                    f"✅ Bot online message set in **#{channel_name}**:\n\n{self.message.value}",
                     COLORS["success"],
                 ),
                 ephemeral=True,
@@ -306,8 +329,9 @@ class GeneralSettingsView(View):
     @discord.ui.button(label="Set Online Message", style=discord.ButtonStyle.primary, emoji="💬")
     async def set_online_message(self, interaction: discord.Interaction, button: Button):
         """Set bot online message"""
-        modal = OnlineMessageModal(self.db, self.guild_id)
-        await interaction.response.send_modal(modal)
+        view = View()
+        view.add_item(OnlineMessageChannelSelect(self.db, self.guild_id))
+        await interaction.response.send_message("Select a channel for the online message:", view=view, ephemeral=True)
 
     @discord.ui.button(label="Set Mod Role", style=discord.ButtonStyle.primary, emoji="🛡️")
     async def set_mod_role(self, interaction: discord.Interaction, button: Button):
@@ -325,7 +349,7 @@ class GeneralSettingsView(View):
             embed = discord.Embed(
                 title="✅ Mod Role Set",
                 description=f"Mod role has been set to {role.mention}\n\n"
-                           f"Users with this role can use moderation commands, verify users, review appeals, and manage XP.",
+                           f"Users with this role can verify users and review appeals.",
                 color=COLORS["success"],
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
