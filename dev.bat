@@ -42,47 +42,47 @@ if not exist "backups" mkdir "backups"
 
 :menu
 cls
-echo ========================================
-echo          MalaBoT Development Tools
-echo ========================================
+echo ================================================================================
+echo                          MalaBoT Development Tools
+echo ================================================================================
 echo.
 echo [BOT MANAGEMENT]
-echo  1. Start Bot with cache clear
-echo  2. Stop Bot
-echo  3. Restart Bot with cache clear
-echo  4. Check Bot Status
-echo  5. View Live Logs
-echo  6. Clear All Caches
+echo  1. Start Bot                    - Clear cache, validate config, start bot
+echo  2. Stop Bot                     - Stop running bot (multi-method)
+echo  3. Restart Bot                  - Stop, clear cache, restart bot
+echo  4. Check Bot Status             - View status, logs, process info
+echo  5. View Live Logs               - Real-time log monitoring (Ctrl+C to exit)
+echo  6. Clear All Caches             - Clear Python/pytest/temp caches
 echo.
 echo [WORKFLOWS]
-echo  7. Update Workflow
-echo  8. Deploy Workflow
+echo  7. Update Workflow              - Pull + Install + Restart + Status
+echo  8. Deploy Workflow              - Stage + Commit + Push to GitHub
 echo.
 echo [GIT OPERATIONS]
-echo  9.  Check Git Status
-echo 10. Stage All Changes
-echo 11. Commit Changes
-echo 12. Push to GitHub
-echo 13. Remote Deploy to Droplet
-echo 14. Pull from GitHub
-echo 15. View Commit History
+echo  9.  Check Git Status            - View modified/staged files
+echo 10. Stage All Changes            - Stage all files for commit
+echo 11. Commit Changes               - Commit staged files with message
+echo 12. Push to GitHub               - Push commits to remote
+echo 13. Remote Deploy to Droplet    - Deploy to production server
+echo 14. Pull from GitHub             - Get latest changes from remote
+echo 15. View Commit History          - Show last 10 commits
 echo.
 echo [UTILITIES]
-echo 16. Install Dependencies
-echo 17. Create .env File
-echo 18. Test Configuration
+echo 16. Install Dependencies         - Install/update Python packages
+echo 17. Create .env File             - Create config from template
+echo 18. Test Configuration           - Validate .env settings
 echo.
 echo [ADVANCED OPS]
-echo 19. Full Clean Update
-echo 20. Backup Now
-echo 21. Verify Environment
-echo 22. Clear All (Commands + Caches + Logs + Temp)
-echo 23. Fix /verify Command Structure
+echo 19. Full Clean Update            - Backup + Reset + Pull + Restart
+echo 20. Backup Now                   - Backup logs and database
+echo 21. Verify Environment           - Check configuration validity
+echo 22. Clear All                    - Clear commands + caches + logs + temp
+echo 23. Fix /verify Command          - Fix command structure in Discord
 echo.
 echo [EXIT]
-echo  0. Exit
+echo  0. Exit                         - Close development tools
 echo.
-echo ========================================
+echo ================================================================================
 set /p choice="Enter your choice: "
 
 if "%choice%"=="1" goto start
