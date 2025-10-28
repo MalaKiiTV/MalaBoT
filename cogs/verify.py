@@ -10,7 +10,7 @@ from discord.ext import commands
 from discord.ui import Select, View, Modal, TextInput
 from datetime import datetime
 
-from utils.helpers import create_embed, safe_send_message, check_mod_permission
+from utils.helpers import create_embed, safe_send_message
 from utils.logger import log_system
 from config.constants import COLORS
 
@@ -144,8 +144,8 @@ class VerifyGroup(app_commands.Group):
         super().__init__(name="verify", description="Warzone verification system")
         self.cog = cog
 
-    @app_commands.command(name="submit", description="Submit your Warzone verification")
-    async def submit(self, interaction: discord.Interaction):
+    @app_commands.command(name="activision", description="Submit your Warzone verification with Activision ID")
+    async def activision(self, interaction: discord.Interaction):
         """Submit verification - opens modal for Activision ID, then asks for screenshot."""
         modal = ActivisionIDModal(self.cog.bot)
         await interaction.response.send_modal(modal)
@@ -169,11 +169,13 @@ class VerifyGroup(app_commands.Group):
         notes: str = None,
     ):
         try:
-               # Check mod permissions (checks verification_mod_role first, then general mod_role)
-               if not await check_mod_permission(interaction, self.cog.db, "verification_mod_role"):
-                   return
-               
+            # Check staff permission
+            from utils.helpers import check_staff_permission
+            if not await check_staff_permission(interaction, self.cog.db):
+                return
+
             await interaction.response.defer(ephemeral=True, thinking=True)
+            guild_id = interaction.guild.id
             decision_value = decision.value
 
             if decision_value not in ["verified", "cheater", "unverified"]:
@@ -193,7 +195,6 @@ class VerifyGroup(app_commands.Group):
 
             if decision_value == "verified" and member:
                 # Get verified role from settings
-                guild_id = interaction.guild.id
                 verified_role_id = await self.cog.db.get_setting(f"verify_role_{guild_id}")
                 
                 if verified_role_id:
@@ -210,11 +211,44 @@ class VerifyGroup(app_commands.Group):
                 result_text = f"❌ Marked {user.mention} as unverified. They remain unverified."
                 
             elif decision_value == "cheater" and member:
-                try:
-                    await member.ban(reason=f"Verification: Confirmed cheater by {interaction.user}: {notes or 'No additional notes'}")
-                    result_text = f"🔨 Banned {user.mention} from the server for cheating."
-                except discord.Forbidden:
-                    result_text = f"❌ Failed to ban {user.mention}. Missing permissions."
+                # Get cheater role and channel from settings
+                cheater_role_id = await self.cog.db.get_setting(f"cheater_role_{guild_id}")
+                cheater_channel_id = await self.cog.db.get_setting(f"cheater_channel_{guild_id}")
+                
+                if cheater_role_id and cheater_channel_id:
+                    cheater_role = guild.get_role(int(cheater_role_id))
+                    cheater_channel = guild.get_channel(int(cheater_channel_id))
+                    
+                    if cheater_role and cheater_channel:
+                        try:
+                            # Remove all roles except @everyone
+                            roles_to_remove = [role for role in member.roles if role != guild.default_role]
+                            await member.remove_roles(*roles_to_remove, reason=f"Marked as cheater by {interaction.user}")
+                            
+                            # Add cheater role
+                            await member.add_roles(cheater_role, reason=f"Marked as cheater by {interaction.user}")
+                            
+                            # Send notification to cheater jail
+                            jail_embed = discord.Embed(
+                                title="🚨 New Arrival",
+                                description=(
+                                    f"{member.mention} has been sent to cheater jail.\n\n"
+                                    f"**Reason:** Confirmed cheater during verification\n"
+                                    f"**Reviewed by:** {interaction.user.mention}\n"
+                                    f"**Notes:** {notes or 'None provided'}\n\n"
+                                    f"You can submit ONE appeal using `/appeal`"
+                                ),
+                                color=COLORS["error"],
+                            )
+                            await cheater_channel.send(content=f"{member.mention}", embed=jail_embed)
+                            
+                            result_text = f"🔒 Sent {member.mention} to cheater jail ({cheater_channel.mention}) with {cheater_role.mention} role."
+                        except discord.Forbidden:
+                            result_text = f"❌ Failed to assign cheater role to {user.mention}. Missing permissions."
+                    else:
+                        result_text = f"❌ Cheater role or channel not found. Please configure in `/setup` → Verification System"
+                else:
+                    result_text = f"❌ Cheater jail system not configured. Please run `/setup` → Verification System to set up cheater role and channel."
 
             await safe_send_message(interaction, content=result_text, ephemeral=True)
 
@@ -227,7 +261,7 @@ class VerifyGroup(app_commands.Group):
                 details=f"{decision_value.upper()} - {notes or 'No notes'}",
             )
 
-            # DM user about decision (except for cheater bans)
+            # DM user about decision (except for cheaters)
             if decision_value != "cheater":
                 try:
                     dm_embed = create_embed(
@@ -290,24 +324,15 @@ class Verify(commands.Cog):
             )
             return
 
-        # Send platform selection (ephemeral)
+        # Send platform selection
         view = PlatformView(activision_id, screenshot.url, user_id)
-        # Delete the user's screenshot message for privacy
-        try:
-            await message.delete()
-        except:
-            pass
-        
-        # Send ephemeral message to user
-        await message.channel.send(
-            content=f"<@{user_id}>",
+        await message.reply(
             embed=create_embed(
                 "Select Your Platform",
                 f"**Activision ID:** `{activision_id}`\n\nPlease select your gaming platform from the dropdown below:",
                 COLORS["info"],
             ),
             view=view,
-            delete_after=300  # Delete after 5 minutes
         )
 
 
