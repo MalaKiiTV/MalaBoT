@@ -171,35 +171,10 @@ class AppealGroup(app_commands.Group):
     ):
         """Review an appeal"""
         try:
-            guild_id = interaction.guild.id
-            
-            # Check if user has staff role
-            staff_role_id = await self.cog.db.get_setting(f"staff_role_{guild_id}")
-            
-            if staff_role_id:
-                staff_role = interaction.guild.get_role(int(staff_role_id))
-                if staff_role and staff_role not in interaction.user.roles:
-                    await interaction.response.send_message(
-                        embed=create_embed(
-                            "Permission Denied",
-                            f"❌ You need the {staff_role.mention} role to review appeals.",
-                            COLORS["error"],
-                        ),
-                        ephemeral=True,
-                    )
-                    return
-            else:
-                # Fallback to manage_roles permission
-                if not interaction.user.guild_permissions.manage_roles:
-                    await interaction.response.send_message(
-                        embed=create_embed(
-                            "Permission Denied",
-                            "❌ You need the Manage Roles permission to review appeals.",
-                            COLORS["error"],
-                        ),
-                        ephemeral=True,
-                    )
-                    return
+            # Check staff permission
+            from utils.helpers import check_staff_permission
+            if not await check_staff_permission(interaction, self.cog.db):
+                return
             
             await interaction.response.defer(ephemeral=True, thinking=True)
             

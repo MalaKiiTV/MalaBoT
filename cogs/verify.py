@@ -146,8 +146,8 @@ class VerifyGroup(app_commands.Group):
         super().__init__(name="verify", description="Warzone verification system")
         self.cog = cog
 
-    @app_commands.command(name="submit", description="Submit your Warzone verification")
-    async def submit(self, interaction: discord.Interaction):
+    @app_commands.command(name="activision", description="Submit your Warzone verification with Activision ID")
+    async def activision(self, interaction: discord.Interaction):
         """Submit verification - opens modal for Activision ID, then asks for screenshot."""
         modal = ActivisionIDModal(self.cog.bot)
         await interaction.response.send_modal(modal)
@@ -171,37 +171,13 @@ class VerifyGroup(app_commands.Group):
         notes: str = None,
     ):
         try:
-            # Check if user has staff role
-            guild_id = interaction.guild.id
-            staff_role_id = await self.cog.db.get_setting(f"staff_role_{guild_id}")
-            
-            if staff_role_id:
-                staff_role = interaction.guild.get_role(int(staff_role_id))
-                if staff_role and staff_role not in interaction.user.roles:
-                    await interaction.response.send_message(
-                        embed=create_embed(
-                            "Permission Denied",
-                            f"❌ You need the {staff_role.mention} role to review verifications.",
-                            COLORS["error"],
-                        ),
-                        ephemeral=True,
-                    )
-                    return
-            else:
-                # Fallback to manage_roles permission if no staff role configured
-                if not interaction.user.guild_permissions.manage_roles:
-                    await interaction.response.send_message(
-                        embed=create_embed(
-                            "Permission Denied",
-                            "❌ You need the Manage Roles permission to review verifications.\n\n"
-                            "**Tip:** Configure a staff role in `/setup` → Verification System",
-                            COLORS["error"],
-                        ),
-                        ephemeral=True,
-                    )
-                    return
+            # Check staff permission
+            from utils.helpers import check_staff_permission
+            if not await check_staff_permission(interaction, self.cog.db):
+                return
 
             await interaction.response.defer(ephemeral=True, thinking=True)
+            guild_id = interaction.guild.id
             decision_value = decision.value
 
             if decision_value not in ["verified", "cheater", "unverified"]:

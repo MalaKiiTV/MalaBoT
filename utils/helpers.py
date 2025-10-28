@@ -135,6 +135,57 @@ class PermissionHelper:
     def is_admin(member: discord.Member) -> bool:
         """Check if member has administrator permissions."""
         return member.guild_permissions.administrator
+    
+    @staticmethod
+    async def is_staff(interaction: discord.Interaction, db_manager) -> bool:
+        """
+        Check if user has staff role or admin permissions.
+        Admins always have staff permissions.
+        """
+        # Check admin first (admins bypass staff role requirement)
+        if interaction.user.guild_permissions.administrator:
+            return True
+        
+        # Check staff role
+        guild_id = interaction.guild.id
+        staff_role_id = await db_manager.get_setting(f"staff_role_{guild_id}")
+        
+        if staff_role_id:
+            staff_role = interaction.guild.get_role(int(staff_role_id))
+            if staff_role and staff_role in interaction.user.roles:
+                return True
+        
+        return False
+    
+    @staticmethod
+    async def check_staff_permission(interaction: discord.Interaction, db_manager) -> bool:
+        """
+        Check staff permission and send error message if user lacks permission.
+        Returns True if user has permission, False otherwise.
+        """
+        if await PermissionHelper.is_staff(interaction, db_manager):
+            return True
+        
+        # Get staff role for error message
+        guild_id = interaction.guild.id
+        staff_role_id = await db_manager.get_setting(f"staff_role_{guild_id}")
+        
+        if staff_role_id:
+            staff_role = interaction.guild.get_role(int(staff_role_id))
+            role_mention = staff_role.mention if staff_role else "the configured staff role"
+            error_msg = f"❌ You need {role_mention} or Administrator permission to use this command."
+        else:
+            error_msg = "❌ You need Administrator permission to use this command.\n\n**Tip:** Configure a staff role in `/setup` → General Settings"
+        
+        await interaction.response.send_message(
+            embed=create_embed(
+                "Permission Denied",
+                error_msg,
+                COLORS["error"],
+            ),
+            ephemeral=True,
+        )
+        return False
 
 class XPHelper:
     """Helper class for XP-related operations."""
@@ -316,6 +367,12 @@ def is_owner(user: discord.User) -> bool:
 
 def is_admin(member: discord.Member) -> bool:
     return permission_helper.is_admin(member)
+
+async def is_staff(interaction: discord.Interaction, db_manager) -> bool:
+    return await permission_helper.is_staff(interaction, db_manager)
+
+async def check_staff_permission(interaction: discord.Interaction, db_manager) -> bool:
+    return await permission_helper.check_staff_permission(interaction, db_manager)
 
 def get_system_info() -> Dict[str, Any]:
     return system_helper.get_system_info()

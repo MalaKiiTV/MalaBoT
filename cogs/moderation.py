@@ -44,21 +44,24 @@ class Moderation(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            # Check if user is owner or has admin permissions
+            # Check if user is owner, admin, or staff
+            from utils.helpers import is_staff
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (interaction.user.guild_permissions.administrator or 
                              interaction.user.guild_permissions.manage_guild)
+            has_staff_role = await is_staff(interaction, self.db)
             
-            if not (is_bot_owner or has_admin_perm):
+            if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
                     title="🚫 Permission Denied",
                     description=f"This command is only available to:\n\n"
                                f"• Bot Owners\n"
-                               f"• Server Administrators\n\n"
+                               f"• Server Administrators\n"
+                               f"• Staff Members (configured role)\n\n"
                                f"Your current permissions:\n"
                                f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
                                f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
-                               f"• Manage Server: {'✅' if interaction.user.guild_permissions.manage_guild else '❌'}"
+                               f"• Staff Role: {'✅' if has_staff_role else '❌'}"
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 self.logger.warning(f"Unauthorized moderation command attempt by {interaction.user.name} ({interaction.user.id})")
@@ -348,22 +351,24 @@ class Moderation(commands.Cog):
     async def kick(self, interaction: discord.Interaction, user: discord.Member, reason: str = "No reason provided"):
         """Kick a user from the server."""
         try:
-            # Check if user is owner or has admin permissions
+            # Check if user is owner, admin, or staff
+            from utils.helpers import is_staff
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (interaction.user.guild_permissions.administrator or 
                              interaction.user.guild_permissions.kick_members)
+            has_staff_role = await is_staff(interaction, self.db)
             
-            if not (is_bot_owner or has_admin_perm):
+            if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
                     title="⛔ Permission Denied",
                     description=f"This command is only available to:\n\n"
                                f"• Bot Owners\n"
                                f"• Server Administrators\n"
-                               f"• Users with Kick Members permission\n\n"
+                               f"• Staff Members (configured role)\n\n"
                                f"Your current permissions:\n"
                                f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
                                f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
-                               f"• Kick Members: {'✅' if interaction.user.guild_permissions.kick_members else '❌'}"
+                               f"• Staff Role: {'✅' if has_staff_role else '❌'}"
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 self.logger.warning(f"Unauthorized kick command attempt by {interaction.user.name} ({interaction.user.id})")
@@ -427,22 +432,24 @@ class Moderation(commands.Cog):
     async def ban(self, interaction: discord.Interaction, user: discord.User, reason: str = "No reason provided"):
         """Ban a user from the server."""
         try:
-            # Check if user is owner or has admin permissions
+            # Check if user is owner, admin, or staff
+            from utils.helpers import is_staff
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (interaction.user.guild_permissions.administrator or 
                              interaction.user.guild_permissions.ban_members)
+            has_staff_role = await is_staff(interaction, self.db)
             
-            if not (is_bot_owner or has_admin_perm):
+            if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
                     title="⛔ Permission Denied",
                     description=f"This command is only available to:\n\n"
                                f"• Bot Owners\n"
                                f"• Server Administrators\n"
-                               f"• Users with Ban Members permission\n\n"
+                               f"• Staff Members (configured role)\n\n"
                                f"Your current permissions:\n"
                                f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
                                f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
-                               f"• Ban Members: {'✅' if interaction.user.guild_permissions.ban_members else '❌'}"
+                               f"• Staff Role: {'✅' if has_staff_role else '❌'}"
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 self.logger.warning(f"Unauthorized ban command attempt by {interaction.user.name} ({interaction.user.id})")
@@ -506,22 +513,24 @@ class Moderation(commands.Cog):
     async def mute(self, interaction: discord.Interaction, user: discord.Member, duration: int = 10, reason: str = "No reason provided"):
         """Mute a user in the server."""
         try:
-            # Check if user is owner or has admin permissions
+            # Check if user is owner, admin, or staff
+            from utils.helpers import is_staff
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (interaction.user.guild_permissions.administrator or 
                              interaction.user.guild_permissions.moderate_members)
+            has_staff_role = await is_staff(interaction, self.db)
             
-            if not (is_bot_owner or has_admin_perm):
+            if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
                     title="⛔ Permission Denied",
                     description=f"This command is only available to:\n\n"
                                f"• Bot Owners\n"
                                f"• Server Administrators\n"
-                               f"• Users with Moderate Members permission\n\n"
+                               f"• Staff Members (configured role)\n\n"
                                f"Your current permissions:\n"
                                f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
                                f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
-                               f"• Moderate Members: {'✅' if interaction.user.guild_permissions.moderate_members else '❌'}"
+                               f"• Staff Role: {'✅' if has_staff_role else '❌'}"
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 self.logger.warning(f"Unauthorized mute command attempt by {interaction.user.name} ({interaction.user.id})")
@@ -606,22 +615,24 @@ class Moderation(commands.Cog):
     async def unmute(self, interaction: discord.Interaction, user: discord.Member, reason: str = "No reason provided"):
         """Unmute a user in the server."""
         try:
-            # Check if user is owner or has admin permissions
+            # Check if user is owner, admin, or staff
+            from utils.helpers import is_staff
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (interaction.user.guild_permissions.administrator or 
                              interaction.user.guild_permissions.moderate_members)
+            has_staff_role = await is_staff(interaction, self.db)
             
-            if not (is_bot_owner or has_admin_perm):
+            if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
                     title="⛔ Permission Denied",
                     description=f"This command is only available to:\n\n"
                                f"• Bot Owners\n"
                                f"• Server Administrators\n"
-                               f"• Users with Moderate Members permission\n\n"
+                               f"• Staff Members (configured role)\n\n"
                                f"Your current permissions:\n"
                                f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
                                f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
-                               f"• Moderate Members: {'✅' if interaction.user.guild_permissions.moderate_members else '❌'}"
+                               f"• Staff Role: {'✅' if has_staff_role else '❌'}"
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 self.logger.warning(f"Unauthorized unmute command attempt by {interaction.user.name} ({interaction.user.id})")

@@ -59,7 +59,7 @@ echo  7. Update Workflow              - Pull + Install + Restart + Status
 echo  8. Deploy Workflow              - Stage + Commit + Push to GitHub
 echo.
 echo [GIT OPERATIONS]
-echo  9.  Check Git Status            - View modified/staged files
+echo  9. Check Git Status             - View modified/staged files
 echo 10. Stage All Changes            - Stage all files for commit
 echo 11. Commit Changes               - Commit staged files with message
 echo 12. Push to GitHub               - Push commits to remote
@@ -68,19 +68,19 @@ echo 14. Pull from GitHub             - Get latest changes from remote
 echo 15. View Commit History          - Show last 10 commits
 echo.
 echo [DROPLET MANAGEMENT]
-echo 21. View Droplet Status          - Check PM2 bot status on droplet
-echo 22. View Droplet Logs            - View live logs from droplet
-echo 23. Restart Droplet Bot          - Restart bot on droplet
-echo 24. Stop Droplet Bot             - Stop bot on droplet
+echo 16. View Droplet Status          - Check PM2 bot status on droplet
+echo 17. View Droplet Logs            - View live logs from droplet
+echo 18. Restart Droplet Bot          - Restart bot on droplet
+echo 19. Stop Droplet Bot             - Stop bot on droplet
 echo.
 echo [UTILITIES]
-echo 16. Install Dependencies         - Install/update Python packages
-echo 17. Test Configuration           - Validate .env settings
+echo 20. Install Dependencies         - Install/update Python packages
+echo 21. Test Configuration           - Validate .env settings
 echo.
 echo [ADVANCED OPS]
-echo 18. Backup Now                   - Backup logs and database
-echo 19. Verify Environment           - Check configuration validity
-echo 20. Clear All                    - Clear commands + caches + logs + temp
+echo 22. Backup Now                   - Backup logs and database
+echo 23. Verify Environment           - Check configuration validity
+echo 24. Clear All                    - Clear commands + caches + logs + temp
 echo.
 echo [EXIT]
 echo  0. Exit                         - Close development tools
@@ -103,15 +103,15 @@ if "%choice%"=="12" goto gitpush
 if "%choice%"=="13" goto remotedeploy
 if "%choice%"=="14" goto gitpull
 if "%choice%"=="15" goto githistory
-if "%choice%"=="16" goto installdeps
-if "%choice%"=="17" goto testconfig
-if "%choice%"=="18" goto backupnow
-if "%choice%"=="19" goto verifyenv
-if "%choice%"=="20" goto clearall
-if "%choice%"=="21" goto droplet_status
-if "%choice%"=="22" goto droplet_logs
-if "%choice%"=="23" goto droplet_restart
-if "%choice%"=="24" goto droplet_stop
+if "%choice%"=="16" goto droplet_status
+if "%choice%"=="17" goto droplet_logs
+if "%choice%"=="18" goto droplet_restart
+if "%choice%"=="19" goto droplet_stop
+if "%choice%"=="20" goto installdeps
+if "%choice%"=="21" goto testconfig
+if "%choice%"=="22" goto backupnow
+if "%choice%"=="23" goto verifyenv
+if "%choice%"=="24" goto clearall
 if "%choice%"=="0" goto exit
 
 echo Invalid choice. Please try again.

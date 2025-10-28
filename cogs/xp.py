@@ -308,11 +308,13 @@ class XP(commands.Cog):
     async def xpadd(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Add XP to a user."""
         try:
-            # Check permissions
-            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user)):
+            # Check permissions (staff role or admin)
+            from utils.helpers import is_staff
+            has_staff = await is_staff(interaction, self.db)
+            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user) or has_staff):
                 embed = embed_helper.error_embed(
                     title="Permission Denied",
-                    description="This command requires Administrator permission."
+                    description="This command requires Administrator permission or Staff role."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
@@ -330,11 +332,13 @@ class XP(commands.Cog):
     async def xpremove(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Remove XP from a user."""
         try:
-            # Check permissions
-            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user)):
+            # Check permissions (staff role or admin)
+            from utils.helpers import is_staff
+            has_staff = await is_staff(interaction, self.db)
+            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user) or has_staff):
                 embed = embed_helper.error_embed(
                     title="Permission Denied",
-                    description="This command requires Administrator permission."
+                    description="This command requires Administrator permission or Staff role."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
@@ -352,11 +356,13 @@ class XP(commands.Cog):
     async def xpset(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Set user XP to a specific amount."""
         try:
-            # Check permissions
-            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user)):
+            # Check permissions (staff role or admin)
+            from utils.helpers import is_staff
+            has_staff = await is_staff(interaction, self.db)
+            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user) or has_staff):
                 embed = embed_helper.error_embed(
                     title="Permission Denied",
-                    description="This command requires Administrator permission."
+                    description="This command requires Administrator permission or Staff role."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
@@ -373,11 +379,13 @@ class XP(commands.Cog):
     async def xpreset(self, interaction: discord.Interaction, user: discord.Member):
         """Reset user XP to 0."""
         try:
-            # Check permissions
-            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user)):
+            # Check permissions (staff role or admin)
+            from utils.helpers import is_staff
+            has_staff = await is_staff(interaction, self.db)
+            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user) or has_staff):
                 embed = embed_helper.error_embed(
                     title="Permission Denied",
-                    description="This command requires Administrator permission."
+                    description="This command requires Administrator permission or Staff role."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
@@ -403,11 +411,13 @@ class XP(commands.Cog):
     async def xpconfig(self, interaction: discord.Interaction, setting: str = None, value: int = None):
         """Configure XP settings."""
         try:
-            # Check permissions
-            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user)):
+            # Check permissions (staff role or admin)
+            from utils.helpers import is_staff
+            has_staff = await is_staff(interaction, self.db)
+            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user) or has_staff):
                 embed = embed_helper.error_embed(
                     title="Permission Denied",
-                    description="This command requires Administrator permission."
+                    description="This command requires Administrator permission or Staff role."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return

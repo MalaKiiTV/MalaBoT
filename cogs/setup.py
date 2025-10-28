@@ -708,6 +708,53 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
             )
 
 
+class GeneralStaffRoleSelect(discord.ui.RoleSelect):
+    """Role selector for staff role (global setting)"""
+    def __init__(self, db_manager, guild_id: int):
+        super().__init__(
+            placeholder="Select staff role...",
+            min_values=1,
+            max_values=1
+        )
+        self.db = db_manager
+        self.guild_id = guild_id
+
+    async def callback(self, interaction: discord.Interaction):
+        role = self.values[0]
+        try:
+            await self.db.set_setting(f"staff_role_{self.guild_id}", role.id)
+            await self.db.log_event(
+                category="SETTINGS",
+                action="SET_STAFF_ROLE",
+                user_id=interaction.user.id,
+                details=f"Set staff role to {role.name}",
+                guild_id=self.guild_id,
+            )
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Staff Role Set",
+                    f"✅ Staff role set to {role.mention}\n\n"
+                    f"Users with this role can:\n"
+                    f"• Review verifications (`/verify review`)\n"
+                    f"• Review appeals (`/appeal review`)\n"
+                    f"• Use moderation commands\n"
+                    f"• Manage XP (`/xpadd`, `/xpremove`, etc.)",
+                    COLORS["success"],
+                ),
+                ephemeral=True,
+            )
+        except Exception as e:
+            log_system(f"Error setting staff role: {e}", level="error")
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Error",
+                    "Failed to set staff role. Please try again.",
+                    COLORS["error"],
+                ),
+                ephemeral=True,
+            )
+
+
 class GeneralSettingsView(View):
     """View for general settings"""
     def __init__(self, db_manager, guild_id: int):
@@ -719,6 +766,8 @@ class GeneralSettingsView(View):
         self.add_item(TimezoneSelect(db_manager, guild_id))
         # Add online message channel selector
         self.add_item(OnlineMessageChannelSelect(db_manager, guild_id))
+        # Add staff role selector
+        self.add_item(GeneralStaffRoleSelect(db_manager, guild_id))
 
     @discord.ui.button(label="Set Online Message Text", style=discord.ButtonStyle.primary, emoji="💬")
     async def set_online_message(self, interaction: discord.Interaction, button: Button):
@@ -907,7 +956,8 @@ class SetupSelect(Select):
                 "**Available Settings:**\n"
                 "• **Timezone** - Affects birthday announcements and scheduled tasks\n"
                 "• **Online Message Channel** - Where bot posts when coming online\n"
-                "• **Bot Online Message** - Message sent when bot comes online\n\n"
+                "• **Online Message Text** - Message sent when bot comes online\n"
+                "• **Staff Role** - Role that can use moderation and verification commands\n\n"
                 "Select options from the dropdowns and use the button to configure."
             ),
             color=COLORS["primary"],
