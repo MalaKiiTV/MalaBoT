@@ -102,6 +102,20 @@ class TimeHelper:
             minutes = (seconds % 3600) // 60
             return f"{days}d {hours}h {minutes}m"
 
+
+    @staticmethod
+    def get_discord_timestamp(dt: datetime, style: str = "R") -> str:
+        """
+        Convert datetime to Discord timestamp format.
+        Styles: t (short time), T (long time), d (short date), D (long date),
+                f (short datetime), F (long datetime), R (relative)
+        """
+        if dt is None:
+            return "Unknown"
+        
+        timestamp = int(dt.timestamp())
+        return f"<t:{timestamp}:{style}>"
+
 class PermissionHelper:
     """Helper class for permission-related operations."""
     
@@ -120,8 +134,13 @@ class XPHelper:
     """Helper class for XP-related operations."""
     
     @staticmethod
-    def calculate_level_from_xp(total_xp: int, xp_table: Dict[int, int]) -> int:
+    def calculate_level_from_xp(total_xp: int, xp_table: Dict[int, int] = None) -> int:
         """Calculate level from total XP using the XP table."""
+        if xp_table is None:
+            # Import here to avoid circular dependency
+            from config.constants import XP_TABLE
+            xp_table = XP_TABLE
+        
         level = 1
         for lvl, xp_required in sorted(xp_table.items()):
             if total_xp >= xp_required:
@@ -179,8 +198,13 @@ class CooldownHelper:
             return datetime.now() < self.cooldowns[key]
         return False
     
-    def set_cooldown(self, user_id: int, command: str, seconds: int):
+    def set_cooldown(self, user_id: int, command: str, seconds: int = None):
         """Set a cooldown for a user on a command."""
+        if seconds is None:
+            # Import here to avoid circular dependency
+            from config.constants import COMMAND_COOLDOWNS
+            seconds = COMMAND_COOLDOWNS.get(command, 5)
+        
         key = f"{user_id}_{command}"
         self.cooldowns[key] = datetime.now() + timedelta(seconds=seconds)
     

@@ -496,6 +496,53 @@ class DatabaseManager:
         await conn.commit()
 
 
+    async def increment_daily_streak(self, user_id: int, guild_id: int) -> int:
+        """Increment and return the user's daily streak."""
+        from datetime import date, timedelta
+        conn = await self.get_connection()
+        
+        # Get current user data
+        cursor = await conn.execute("""
+            SELECT daily_streak, last_daily_award_date
+            FROM users
+            WHERE user_id = ?
+        """, (user_id,))
+        
+        row = await cursor.fetchone()
+        
+        if row:
+            current_streak = row[0] or 0
+            last_daily = row[1]
+            
+            # Check if streak should continue
+            today = date.today()
+            yesterday = today - timedelta(days=1)
+            
+            if last_daily:
+                last_date = date.fromisoformat(last_daily)
+                if last_date == yesterday:
+                    # Streak continues
+                    new_streak = current_streak + 1
+                elif last_date == today:
+                    # Already claimed today
+                    new_streak = current_streak
+                else:
+                    # Streak broken
+                    new_streak = 1
+            else:
+                new_streak = 1
+            
+            await conn.execute("""
+                UPDATE users
+                SET daily_streak = ?
+                WHERE user_id = ?
+            """, (new_streak, user_id))
+            await conn.commit()
+            
+            return new_streak
+        else:
+            return 1
+
     async def log_event(self, category: str, action: str, user_id: int = None,
                        target_id: int = None, channel_id: int = None,
                        details: str = None, guild_id: int = None):

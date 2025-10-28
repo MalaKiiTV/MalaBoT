@@ -4,6 +4,7 @@ Handles message deletion, channel management, and moderation logging.
 """
 
 import discord
+import asyncio
 from discord import app_commands
 from discord.ext import commands
 from typing import Optional
