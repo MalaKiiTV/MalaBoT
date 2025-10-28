@@ -1,7 +1,7 @@
 """
 Verify Cog for MalaBoT
 Parent slash command: /verify
-Subcommands: submit, review, setup, config
+Subcommands: submit, review
 """
 
 import discord
@@ -148,62 +148,16 @@ class Verify(commands.Cog):
         if not hasattr(bot, 'pending_verifications'):
             bot.pending_verifications = {}
 
-    verify_group = app_commands.Group(name="verify", description="Warzone verification system.")
+    # Create the verify group
+    verify = app_commands.Group(name="verify", description="Warzone verification system")
 
-    # ============================================================
-    # SUBCOMMAND — SUBMIT VERIFICATION
-    # ============================================================
-    @verify_group.command(name="submit", description="Submit your Warzone verification.")
-    async def submit(self, interaction: discord.Interaction):
+    @verify.command(name="submit", description="Submit your Warzone verification")
+    async def verify_submit(self, interaction: discord.Interaction):
         """Submit verification - opens modal for Activision ID, then asks for screenshot."""
         modal = ActivisionIDModal(self.bot)
         await interaction.response.send_modal(modal)
 
-    @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        """Listen for screenshot uploads from users with pending verifications."""
-        if message.author.bot:
-            return
-
-        user_id = message.author.id
-        if user_id not in self.bot.pending_verifications:
-            return
-
-        if not message.attachments:
-            return
-
-        # Get pending verification data
-        pending = self.bot.pending_verifications[user_id]
-        activision_id = pending["activision_id"]
-        screenshot = message.attachments[0]
-
-        # Check if attachment is an image
-        if not any(screenshot.filename.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']):
-            await message.reply(
-                embed=create_embed(
-                    "Invalid File Type",
-                    "Please upload an image file (PNG, JPG, JPEG, GIF, or WEBP).",
-                    COLORS["error"],
-                ),
-                delete_after=10,
-            )
-            return
-
-        # Send platform selection
-        view = PlatformView(activision_id, screenshot.url, user_id)
-        await message.reply(
-            embed=create_embed(
-                "Select Your Platform",
-                f"**Activision ID:** `{activision_id}`\n\nPlease select your gaming platform from the dropdown below:",
-                COLORS["info"],
-            ),
-            view=view,
-        )
-
-    # ============================================================
-    # SUBCOMMAND — REVIEW VERIFICATION
-    # ============================================================
-    @verify_group.command(name="review", description="Review a pending verification (staff only).")
+    @verify.command(name="review", description="Review a pending verification (staff only)")
     @app_commands.checks.has_permissions(manage_roles=True)
     @app_commands.describe(
         user="The user to review",
@@ -215,7 +169,7 @@ class Verify(commands.Cog):
         app_commands.Choice(name="Cheater", value="cheater"),
         app_commands.Choice(name="Unverified", value="unverified"),
     ])
-    async def review(
+    async def verify_review(
         self,
         interaction: discord.Interaction,
         user: discord.User,
@@ -292,6 +246,47 @@ class Verify(commands.Cog):
         except Exception as e:
             log_system(f"Verification review error: {e}", level="error")
             await safe_send_message(interaction, content="An error occurred while processing review.", ephemeral=True)
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        """Listen for screenshot uploads from users with pending verifications."""
+        if message.author.bot:
+            return
+
+        user_id = message.author.id
+        if user_id not in self.bot.pending_verifications:
+            return
+
+        if not message.attachments:
+            return
+
+        # Get pending verification data
+        pending = self.bot.pending_verifications[user_id]
+        activision_id = pending["activision_id"]
+        screenshot = message.attachments[0]
+
+        # Check if attachment is an image
+        if not any(screenshot.filename.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']):
+            await message.reply(
+                embed=create_embed(
+                    "Invalid File Type",
+                    "Please upload an image file (PNG, JPG, JPEG, GIF, or WEBP).",
+                    COLORS["error"],
+                ),
+                delete_after=10,
+            )
+            return
+
+        # Send platform selection
+        view = PlatformView(activision_id, screenshot.url, user_id)
+        await message.reply(
+            embed=create_embed(
+                "Select Your Platform",
+                f"**Activision ID:** `{activision_id}`\n\nPlease select your gaming platform from the dropdown below:",
+                COLORS["info"],
+            ),
+            view=view,
+        )
 
 
 async def setup(bot: commands.Bot):
