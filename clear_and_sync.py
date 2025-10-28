@@ -78,9 +78,13 @@ async def clear_and_sync():
 
 def main():
     """Main entry point."""
-    print("\n" + "="*50)
-    print("MalaBoT Command Clear & Sync Utility")
-    print("="*50 + "\n")
+    # Check if running in automated mode (from dev.bat)
+    automated = len(sys.argv) > 1 and sys.argv[1] == "--auto"
+    
+    if not automated:
+        print("\n" + "="*50)
+        print("MalaBoT Command Clear & Sync Utility")
+        print("="*50 + "\n")
     
     # Validate settings
     errors = settings.validate()
@@ -90,27 +94,29 @@ def main():
             print(f"  - {error}")
         sys.exit(1)
     
-    print("⚙️  Configuration validated")
-    print(f"🤖 Bot: {settings.BOT_NAME}")
-    print(f"📌 Version: {settings.BOT_VERSION}")
-    print("\n⚠️  WARNING: This will clear ALL commands from Discord!")
-    print("   Your bot will need to resync after this.\n")
-    
-    try:
-        response = input("Continue? (yes/no): ").strip().lower()
-        if response not in ['yes', 'y']:
-            print("❌ Cancelled by user")
+    if not automated:
+        print("⚙️  Configuration validated")
+        print(f"🤖 Bot: {settings.BOT_NAME}")
+        print(f"📌 Version: {settings.BOT_VERSION}")
+        print("\n⚠️  WARNING: This will clear ALL commands from Discord!")
+        print("   Your bot will need to resync after this.\n")
+        
+        try:
+            response = input("Continue? (yes/no): ").strip().lower()
+            if response not in ['yes', 'y']:
+                print("❌ Cancelled by user")
+                sys.exit(0)
+        except KeyboardInterrupt:
+            print("\n❌ Cancelled by user")
             sys.exit(0)
-    except KeyboardInterrupt:
-        print("\n❌ Cancelled by user")
-        sys.exit(0)
-    
-    print("\n🚀 Starting command clear process...\n")
+        
+        print("\n🚀 Starting command clear process...\n")
     
     try:
         asyncio.run(clear_and_sync())
     except KeyboardInterrupt:
         print("\n⚠️ Interrupted by user")
+        sys.exit(1)
     except Exception as e:
         print(f"\n❌ Fatal error: {e}")
         import traceback

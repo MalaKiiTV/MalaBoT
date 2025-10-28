@@ -71,6 +71,7 @@ echo [ADVANCED OPS]
 echo 19. Full Clean Update
 echo 20. Backup Now
 echo 21. Verify Environment
+echo 22. Clear All (Commands + Caches + Logs + Temp)
 echo.
 echo [EXIT]
 echo  0. Exit
@@ -99,6 +100,7 @@ if "%choice%"=="18" goto testconfig
 if "%choice%"=="19" goto fullupdate
 if "%choice%"=="20" goto backupnow
 if "%choice%"=="21" goto verifyenv
+if "%choice%"=="22" goto clearall
 if "%choice%"=="0" goto exit
 
 echo Invalid choice. Please try again.
@@ -351,12 +353,16 @@ goto menu
 :gitpush
 echo.
 echo [INFO] Pushing to GitHub...
-git push origin main
+REM First try to pull any remote changes
+git pull origin main --rebase >nul 2>&1
+REM Then push using token authentication
+git push https://x-access-token:%GITHUB_TOKEN%@github.com/MalaKiiTV/MalaBoT.git main
 if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Pushed to GitHub successfully!
 ) else (
     echo [ERROR] Failed to push to GitHub
     echo [INFO] Make sure you have committed changes first
+    echo [INFO] If GITHUB_TOKEN is not set, use: set GITHUB_TOKEN=your_token_here
 )
 timeout /T 3 /NOBREAK >NUL
 goto menu
@@ -596,9 +602,12 @@ set DROPLET_USER=malabot
 set DROPLET_IP=165.232.156.230
 set DROPLET_DIR=/home/malabot/MalaBoT
 echo [1/4] Pushing local changes to GitHub...
-git push origin main
+REM First pull any remote changes
+git pull origin main --rebase >nul 2>&1
+REM Then push using token authentication
+git push https://x-access-token:%GITHUB_TOKEN%@github.com/MalaKiiTV/MalaBoT.git main
 if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] git push failed. Commit first.
+    echo [ERROR] git push failed. Commit first or set GITHUB_TOKEN.
     pause
     goto menu
 )
@@ -646,6 +655,64 @@ if %ERRORLEVEL% EQU 0 (
 ) else (
     echo [ERROR] Validation failed. Check your .env settings.
 )
+pause
+goto menu
+
+:clearall
+echo.
+echo ========================================
+echo Clear All - Complete System Cleanup
+echo ========================================
+echo.
+echo [WARNING] This will clear:
+echo   - Discord slash commands (all servers)
+echo   - Python cache files (.pyc, __pycache__)
+echo   - Pytest cache
+echo   - Temporary files
+echo   - Old log files (keeping last 5)
+echo   - Discord.py cache
+echo.
+set /p confirm="Are you sure you want to continue? (yes/no): "
+if /i not "%confirm%"=="yes" (
+    echo [CANCELLED] Clear all operation cancelled.
+    timeout /T 2 /NOBREAK >NUL
+    goto menu
+)
+
+echo.
+echo [1/4] Stopping bot...
+call :stop_internal
+timeout /T 2 /NOBREAK >NUL
+
+echo [2/4] Running system cleanup...
+python cleanup.py --auto
+if %ERRORLEVEL% NEQ 0 (
+    echo [WARNING] Cleanup script encountered errors
+) else (
+    echo [SUCCESS] System cleanup completed
+)
+
+echo [3/4] Clearing Discord commands...
+python clear_and_sync.py --auto
+if %ERRORLEVEL% NEQ 0 (
+    echo [WARNING] Command clear script failed or was cancelled
+) else (
+    echo [SUCCESS] Discord commands cleared
+)
+
+echo [4/4] Final verification...
+echo [SUCCESS] All cleanup operations completed
+
+echo.
+echo ========================================
+echo [SUCCESS] Complete System Cleanup Done!
+echo ========================================
+echo.
+echo Next steps:
+echo   1. Start your bot (option 1)
+echo   2. Wait 30 seconds for commands to sync
+echo   3. Test commands in Discord
+echo.
 pause
 goto menu
 
