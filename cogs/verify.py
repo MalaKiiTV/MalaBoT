@@ -337,4 +337,7 @@ class Verify(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(Verify(bot))
+    verify_cog = Verify(bot)
+    verify_group = VerifyGroup(verify_cog)
+    await bot.add_cog(verify_cog)
+    bot.tree.add_command(verify_group)

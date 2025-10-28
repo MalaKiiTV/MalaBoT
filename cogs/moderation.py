@@ -49,7 +49,7 @@ class Moderation(commands.Cog):
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (interaction.user.guild_permissions.administrator or 
                              interaction.user.guild_permissions.manage_guild)
-            has_staff_role = await is_staff(interaction, self.db)
+            has_staff_role = await is_staff(interaction, self.bot.db_manager)
             
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
@@ -356,7 +356,7 @@ class Moderation(commands.Cog):
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (interaction.user.guild_permissions.administrator or 
                              interaction.user.guild_permissions.kick_members)
-            has_staff_role = await is_staff(interaction, self.db)
+            has_staff_role = await is_staff(interaction, self.bot.db_manager)
             
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
@@ -437,7 +437,7 @@ class Moderation(commands.Cog):
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (interaction.user.guild_permissions.administrator or 
                              interaction.user.guild_permissions.ban_members)
-            has_staff_role = await is_staff(interaction, self.db)
+            has_staff_role = await is_staff(interaction, self.bot.db_manager)
             
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
@@ -518,7 +518,7 @@ class Moderation(commands.Cog):
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (interaction.user.guild_permissions.administrator or 
                              interaction.user.guild_permissions.moderate_members)
-            has_staff_role = await is_staff(interaction, self.db)
+            has_staff_role = await is_staff(interaction, self.bot.db_manager)
             
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
@@ -620,7 +620,7 @@ class Moderation(commands.Cog):
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (interaction.user.guild_permissions.administrator or 
                              interaction.user.guild_permissions.moderate_members)
-            has_staff_role = await is_staff(interaction, self.db)
+            has_staff_role = await is_staff(interaction, self.bot.db_manager)
             
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
