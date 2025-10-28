@@ -157,9 +157,15 @@ class XP(commands.Cog):
                 inline=True
             )
             
+            # Check if daily is available
+            from datetime import date
+            today = date.today().isoformat()
+            last_daily = user_data.get('last_daily_award_date')
+            daily_available = last_daily != today
+            
             embed.add_field(
                 name="📅 Daily Check-in",
-                value=f"✅ Available" if not user_data.get('daily_claimed', False) else "❌ Already claimed",
+                value=f"✅ Available" if daily_available else "❌ Already claimed",
                 inline=True
             )
             
@@ -238,14 +244,19 @@ class XP(commands.Cog):
             user_data = await self.bot.db_manager.get_user(interaction.user.id)
             
             if not user_data:
-                await self.bot.db_manager.create_user(interaction.user.id, interaction.guild.id)
-                user_data = {'daily_claimed': False, 'streak': 0}
+                await self.bot.db_manager.create_user(interaction.user.id)
+                user_data = await self.bot.db_manager.get_user(interaction.user.id)
             
-            if user_data.get('daily_claimed', False):
+            # Check if already claimed today
+            from datetime import date
+            today = date.today().isoformat()
+            last_daily = user_data.get('last_daily_award_date')
+            
+            if last_daily == today:
                 # Show next claim time
                 embed = embed_helper.error_embed(
                     title="Daily Bonus Already Claimed",
-                    description="You've already claimed your daily bonus!\n\nCome back tomorrow for your next bonus."
+                    description="You've already claimed your daily bonus today!\n\nCome back tomorrow for your next bonus."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
