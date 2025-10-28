@@ -156,6 +156,14 @@ class XPHelper:
         return xp_table.get(next_level, xp_table[max(xp_table.keys())])
     
     @staticmethod
+    def get_xp_for_level(level: int, xp_table: Dict[int, int] = None) -> int:
+        """Get XP required for a specific level."""
+        if xp_table is None:
+            from config.constants import XP_TABLE
+            xp_table = XP_TABLE
+        return xp_table.get(level, 0)
+    
+    @staticmethod
     def get_random_xp(min_xp: int, max_xp: int) -> int:
         """Get random XP amount within range."""
         return random.randint(min_xp, max_xp)

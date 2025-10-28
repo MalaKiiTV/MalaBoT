@@ -54,7 +54,7 @@ class XP(commands.Cog):
             # Check for level up
             user_data = await self.bot.db_manager.get_user(message.author.id)
             if user_data:
-                current_level = xp_helper.calculate_level_from_xp(user_data.get('total_xp', 0))
+                current_level = xp_helper.calculate_level_from_xp(user_data.get('xp', 0))
                 if current_level > user_data.get('level', 0):
                     await self._handle_level_up(message.author, message.guild, current_level, user_data.get('level', 0))
             
@@ -96,7 +96,7 @@ class XP(commands.Cog):
             # Get user XP data
             user_data = await self.bot.db_manager.get_user(target_user.id)
             
-            if not user_data or not user_data.get('total_xp', 0):
+            if not user_data or user_data.get('xp', 0) == 0:
                 embed = embed_helper.error_embed(
                     title="No XP Data",
                     description=f"{target_user.mention} hasn't earned any XP yet."
@@ -105,7 +105,7 @@ class XP(commands.Cog):
                 return
             
             # Calculate rank info
-            current_xp = user_data.get('total_xp', 0)
+            current_xp = user_data.get('xp', 0)
             current_level = xp_helper.calculate_level_from_xp(current_xp)
             level_xp = xp_helper.get_xp_for_level(current_level)
             next_level_xp = xp_helper.get_xp_for_level(current_level + 1)
@@ -217,9 +217,9 @@ class XP(commands.Cog):
                     else:
                         medal = f"#{i}"
                     
-                    leaderboard_text += f"{medal} **{user.display_name}** - Level {user_data.get('level', 0)} ({user_data.get('total_xp', 0):,} XP)\n"
+                    leaderboard_text += f"{medal} **{user.display_name}** - Level {user_data.get('level', 0)} ({user_data.get('xp', 0):,} XP)\n"
                 else:
-                    leaderboard_text += f"#{i} Unknown User - Level {user_data.get('level', 0)} ({user_data.get('total_xp', 0):,} XP)\n"
+                    leaderboard_text += f"#{i} Unknown User - Level {user_data.get('level', 0)} ({user_data.get('xp', 0):,} XP)\n"
             
             embed.description = leaderboard_text
             embed.set_footer(text=f"Top {limit} users • Requested by {interaction.user.display_name}")
@@ -379,15 +379,15 @@ class XP(commands.Cog):
             
             # Get current XP
             user_data = await self.bot.db_manager.get_user(user.id)
-            if not user_data or user_data.get('total_xp', 0) < amount:
+            if not user_data or user_data.get('xp', 0) < amount:
                 embed = embed_helper.error_embed(
                     title="Insufficient XP",
-                    description=f"{user.mention} only has {user_data.get('total_xp', 0):,} XP."
+                    description=f"{user.mention} only has {user_data.get('xp', 0):,} XP."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            new_xp = user_data.get('total_xp', 0) - amount
+            new_xp = user_data.get('xp', 0) - amount
             await self.bot.db_manager.update_user_xp(user.id, -amount)
             
             embed = embed_helper.success_embed(
@@ -415,7 +415,7 @@ class XP(commands.Cog):
             
             # Get current XP and calculate difference
             user_data = await self.bot.db_manager.get_user(user.id)
-            current_xp = user_data.get('total_xp', 0) if user_data else 0
+            current_xp = user_data.get('xp', 0) if user_data else 0
             diff = amount - current_xp
             
             if diff != 0:
