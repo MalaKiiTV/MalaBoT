@@ -148,12 +148,12 @@ class Verify(commands.Cog):
         if not hasattr(bot, 'pending_verifications'):
             bot.pending_verifications = {}
 
-    verify = app_commands.Group(name="verify", description="Warzone verification system.")
+    verify_group = app_commands.Group(name="verify", description="Warzone verification system.")
 
     # ============================================================
     # SUBCOMMAND — SUBMIT VERIFICATION
     # ============================================================
-    @verify.command(name="submit", description="Submit your Warzone verification.")
+    @verify_group.command(name="submit", description="Submit your Warzone verification.")
     async def submit(self, interaction: discord.Interaction):
         """Submit verification - opens modal for Activision ID, then asks for screenshot."""
         modal = ActivisionIDModal(self.bot)
@@ -203,7 +203,7 @@ class Verify(commands.Cog):
     # ============================================================
     # SUBCOMMAND — REVIEW VERIFICATION
     # ============================================================
-    @verify.command(name="review", description="Review a pending verification (staff only).")
+    @verify_group.command(name="review", description="Review a pending verification (staff only).")
     @app_commands.checks.has_permissions(manage_roles=True)
     @app_commands.describe(
         user="The user to review",
@@ -291,7 +291,7 @@ class Verify(commands.Cog):
     # ============================================================
     # SUBCOMMAND — SETUP VERIFICATION CHANNEL
     # ============================================================
-    @verify.command(name="setup", description="Set up the verification review channel (admin only).")
+    @verify_group.command(name="setup", description="Set up the verification review channel (admin only).")
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.describe(channel="Channel where verification submissions will be posted for review")
     async def setup(self, interaction: discord.Interaction, channel: discord.TextChannel):
@@ -330,7 +330,7 @@ class Verify(commands.Cog):
     # ============================================================
     # SUBCOMMAND — CONFIG VERIFICATION ROLES
     # ============================================================
-    @verify.command(name="config", description="Configure verification roles (admin only).")
+    @verify_group.command(name="config", description="Configure verification roles (admin only).")
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.describe(
         verified_role="Role to assign when user is verified",
