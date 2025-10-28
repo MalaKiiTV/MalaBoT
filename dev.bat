@@ -72,6 +72,7 @@ echo 19. Full Clean Update
 echo 20. Backup Now
 echo 21. Verify Environment
 echo 22. Clear All (Commands + Caches + Logs + Temp)
+echo 23. Fix /verify Command Structure
 echo.
 echo [EXIT]
 echo  0. Exit
@@ -101,6 +102,7 @@ if "%choice%"=="19" goto fullupdate
 if "%choice%"=="20" goto backupnow
 if "%choice%"=="21" goto verifyenv
 if "%choice%"=="22" goto clearall
+if "%choice%"=="23" goto fixverify
 if "%choice%"=="0" goto exit
 
 echo Invalid choice. Please try again.
@@ -673,11 +675,13 @@ echo   - Old log files (keeping last 5)
 echo   - Discord.py cache
 echo.
 set /p confirm="Are you sure you want to continue? (yes/no): "
-if /i not "%confirm%"=="yes" (
-    echo [CANCELLED] Clear all operation cancelled.
-    timeout /T 2 /NOBREAK >NUL
-    goto menu
-)
+if /i "%confirm%"=="yes" goto clearall_continue
+if /i "%confirm%"=="y" goto clearall_continue
+echo [CANCELLED] Clear all operation cancelled.
+timeout /T 2 /NOBREAK >NUL
+goto menu
+
+:clearall_continue
 
 echo.
 echo [1/4] Stopping bot...
@@ -712,6 +716,52 @@ echo Next steps:
 echo   1. Start your bot (option 1)
 echo   2. Wait 30 seconds for commands to sync
 echo   3. Test commands in Discord
+echo.
+pause
+goto menu
+
+:fixverify
+echo.
+echo ========================================
+echo Fix /verify Command Structure
+echo ========================================
+echo.
+echo This will fix the /verify command to show as a parent
+echo command with subcommands (submit, review, setup) instead
+echo of separate individual commands.
+echo.
+set /p confirm="Continue? (yes/no): "
+if /i "%confirm%"=="yes" goto fixverify_continue
+if /i "%confirm%"=="y" goto fixverify_continue
+echo [CANCELLED] Operation cancelled.
+timeout /T 2 /NOBREAK >NUL
+goto menu
+
+:fixverify_continue
+echo.
+echo [1/2] Stopping bot...
+call :stop_internal
+timeout /T 2 /NOBREAK >NUL
+
+echo [2/2] Running verify command fix...
+python fix_verify_command.py
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Fix script failed
+    pause
+    goto menu
+)
+
+echo.
+echo ========================================
+echo [SUCCESS] /verify Command Structure Fixed!
+echo ========================================
+echo.
+echo Next steps:
+echo   1. Start your bot (option 1)
+echo   2. Wait 30 seconds
+echo   3. In Discord, type /verify and press space
+echo   4. You should see: submit, review, setup
+echo   5. If not, restart Discord (Ctrl+R)
 echo.
 pause
 goto menu
