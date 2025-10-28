@@ -582,25 +582,27 @@ The bot will start in safe mode to prevent further issues.
     async def _sync_commands(self):
         """Sync slash commands to Discord (instant in debug guilds)."""
         try:
-            # Sync to debug guilds first (for instant updates)
+            # If DEBUG_GUILDS is set, ONLY sync to those guilds (local development)
+            # This prevents duplicate commands (guild + global)
             if settings.DEBUG_GUILDS:
+                self.logger.info("🔧 DEBUG MODE: Syncing only to debug guilds (no global sync)")
                 for guild_id in settings.DEBUG_GUILDS:
                     try:
                         guild = discord.Object(id=guild_id)
                         self.tree.copy_global_to(guild=guild)
-                        await self.tree.sync(guild=guild)
-                        self.logger.info(f"✅ Commands synced instantly to debug guild: {guild_id}")
+                        synced = await self.tree.sync(guild=guild)
+                        self.logger.info(f"✅ Synced {len(synced)} commands to debug guild: {guild_id}")
                     except Exception as e:
                         self.logger.error(f"❌ Failed to sync to debug guild {guild_id}: {e}")
-
-            # Global sync (takes up to 1 hour to propagate)
-            await self.tree.sync()
-            self.logger.info("🌐 Global commands synced successfully")
+            else:
+                # No DEBUG_GUILDS set = Production mode = Global sync only
+                self.logger.info("🌐 PRODUCTION MODE: Syncing globally")
+                synced = await self.tree.sync()
+                self.logger.info(f"✅ Synced {len(synced)} global commands")
 
         except Exception as e:
             self.logger.error(f"❌ Command sync failed: {e}")
 
-    
     async def on_guild_join(self, guild: discord.Guild):
         """Called when bot joins a new guild."""
         self.logger.info(f"Joined new guild: {guild.name} (ID: {guild.id})")
