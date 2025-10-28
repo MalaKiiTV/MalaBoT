@@ -550,10 +550,10 @@ set DROPLET_DIR=/home/malabot/MalaBoT
 echo [1/4] Pushing local changes to GitHub...
 REM First pull any remote changes
 git pull origin main --rebase --no-edit >nul 2>&1
-REM Then push using token authentication
-git push https://x-access-token:%GITHUB_TOKEN%@github.com/MalaKiiTV/MalaBoT.git main
+REM Then push using default git credentials
+git push origin main
 if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] git push failed. Commit first or set GITHUB_TOKEN.
+    echo [ERROR] git push failed. Make sure changes are committed and you're logged into GitHub.
     pause
     goto menu
 )
