@@ -356,14 +356,14 @@ echo.
 echo [INFO] Pushing to GitHub...
 REM First try to pull any remote changes
 git pull origin main --rebase --no-edit >nul 2>&1
-REM Then push using token authentication
-git push https://x-access-token:%GITHUB_TOKEN%@github.com/MalaKiiTV/MalaBoT.git main
+REM Then push using default git credentials
+git push origin main
 if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Pushed to GitHub successfully!
 ) else (
     echo [ERROR] Failed to push to GitHub
     echo [INFO] Make sure you have committed changes first
-    echo [INFO] If GITHUB_TOKEN is not set, use: set GITHUB_TOKEN=your_token_here
+    echo [INFO] Make sure you're logged into GitHub Desktop or have git credentials configured
 )
 timeout /T 3 /NOBREAK >NUL
 goto menu
