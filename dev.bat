@@ -8,6 +8,11 @@ chcp 65001 >nul
 REM Set window title
 title MalaBoT Development Tools
 
+REM Configure git to never open editor for merges
+git config pull.rebase false >nul 2>&1
+git config merge.commit no >nul 2>&1
+git config core.editor "echo" >nul 2>&1
+
 REM Check if Python is installed
 python --version >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
