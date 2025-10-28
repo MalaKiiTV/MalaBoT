@@ -1,5 +1,5 @@
 @echo off
-REM COMPLETELY FIXED Development Script for MalaBoT
+REM FIXED Development Script for MalaBoT
 REM This script handles the complete local development workflow
 
 setlocal enabledelayedexpansion
@@ -42,16 +42,16 @@ echo          MalaBoT Development Tools
 echo ========================================
 echo.
 echo [BOT MANAGEMENT]
-echo  1. Start Bot (with cache clear)
+echo  1. Start Bot with cache clear
 echo  2. Stop Bot
-echo  3. Restart Bot (with cache clear)
+echo  3. Restart Bot with cache clear
 echo  4. Check Bot Status
 echo  5. View Live Logs
 echo  6. Clear All Caches
 echo.
 echo [WORKFLOWS]
-echo  7. Update Workflow  (Pull → Restart → Status)
-echo  8. Deploy Workflow  (Stage → Commit → Push)
+echo  7. Update Workflow
+echo  8. Deploy Workflow
 echo.
 echo [GIT OPERATIONS]
 echo  9.  Check Git Status
@@ -63,12 +63,12 @@ echo 14. Pull from GitHub
 echo 15. View Commit History
 echo.
 echo [UTILITIES]
-echo 16. Install/Update Dependencies
-echo 17. Create .env File from Template
-echo 18. Test Bot Configuration
+echo 16. Install Dependencies
+echo 17. Create .env File
+echo 18. Test Configuration
 echo.
 echo [ADVANCED OPS]
-echo 19. Full Local Clean Update
+echo 19. Full Clean Update
 echo 20. Backup Now
 echo 21. Verify Environment
 echo.
@@ -78,33 +78,28 @@ echo.
 echo ========================================
 set /p choice="Enter your choice: "
 
-if "%choice%"=="1"  goto start
-if "%choice%"=="2"  goto stop
-if "%choice%"=="3"  goto restart
-if "%choice%"=="4"  goto status
-if "%choice%"=="5"  goto logs
-if "%choice%"=="6"  goto clearcache
-
-if "%choice%"=="7"  goto updateworkflow
-if "%choice%"=="8"  goto deployworkflow
-
-if "%choice%"=="9"  goto gitstatus
+if "%choice%"=="1" goto start
+if "%choice%"=="2" goto stop
+if "%choice%"=="3" goto restart
+if "%choice%"=="4" goto status
+if "%choice%"=="5" goto logs
+if "%choice%"=="6" goto clearcache
+if "%choice%"=="7" goto updateworkflow
+if "%choice%"=="8" goto deployworkflow
+if "%choice%"=="9" goto gitstatus
 if "%choice%"=="10" goto gitstage
 if "%choice%"=="11" goto gitcommit
 if "%choice%"=="12" goto gitpush
 if "%choice%"=="13" goto remotedeploy
 if "%choice%"=="14" goto gitpull
 if "%choice%"=="15" goto githistory
-
 if "%choice%"=="16" goto installdeps
 if "%choice%"=="17" goto createenv
 if "%choice%"=="18" goto testconfig
-
 if "%choice%"=="19" goto fullupdate
 if "%choice%"=="20" goto backupnow
 if "%choice%"=="21" goto verifyenv
-
-if "%choice%"=="0"  goto exit
+if "%choice%"=="0" goto exit
 
 echo Invalid choice. Please try again.
 timeout /T 2 /NOBREAK >NUL
@@ -136,7 +131,7 @@ if not exist .env (
 )
 
 echo [3/4] Testing configuration...
-python -c "from config.settings import settings; errors = settings.validate(); print(f'Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
+python -c "from config.settings import settings; errors = settings.validate(); print('Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Configuration test failed!
     echo [INFO] Please check your .env file and ensure:
@@ -156,30 +151,43 @@ goto menu
 :stop
 echo.
 echo [INFO] Stopping MalaBoT...
-REM Try to close the bot window cleanly
+
+REM Method 1: Try to close by window title
+echo [1/3] Attempting to stop via window title...
 taskkill /FI "WINDOWTITLE eq MalaBoT Console" /F >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Bot stopped via window title
-) else (
-    REM Fallback: Try both python.exe and python3.exe for safety
-    wmic process where "name='python.exe' and commandline like '%bot.py%'" delete >nul 2>&1
-    wmic process where "name='python3.exe' and commandline like '%bot.py%'" delete >nul 2>&1
-    if %ERRORLEVEL% EQU 0 (
-        echo [SUCCESS] Bot stopped via process detection
-    ) else (
-        echo [WARNING] No running bot process found
-    )
+    goto stop_done
 )
+
+REM Method 2: Try to find and kill python processes running bot.py
+echo [2/3] Attempting to stop via process detection...
+tasklist /FI "IMAGENAME eq python.exe" /FO CSV | findstr /I "bot.py" >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    for /f "tokens=2 delims=," %%P in ('tasklist /FI "IMAGENAME eq python.exe" /FO CSV ^| findstr /I "bot.py"') do (
+        taskkill /PID %%P /F >nul 2>&1
+    )
+    echo [SUCCESS] Bot stopped via process detection
+    goto stop_done
+)
+
+REM Method 3: Fallback - try all python processes
+echo [3/3] Attempting fallback termination...
+taskkill /IM python.exe /F >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [SUCCESS] Bot stopped via fallback method
+    goto stop_done
+)
+
+echo [WARNING] Could not find running bot process
+:stop_done
 timeout /T 2 /NOBREAK >nul
 goto menu
-
 
 :restart
 echo.
 echo [1/5] Stopping bot...
-taskkill /FI "WINDOWTITLE eq MalaBoT Console" /F >nul 2>&1
-wmic process where "name='python.exe' and commandline like '%bot.py%'" delete >nul 2>&1
-wmic process where "name='python3.exe' and commandline like '%bot.py%'" delete >nul 2>&1
+call :stop_internal
 timeout /T 2 /NOBREAK >NUL
 
 echo [2/5] Clearing Python cache...
@@ -193,7 +201,7 @@ if not exist .env (
     goto menu
 )
 
-python -c "from config.settings import settings; errors = settings.validate(); print(f'Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
+python -c "from config.settings import settings; errors = settings.validate(); print('Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Configuration test failed!
     echo [INFO] Check your .env file settings
@@ -215,7 +223,7 @@ echo ========================================
 echo Bot Status:
 echo ========================================
 
-REM === Safe timestamp (never crashes) ===
+REM Safe timestamp
 for /f "tokens=2 delims==." %%A in ('wmic os get localdatetime /value 2^>nul') do set "ts_raw=%%A"
 if not defined ts_raw (
     set "ts=Unknown"
@@ -225,20 +233,25 @@ if not defined ts_raw (
 echo Checked: %ts%
 echo ========================================
 
-REM === Detect bot.py running safely ===
-set "bot_running=0"
-for /f "usebackq delims=" %%A in (`powershell -NoLogo -NoProfile -Command ^
-    "$p = Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match 'bot\.py' }; if ($p) { Write-Output 1 } else { Write-Output 0 }"`) do set "bot_running=%%A"
-
-if "%bot_running%"=="1" (
-    echo [STATUS] Bot is RUNNING
-    echo.
-    echo Running processes:
-    powershell -NoLogo -NoProfile -Command "Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match 'bot\.py' } | Select-Object Id,ProcessName | Format-Table -AutoSize"
-) else (
-    echo [STATUS] Bot is NOT RUNNING
+REM Check if bot window is running
+tasklist /V /FI "WINDOWTITLE eq MalaBoT Console" 2>nul | find /I "MalaBoT Console" >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [STATUS] Bot is RUNNING via window title
+    goto status_done
 )
 
+REM Check if python processes are running bot.py
+tasklist /FI "IMAGENAME eq python.exe" /FO CSV | findstr /I "bot.py" >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [STATUS] Bot is RUNNING via process detection
+    echo Running processes:
+    tasklist /FI "IMAGENAME eq python.exe" /FO CSV | findstr /I "bot.py"
+    goto status_done
+)
+
+echo [STATUS] Bot is NOT RUNNING
+
+:status_done
 echo.
 echo ========================================
 echo Recent log entries (last 10 lines):
@@ -246,7 +259,7 @@ echo ========================================
 
 if exist "data\logs\bot.log" (
     echo [INFO] Displaying last 10 log lines...
-    powershell -NoLogo -NoProfile -Command "try {Get-Content 'data/logs/bot.log' -Tail 10 | ForEach-Object { $_ -replace '[^\x20-\x7E]', '' }} catch { Write-Host '[ERROR] Failed to read log file.' }"
+    for /f "skip=-10" %%L in ('type "data\logs\bot.log" 2^>nul') do echo %%L
 ) else (
     echo [INFO] No log file found - bot may not have started yet
 )
@@ -256,25 +269,19 @@ echo.
 pause
 goto menu
 
-
 :logs
 echo.
-echo [INFO] Opening live log viewer...
+echo [INFO] Opening log viewer...
 echo [INFO] Press Ctrl+C to stop viewing logs
 echo.
 
 if exist "data\logs\bot.log" (
-    powershell -Command "Get-Content 'data\logs\bot.log' -Wait -Tail 20"
+    type "data\logs\bot.log" | more
 ) else (
     echo [WARNING] Log file not found at: data\logs\bot.log
-    echo [INFO] Waiting for log file to be created...
-    timeout /T 5 /NOBREAK >NUL
-    if exist "data\logs\bot.log" (
-        powershell -Command "Get-Content 'data\logs\bot.log' -Wait -Tail 20"
-    ) else (
-        echo [ERROR] Log file still not found - check if bot is running
-    )
+    echo [INFO] Check if bot is running
 )
+pause
 goto menu
 
 :clearcache
@@ -292,9 +299,9 @@ del /F /Q *.tmp 2>NUL
 
 echo [4/4] Cleaning old logs (keeping last 5)...
 if exist "data\logs\*.log" (
-    for /f "skip=5 delims=" %%F in ('dir /B /O-D data\logs\*.log 2^>NUL') do (
-        del "data\logs\%%F" 2>NUL
-    )
+    dir /B /O-D "data\logs\*.log" 2>nul > temp_files.txt
+    for /f "skip=5 delims=" %%F in (temp_files.txt) do del "data\logs\%%F" 2>NUL
+    del temp_files.txt 2>NUL
 )
 
 echo [SUCCESS] All caches cleared!
@@ -350,7 +357,6 @@ if %ERRORLEVEL% EQU 0 (
 ) else (
     echo [ERROR] Failed to push to GitHub
     echo [INFO] Make sure you have committed changes first
-    echo [INFO] Check your authentication with GitHub
 )
 timeout /T 3 /NOBREAK >NUL
 goto menu
@@ -363,7 +369,6 @@ if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Pulled from GitHub successfully!
 ) else (
     echo [ERROR] Failed to pull from GitHub
-    echo [INFO] Check your internet connection and repository access
 )
 timeout /T 3 /NOBREAK >NUL
 goto menu
@@ -394,8 +399,8 @@ if %ERRORLEVEL% NEQ 0 (
     goto menu
 )
 
-echo [2/5] Installing/Updating dependencies...
-pip install -r requirements.txt
+echo [2/5] Installing dependencies...
+call :installdeps_silent
 
 echo [3/5] Restarting bot...
 call :stop_internal
@@ -404,13 +409,9 @@ call :start_internal
 
 echo [4/5] Checking status...
 timeout /T 3 /NOBREAK >NUL
-call :status_internal
+call :status_basic
 
-echo [5/5] Opening logs...
-timeout /T 2 /NOBREAK >NUL
-call :logs_internal
-
-echo.
+echo [5/5] Workflow complete!
 echo ========================================
 echo [SUCCESS] Update Workflow Complete!
 echo ========================================
@@ -470,7 +471,7 @@ goto menu
 
 :installdeps
 echo.
-echo [INFO] Installing/Updating dependencies...
+echo [INFO] Installing dependencies...
 pip install -r requirements.txt
 if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Dependencies installed successfully!
@@ -479,6 +480,10 @@ if %ERRORLEVEL% EQU 0 (
 )
 timeout /T 3 /NOBREAK >NUL
 goto menu
+
+:installdeps_silent
+pip install -r requirements.txt
+goto :eof
 
 :createenv
 echo.
@@ -494,7 +499,7 @@ if exist .env.example (
     echo.
     echo [IMPORTANT] Please edit .env file with your bot token and settings:
     echo - DISCORD_TOKEN: Your Discord bot token
-    echo - OWNER_IDS: Your Discord user ID (comma-separated if multiple)
+    echo - OWNER_IDS: Your Discord user ID
     echo - BOT_PREFIX: Command prefix (default: /)
     echo.
     echo Open .env file and add your credentials before starting the bot.
@@ -533,8 +538,7 @@ if not exist .env (
     goto menu
 )
 
-python -c "
-try:
+python -c "try:
     from config.settings import settings
     errors = settings.validate()
     if errors:
@@ -559,45 +563,6 @@ if %ERRORLEVEL% NEQ 0 (
 pause
 goto menu
 
-REM Internal helper functions
-:stop_internal
-taskkill /FI "WINDOWTITLE eq MalaBoT Console" /F 2>NUL
-wmic process where "name='python.exe' and commandline like '%bot.py%'" delete 2>NUL
-goto :eof
-
-:start_internal
-for /r %%F in (*.pyc) do del "%%F" 2>NUL
-for /d /r %%D in (__pycache__) do rmdir /S /Q "%%D" 2>NUL
-if not exist "data" mkdir "data"
-if not exist "data\logs" mkdir "data\logs"
-start "MalaBoT Console" cmd /k "title MalaBoT Console && python bot.py"
-goto :eof
-
-:status_internal
-set "bot_running=0"
-
-tasklist /v /fo table | find /I "MalaBoT Console" >nul 2>&1 && set "bot_running=1"
-
-if %bot_running%==0 (
-    wmic process where "commandline like '%bot.py%'" get processid,name,commandline 2>nul | find /I "bot.py" >nul && set "bot_running=1"
-)
-
-if %bot_running%==1 (
-    echo [STATUS] Bot is RUNNING
-) else (
-    echo [STATUS] Bot is NOT RUNNING
-)
-goto :eof
-
-:logs_internal
-if exist "data\logs\bot.log" (
-    powershell -Command "Get-Content 'data\logs\bot.log' | Select-Object -Last 10"
-) else (
-    echo [INFO] No log file found
-)
-goto :eof
-
-:exit
 :fullupdate
 echo.
 echo ========================================
@@ -610,14 +575,14 @@ call :backupnow
 echo [3/6] Git reset/pull...
 git reset --hard
 git pull origin main
-echo [4/6] Installing/Updating dependencies...
-call :installdeps
+echo [4/6] Installing dependencies...
+call :installdeps_silent
 echo [5/6] Clearing caches...
 call :clearcache
 echo [6/6] Restarting bot...
 call :start_internal
 timeout /T 3 /NOBREAK >NUL
-call :status_internal
+call :status_basic
 echo [SUCCESS] Full update complete!
 pause
 goto menu
@@ -653,17 +618,16 @@ echo ========================================
 echo Backup Now
 echo ========================================
 
-REM === Safe universal timestamp (locale-proof) ===
+REM Safe universal timestamp
 for /f "tokens=2 delims==." %%A in ('wmic os get localdatetime /value 2^>nul') do set "dt=%%A"
 set "TS=%dt:~0,4%-%dt:~4,2%-%dt:~6,2%_%dt:~8,2%-%dt:~10,2%"
 
 if not exist "backups\logs" mkdir "backups\logs"
 if not exist "backups\db" mkdir "backups\db"
-if exist "data\logs" xcopy "data\logs" "backups\logs\%TS%\" /E /Q /Y >nul
+if exist "data\logs" xcopy "data\logs" "backups\logs\%TS%&quot; /E /Q /Y >nul
 if exist "data\bot.db" copy /Y "data\bot.db" "backups\db\bot_%TS%.db" >nul
 echo [SUCCESS] Backup saved with tag %TS%.
 goto :eof
-
 
 :verifyenv
 echo.
@@ -676,8 +640,7 @@ if not exist .env (
     goto menu
 )
 
-python -c "from config.settings import settings; errs=settings.validate(); import sys; \
-sys.exit(0) if not errs else (print('[ERROR] Config validation failed:') or [print(' -', e) for e in errs] or sys.exit(1))"
+python -c "from config.settings import settings; errs=settings.validate(); import sys; sys.exit(0) if not errs else (print('[ERROR] Config validation failed:') or [print(' -', e) for e in errs] or sys.exit(1))"
 if %ERRORLEVEL% EQU 0 (
     echo [OK] Environment validated successfully.
 ) else (
@@ -685,3 +648,43 @@ if %ERRORLEVEL% EQU 0 (
 )
 pause
 goto menu
+
+REM Internal helper functions
+:stop_internal
+taskkill /FI "WINDOWTITLE eq MalaBoT Console" /F 2>NUL
+tasklist /FI "IMAGENAME eq python.exe" /FO CSV | findstr /I "bot.py" >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    for /f "tokens=2 delims=," %%P in ('tasklist /FI "IMAGENAME eq python.exe" /FO CSV ^| findstr /I "bot.py"') do (
+        taskkill /PID %%P /F 2>NUL
+    )
+)
+goto :eof
+
+:start_internal
+for /r %%F in (*.pyc) do del "%%F" 2>NUL
+for /d /r %%D in (__pycache__) do rmdir /S /Q "%%D" 2>NUL
+if not exist "data" mkdir "data"
+if not exist "data\logs" mkdir "data\logs"
+start "MalaBoT Console" cmd /k "title MalaBoT Console && python bot.py"
+goto :eof
+
+:status_basic
+tasklist /V /FI "WINDOWTITLE eq MalaBoT Console" 2>nul | find /I "MalaBoT Console" >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [STATUS] Bot is RUNNING
+) else (
+    tasklist /FI "IMAGENAME eq python.exe" /FO CSV | findstr /I "bot.py" >nul 2>&1
+    if %ERRORLEVEL% EQU 0 (
+        echo [STATUS] Bot is RUNNING
+    ) else (
+        echo [STATUS] Bot is NOT RUNNING
+    )
+)
+goto :eof
+
+:exit
+echo.
+echo [INFO] Thank you for using MalaBoT Development Tools!
+echo.
+pause
+exit /b 0
