@@ -19,8 +19,6 @@ PLATFORM_OPTIONS = [
     discord.SelectOption(label="Xbox", value="xbox", emoji="🎮"),
     discord.SelectOption(label="PlayStation", value="playstation", emoji="🎮"),
     discord.SelectOption(label="Steam", value="steam", emoji="💻"),
-    discord.SelectOption(label="Battle.net", value="battlenet", emoji="⚔️"),
-    discord.SelectOption(label="Other", value="other", emoji="❓"),
 ]
 
 
@@ -84,7 +82,7 @@ class PlatformSelect(Select):
             await interaction.response.send_message(
                 embed=create_embed(
                     "Verification Submitted ✅",
-                    "Your verification has been sent for staff review. You'll be notified once it's approved or rejected.",
+                    "Your verification has been sent for mod review. You'll be notified once it's approved or rejected.",
                     COLORS["success"],
                 ),
                 ephemeral=True,
@@ -292,15 +290,24 @@ class Verify(commands.Cog):
             )
             return
 
-        # Send platform selection
+        # Send platform selection (ephemeral)
         view = PlatformView(activision_id, screenshot.url, user_id)
-        await message.reply(
+        # Delete the user's screenshot message for privacy
+        try:
+            await message.delete()
+        except:
+            pass
+        
+        # Send ephemeral message to user
+        await message.channel.send(
+            content=f"<@{user_id}>",
             embed=create_embed(
                 "Select Your Platform",
                 f"**Activision ID:** `{activision_id}`\n\nPlease select your gaming platform from the dropdown below:",
                 COLORS["info"],
             ),
             view=view,
+            delete_after=300  # Delete after 5 minutes
         )
 
 
