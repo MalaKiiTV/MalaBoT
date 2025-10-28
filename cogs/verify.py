@@ -153,7 +153,6 @@ class VerifyGroup(app_commands.Group):
         await interaction.response.send_modal(modal)
 
     @app_commands.command(name="review", description="Review a pending verification (staff only)")
-    @app_commands.checks.has_permissions(manage_roles=True)
     @app_commands.describe(
         user="The user to review",
         decision="verified, cheater, or unverified",
@@ -172,6 +171,36 @@ class VerifyGroup(app_commands.Group):
         notes: str = None,
     ):
         try:
+            # Check if user has staff role
+            guild_id = interaction.guild.id
+            staff_role_id = await self.cog.db.get_setting(f"staff_role_{guild_id}")
+            
+            if staff_role_id:
+                staff_role = interaction.guild.get_role(int(staff_role_id))
+                if staff_role and staff_role not in interaction.user.roles:
+                    await interaction.response.send_message(
+                        embed=create_embed(
+                            "Permission Denied",
+                            f"❌ You need the {staff_role.mention} role to review verifications.",
+                            COLORS["error"],
+                        ),
+                        ephemeral=True,
+                    )
+                    return
+            else:
+                # Fallback to manage_roles permission if no staff role configured
+                if not interaction.user.guild_permissions.manage_roles:
+                    await interaction.response.send_message(
+                        embed=create_embed(
+                            "Permission Denied",
+                            "❌ You need the Manage Roles permission to review verifications.\n\n"
+                            "**Tip:** Configure a staff role in `/setup` → Verification System",
+                            COLORS["error"],
+                        ),
+                        ephemeral=True,
+                    )
+                    return
+
             await interaction.response.defer(ephemeral=True, thinking=True)
             decision_value = decision.value
 
@@ -192,7 +221,6 @@ class VerifyGroup(app_commands.Group):
 
             if decision_value == "verified" and member:
                 # Get verified role from settings
-                guild_id = interaction.guild.id
                 verified_role_id = await self.cog.db.get_setting(f"verify_role_{guild_id}")
                 
                 if verified_role_id:
@@ -209,11 +237,44 @@ class VerifyGroup(app_commands.Group):
                 result_text = f"❌ Marked {user.mention} as unverified. They remain unverified."
                 
             elif decision_value == "cheater" and member:
-                try:
-                    await member.ban(reason=f"Verification: Confirmed cheater by {interaction.user}: {notes or 'No additional notes'}")
-                    result_text = f"🔨 Banned {user.mention} from the server for cheating."
-                except discord.Forbidden:
-                    result_text = f"❌ Failed to ban {user.mention}. Missing permissions."
+                # Get cheater role and channel from settings
+                cheater_role_id = await self.cog.db.get_setting(f"cheater_role_{guild_id}")
+                cheater_channel_id = await self.cog.db.get_setting(f"cheater_channel_{guild_id}")
+                
+                if cheater_role_id and cheater_channel_id:
+                    cheater_role = guild.get_role(int(cheater_role_id))
+                    cheater_channel = guild.get_channel(int(cheater_channel_id))
+                    
+                    if cheater_role and cheater_channel:
+                        try:
+                            # Remove all roles except @everyone
+                            roles_to_remove = [role for role in member.roles if role != guild.default_role]
+                            await member.remove_roles(*roles_to_remove, reason=f"Marked as cheater by {interaction.user}")
+                            
+                            # Add cheater role
+                            await member.add_roles(cheater_role, reason=f"Marked as cheater by {interaction.user}")
+                            
+                            # Send notification to cheater jail
+                            jail_embed = discord.Embed(
+                                title="🚨 New Arrival",
+                                description=(
+                                    f"{member.mention} has been sent to cheater jail.\n\n"
+                                    f"**Reason:** Confirmed cheater during verification\n"
+                                    f"**Reviewed by:** {interaction.user.mention}\n"
+                                    f"**Notes:** {notes or 'None provided'}\n\n"
+                                    f"You can submit ONE appeal using `/appeal`"
+                                ),
+                                color=COLORS["error"],
+                            )
+                            await cheater_channel.send(content=f"{member.mention}", embed=jail_embed)
+                            
+                            result_text = f"🔒 Sent {member.mention} to cheater jail ({cheater_channel.mention}) with {cheater_role.mention} role."
+                        except discord.Forbidden:
+                            result_text = f"❌ Failed to assign cheater role to {user.mention}. Missing permissions."
+                    else:
+                        result_text = f"❌ Cheater role or channel not found. Please configure in `/setup` → Verification System"
+                else:
+                    result_text = f"❌ Cheater jail system not configured. Please run `/setup` → Verification System to set up cheater role and channel."
 
             await safe_send_message(interaction, content=result_text, ephemeral=True)
 
@@ -226,7 +287,7 @@ class VerifyGroup(app_commands.Group):
                 details=f"{decision_value.upper()} - {notes or 'No notes'}",
             )
 
-            # DM user about decision (except for cheater bans)
+            # DM user about decision (except for cheaters)
             if decision_value != "cheater":
                 try:
                     dm_embed = create_embed(

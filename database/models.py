@@ -157,6 +157,22 @@ class DatabaseManager:
             )
         """)
         
+        # Appeals table
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS appeals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                guild_id INTEGER NOT NULL,
+                appeal_text TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reviewed_by INTEGER DEFAULT NULL,
+                reviewed_at TIMESTAMP DEFAULT NULL,
+                review_notes TEXT DEFAULT NULL,
+                UNIQUE(user_id, guild_id)
+            )
+        """)
+        
         await conn.commit()
         
         # Initialize roast_xp if not exists
