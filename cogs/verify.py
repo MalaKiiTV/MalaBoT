@@ -140,24 +140,19 @@ class PlatformView(View):
         self.add_item(PlatformSelect(activision_id, screenshot_url, user_id))
 
 
-class Verify(commands.Cog):
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-        self.db = bot.db_manager
-        # Store pending verifications temporarily
-        if not hasattr(bot, 'pending_verifications'):
-            bot.pending_verifications = {}
+class VerifyGroup(app_commands.Group):
+    """Verify command group"""
+    def __init__(self, cog):
+        super().__init__(name="verify", description="Warzone verification system")
+        self.cog = cog
 
-    # Create the verify group
-    verify = app_commands.Group(name="verify", description="Warzone verification system")
-
-    @verify.command(name="submit", description="Submit your Warzone verification")
-    async def verify_submit(self, interaction: discord.Interaction):
+    @app_commands.command(name="submit", description="Submit your Warzone verification")
+    async def submit(self, interaction: discord.Interaction):
         """Submit verification - opens modal for Activision ID, then asks for screenshot."""
-        modal = ActivisionIDModal(self.bot)
+        modal = ActivisionIDModal(self.cog.bot)
         await interaction.response.send_modal(modal)
 
-    @verify.command(name="review", description="Review a pending verification (staff only)")
+    @app_commands.command(name="review", description="Review a pending verification (staff only)")
     @app_commands.checks.has_permissions(manage_roles=True)
     @app_commands.describe(
         user="The user to review",
@@ -169,7 +164,7 @@ class Verify(commands.Cog):
         app_commands.Choice(name="Cheater", value="cheater"),
         app_commands.Choice(name="Unverified", value="unverified"),
     ])
-    async def verify_review(
+    async def review(
         self,
         interaction: discord.Interaction,
         user: discord.User,
@@ -184,7 +179,7 @@ class Verify(commands.Cog):
                 await safe_send_message(interaction, content="Use `verified`, `cheater`, or `unverified`.", ephemeral=True)
                 return
 
-            conn = await self.db.get_connection()
+            conn = await self.cog.db.get_connection()
             await conn.execute(
                 "UPDATE verifications SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, notes = ? WHERE discord_id = ?",
                 (decision_value, interaction.user.id, notes, user.id),
@@ -198,7 +193,7 @@ class Verify(commands.Cog):
             if decision_value == "verified" and member:
                 # Get verified role from settings
                 guild_id = interaction.guild.id
-                verified_role_id = await self.db.get_setting(f"verify_role_{guild_id}")
+                verified_role_id = await self.cog.db.get_setting(f"verify_role_{guild_id}")
                 
                 if verified_role_id:
                     verified_role = guild.get_role(int(verified_role_id))
@@ -206,9 +201,9 @@ class Verify(commands.Cog):
                         await member.add_roles(verified_role)
                         result_text = f"✅ Verified {member.mention} and assigned {verified_role.mention} role."
                     else:
-                        result_text = f"✅ Verified {member.mention} but verified role not found. Please run `/setup verify` to configure."
+                        result_text = f"✅ Verified {member.mention} but verified role not found. Please run `/setup` and select Verification System to configure."
                 else:
-                    result_text = f"✅ Verified {member.mention} but no verified role configured. Please run `/setup verify` to configure."
+                    result_text = f"✅ Verified {member.mention} but no verified role configured. Please run `/setup` and select Verification System to configure."
                     
             elif decision_value == "unverified" and member:
                 result_text = f"❌ Marked {user.mention} as unverified. They remain unverified."
@@ -223,7 +218,7 @@ class Verify(commands.Cog):
             await safe_send_message(interaction, content=result_text, ephemeral=True)
 
             log_system(f"[VERIFY_REVIEW] {interaction.user} {decision_value.upper()} {user} ({notes or 'no notes'})")
-            await self.db.log_event(
+            await self.cog.db.log_event(
                 category="VERIFY",
                 action="REVIEW",
                 user_id=user.id,
@@ -246,6 +241,23 @@ class Verify(commands.Cog):
         except Exception as e:
             log_system(f"Verification review error: {e}", level="error")
             await safe_send_message(interaction, content="An error occurred while processing review.", ephemeral=True)
+
+
+class Verify(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self.db = bot.db_manager
+        # Store pending verifications temporarily
+        if not hasattr(bot, 'pending_verifications'):
+            bot.pending_verifications = {}
+        
+        # Create and add the verify group
+        self.verify_group = VerifyGroup(self)
+        self.bot.tree.add_command(self.verify_group)
+
+    async def cog_unload(self):
+        """Remove the command group when cog is unloaded"""
+        self.bot.tree.remove_command(self.verify_group.name)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

@@ -273,7 +273,8 @@ The bot will start in safe mode to prevent further issues.
                 'cogs.birthdays',
                 'cogs.welcome',
                 'cogs.owner',
-                'cogs.verify'
+                'cogs.verify',
+                'cogs.setup'
             ]
             
             self.logger.info("Loading all cogs...")
