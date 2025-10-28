@@ -312,9 +312,18 @@ class XP(commands.Cog):
         app_commands.Choice(name="set", value="set"),
         app_commands.Choice(name="reset", value="reset")
     ])
-    async def xpadmin(self, interaction: discord.Interaction, action: str, user: discord.Member, amount: int = 0):
+    async def xpadmin(self, interaction: discord.Interaction, action: str, user: discord.Member, amount: int = None):
         """XP administration commands."""
         try:
+            # Validate amount parameter for actions that need it
+            if action in ["add", "remove", "set"] and (amount is None or amount == 0):
+                embed = embed_helper.error_embed(
+                    title="Missing Amount",
+                    description=f"Please specify an amount for the {action} action.\nExample: `/xpadmin {action} @user 100`"
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+            
             # Check permissions - Server Administrator or Bot Owner
             if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user)):
                 embed = embed_helper.error_embed(
@@ -351,6 +360,111 @@ class XP(commands.Cog):
         except Exception as e:
             self.logger.error(f"Error in xpadmin command: {e}")
             await self._error_response(interaction, "Failed to execute XP admin command")
+    
+
+    @app_commands.command(name="xpconfig", description="View and configure XP settings (Administrator only)")
+    @app_commands.describe(
+        setting="Setting to view or change (leave empty to view all)",
+        value="New value for the setting (leave empty to view current)"
+    )
+    @app_commands.choices(setting=[
+        app_commands.Choice(name="XP per message (min)", value="xp_min"),
+        app_commands.Choice(name="XP per message (max)", value="xp_max"),
+        app_commands.Choice(name="XP cooldown (seconds)", value="cooldown"),
+        app_commands.Choice(name="Daily bonus XP", value="daily_xp"),
+        app_commands.Choice(name="Streak bonus (%)", value="streak_bonus"),
+    ])
+    async def xpconfig(self, interaction: discord.Interaction, setting: str = None, value: int = None):
+        """View or configure XP settings."""
+        try:
+            # Check permissions
+            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user)):
+                embed = embed_helper.error_embed(
+                    title="Permission Denied",
+                    description="This command requires Administrator permission."
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+            
+            from config.constants import (
+                XP_PER_MESSAGE_MIN, XP_PER_MESSAGE_MAX, XP_COOLDOWN_SECONDS,
+                DAILY_CHECKIN_XP, STREAK_BONUS_PERCENT
+            )
+            
+            # If no setting specified, show all current settings
+            if setting is None:
+                embed = create_embed(
+                    title="⚙️ Current XP Configuration",
+                    description="These settings apply to all servers using this bot.",
+                    color=COLORS["info"]
+                )
+                
+                embed.add_field(
+                    name="💬 Message XP",
+                    value=f"**Min:** {XP_PER_MESSAGE_MIN} XP\n**Max:** {XP_PER_MESSAGE_MAX} XP",
+                    inline=True
+                )
+                
+                embed.add_field(
+                    name="⏱️ Cooldown",
+                    value=f"{XP_COOLDOWN_SECONDS} seconds",
+                    inline=True
+                )
+                
+                embed.add_field(
+                    name="📅 Daily Bonus",
+                    value=f"{DAILY_CHECKIN_XP} XP",
+                    inline=True
+                )
+                
+                embed.add_field(
+                    name="🔥 Streak Bonus",
+                    value=f"{STREAK_BONUS_PERCENT}% per day",
+                    inline=True
+                )
+                
+                embed.add_field(
+                    name="📝 How to Change",
+                    value="Edit `config/constants.py` and restart the bot.\n\nExample:\n`XP_PER_MESSAGE_MIN = 10`\n`XP_PER_MESSAGE_MAX = 20`",
+                    inline=False
+                )
+                
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+            
+            # If setting specified but no value, show current value
+            if value is None:
+                setting_info = {
+                    "xp_min": ("Minimum XP per message", XP_PER_MESSAGE_MIN),
+                    "xp_max": ("Maximum XP per message", XP_PER_MESSAGE_MAX),
+                    "cooldown": ("XP cooldown", XP_COOLDOWN_SECONDS, "seconds"),
+                    "daily_xp": ("Daily bonus XP", DAILY_CHECKIN_XP),
+                    "streak_bonus": ("Streak bonus", STREAK_BONUS_PERCENT, "%")
+                }
+                
+                name, current, *unit = setting_info[setting]
+                unit_str = f" {unit[0]}" if unit else ""
+                
+                embed = create_embed(
+                    title=f"⚙️ {name}",
+                    description=f"**Current value:** {current}{unit_str}\n\nTo change this, edit `config/constants.py` and restart the bot.",
+                    color=COLORS["info"]
+                )
+                
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+            
+            # If both setting and value specified, show how to change
+            embed = embed_helper.info_embed(
+                title="⚙️ Configuration Instructions",
+                description=f"To change this setting:\n\n1. Edit `config/constants.py`\n2. Find the setting and change its value\n3. Restart the bot\n\n**Note:** Changes apply to all servers using this bot."
+            )
+            
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            
+        except Exception as e:
+            self.logger.error(f"Error in xpconfig command: {e}")
+            await self._error_response(interaction, "Failed to show XP configuration")
     
     async def _xpadmin_add(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Add XP to user."""

@@ -218,7 +218,4 @@ class Verify(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    cog = Verify(bot)
-    await bot.add_cog(cog)
-    # Ensure the verify group is added to the command tree
-    bot.tree.add_command(cog.verify)
+    await bot.add_cog(Verify(bot))
