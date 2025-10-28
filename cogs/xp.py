@@ -300,31 +300,15 @@ class XP(commands.Cog):
             self.logger.error(f"Error in daily command: {e}")
             await self._error_response(interaction, "Failed to claim daily bonus")
     
-    @app_commands.command(name="xpadmin", description="XP administration commands (Administrator only)")
+    @app_commands.command(name="xpadd", description="Add XP to a user (Administrator only)")
     @app_commands.describe(
-        action="What action would you like to perform?",
-        user="User to perform action on",
-        amount="Amount of XP (required for add/remove/set)"
+        user="User to add XP to",
+        amount="Amount of XP to add"
     )
-    @app_commands.choices(action=[
-        app_commands.Choice(name="add", value="add"),
-        app_commands.Choice(name="remove", value="remove"),
-        app_commands.Choice(name="set", value="set"),
-        app_commands.Choice(name="reset", value="reset")
-    ])
-    async def xpadmin(self, interaction: discord.Interaction, action: str, user: discord.Member, amount: int = 0):
-        """XP administration commands."""
+    async def xpadd(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+        """Add XP to a user."""
         try:
-            # Validate amount parameter for actions that need it
-            if action in ["add", "remove", "set"] and amount <= 0:
-                embed = embed_helper.error_embed(
-                    title="Invalid Amount",
-                    description=f"Please specify a positive amount for the {action} action.\nExample: `/xpadmin {action} @user 100`"
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-            
-            # Check permissions - Server Administrator or Bot Owner
+            # Check permissions
             if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user)):
                 embed = embed_helper.error_embed(
                     title="Permission Denied",
@@ -333,33 +317,75 @@ class XP(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            if not self.bot.db_manager:
+            await self._xpadmin_add(interaction, user, amount)
+        except Exception as e:
+            self.logger.error(f"Error in xpadd command: {e}")
+            await self._error_response(interaction, "Failed to add XP")
+    
+    @app_commands.command(name="xpremove", description="Remove XP from a user (Administrator only)")
+    @app_commands.describe(
+        user="User to remove XP from",
+        amount="Amount of XP to remove"
+    )
+    async def xpremove(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+        """Remove XP from a user."""
+        try:
+            # Check permissions
+            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user)):
                 embed = embed_helper.error_embed(
-                    title="Database Error",
-                    description="Database is not available."
+                    title="Permission Denied",
+                    description="This command requires Administrator permission."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            # Route to appropriate handler
-            if action == "add":
-                await self._xpadmin_add(interaction, user, amount)
-            elif action == "remove":
-                await self._xpadmin_remove(interaction, user, amount)
-            elif action == "set":
-                await self._xpadmin_set(interaction, user, amount)
-            elif action == "reset":
-                await self._xpadmin_reset(interaction, user)
-            else:
+            await self._xpadmin_remove(interaction, user, amount)
+        except Exception as e:
+            self.logger.error(f"Error in xpremove command: {e}")
+            await self._error_response(interaction, "Failed to remove XP")
+    
+    @app_commands.command(name="xpset", description="Set user XP to a specific amount (Administrator only)")
+    @app_commands.describe(
+        user="User to set XP for",
+        amount="Amount of XP to set"
+    )
+    async def xpset(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+        """Set user XP to a specific amount."""
+        try:
+            # Check permissions
+            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user)):
                 embed = embed_helper.error_embed(
-                    title="Unknown Action",
-                    description="The specified action is not recognized."
+                    title="Permission Denied",
+                    description="This command requires Administrator permission."
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-                
+                return
+            
+            await self._xpadmin_set(interaction, user, amount)
         except Exception as e:
-            self.logger.error(f"Error in xpadmin command: {e}")
-            await self._error_response(interaction, "Failed to execute XP admin command")
+            self.logger.error(f"Error in xpset command: {e}")
+            await self._error_response(interaction, "Failed to set XP")
+    
+    @app_commands.command(name="xpreset", description="Reset user XP to 0 (Administrator only)")
+    @app_commands.describe(
+        user="User to reset XP for"
+    )
+    async def xpreset(self, interaction: discord.Interaction, user: discord.Member):
+        """Reset user XP to 0."""
+        try:
+            # Check permissions
+            if not (interaction.user.guild_permissions.administrator or is_owner(interaction.user)):
+                embed = embed_helper.error_embed(
+                    title="Permission Denied",
+                    description="This command requires Administrator permission."
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+            
+            await self._xpadmin_reset(interaction, user)
+        except Exception as e:
+            self.logger.error(f"Error in xpreset command: {e}")
+            await self._error_response(interaction, "Failed to reset XP")
     
 
     @app_commands.command(name="xpconfig", description="Configure XP settings (Administrator only)")
