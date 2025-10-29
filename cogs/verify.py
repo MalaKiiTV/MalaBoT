@@ -79,6 +79,22 @@ class PlatformSelect(Select):
             )
             await conn.commit()
 
+            # Delete the platform selection message to clean up the channel
+            try:
+                await interaction.message.delete()
+            except:
+                pass
+            
+            # Send a brief public confirmation that auto-deletes
+            confirmation_msg = await interaction.channel.send(
+                embed=create_embed(
+                    "✅ Verification Submitted",
+                    f"<@{self.user_id}>'s verification has been submitted for review!",
+                    COLORS["success"],
+                )
+            )
+            
+            # Also send ephemeral confirmation to user
             await interaction.response.send_message(
                 embed=create_embed(
                     "Verification Submitted ✅",
@@ -87,6 +103,15 @@ class PlatformSelect(Select):
                 ),
                 ephemeral=True,
             )
+            
+            # Delete the confirmation message after 5 seconds
+            import asyncio
+            await asyncio.sleep(5)
+            try:
+                await confirmation_msg.delete()
+            except:
+                pass
+            
 
             log_system(f"[VERIFY] User {self.user_id} submitted verification for {self.activision_id} on {platform}")
 
