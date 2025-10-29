@@ -1089,7 +1089,7 @@ class XPSetupView(View):
             await self.db_manager.set_setting(f"xp_levelup_message_{self.guild_id}", message_input.value)
             embed = discord.Embed(
                 title="✅ Level-up Message Set",
-                description=f"Message: {message_input.value}\n\nAvailable variables: `{member}`, `{level}`",
+                description=f"Message: {message_input.value}\n\nAvailable variables: `{{member}}`, `{{level}}`",
                 color=COLORS["success"]
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
