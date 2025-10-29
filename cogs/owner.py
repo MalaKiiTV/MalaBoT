@@ -319,18 +319,21 @@ class Owner(commands.Cog):
             if not self.bot.db_manager:
                 return
             
-            online_channel_id = await self.bot.db_manager.get_setting('online_channel_id')
-            online_message = await self.bot.db_manager.get_setting('online_message')
-            
-            if online_channel_id and online_message:
-                channel = self.bot.get_channel(int(online_channel_id))
-                if channel:
-                    embed = embed_helper.success_embed(
-                        title="🟢 Bot Online",
-                        description=online_message
-                    )
-                    await channel.send(embed=embed)
-                    self.logger.info(f"Sent online message to channel {online_channel_id}")
+            # Try to get guild-specific settings first
+            for guild in self.bot.guilds:
+                guild_id = guild.id
+                online_channel_id = await self.bot.db_manager.get_setting(f'online_message_channel_{guild_id}')
+                online_message = await self.bot.db_manager.get_setting(f'online_message_{guild_id}')
+                
+                if online_channel_id and online_message:
+                    channel = self.bot.get_channel(int(online_channel_id))
+                    if channel:
+                        embed = embed_helper.success_embed(
+                            title="🟢 Bot Online",
+                            description=online_message
+                        )
+                        await channel.send(embed=embed)
+                        self.logger.info(f"Sent online message to channel {online_channel_id} in guild {guild.name}")
                     
         except Exception as e:
             self.logger.error(f"Error sending online message: {e}")

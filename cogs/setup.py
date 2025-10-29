@@ -423,6 +423,7 @@ class GeneralSettingsView(View):
         """View current general settings"""
         timezone = await self.db.get_setting(f"timezone_{self.guild_id}", "UTC-6")
         online_message = await self.db.get_setting(f"online_message_{self.guild_id}", "Not set")
+        online_channel_id = await self.db.get_setting(f"online_message_channel_{self.guild_id}")
         mod_role_id = await self.db.get_setting(f"mod_role_{self.guild_id}")
         
         mod_role_text = "Not set"
@@ -435,8 +436,12 @@ class GeneralSettingsView(View):
                     mod_role_text = f"<@&{mod_role_id}>"
             except:
                 mod_role_text = f"<@&{mod_role_id}>"
+        
+        online_channel_text = "Not set"
+        if online_channel_id:
+            online_channel_text = f"<#{online_channel_id}>"
 
-        config_text = f"**Timezone:** {timezone}\n**Online Message:** {online_message}\n**Mod Role:** {mod_role_text}"
+        config_text = f"**Timezone:** {timezone}\n**Online Message:** {online_message}\n**Online Channel:** {online_channel_text}\n**Mod Role:** {mod_role_text}"
 
         embed = discord.Embed(
             title="Current General Settings",
