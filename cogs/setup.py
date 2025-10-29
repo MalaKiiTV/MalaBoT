@@ -753,10 +753,15 @@ class SetupSelect(Select):
         embed.add_field(name="🏆 XP System", value=xp_text, inline=False)
 
         # General settings
+        online_channel_id = await db.get_setting(f"online_message_channel_{guild_id}")
         general_text = f"Timezone: {timezone}\nOnline Message: {online_message}"
+        if online_channel_id:
+            general_text += f"\nOnline Channel: <#{online_channel_id}>"
+        if mod_role_id:
+            general_text += f"\nMod Role: <@&{mod_role_id}>"
         embed.add_field(name="⚙️ General", value=general_text, inline=False)
 
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.edit_message(embed=embed, view=None)
 
 
 class SetupView(View):
@@ -772,7 +777,7 @@ class WelcomeSetupView(View):
         self.db_manager = db_manager
         
     @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="📢")
-    async def set_channel(self, button: Button, interaction: discord.Interaction):
+    async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set welcome channel"""
         view = View()
         select = ChannelSelect(
@@ -803,7 +808,7 @@ class WelcomeSetupView(View):
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
     @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="💬")
-    async def set_message(self, button: Button, interaction: discord.Interaction):
+    async def set_message(self, interaction: discord.Interaction, button: Button):
         """Set welcome message"""
         modal = Modal(title="Set Welcome Message")
         message_input = discord.ui.TextInput(
@@ -828,7 +833,7 @@ class WelcomeSetupView(View):
         await interaction.response.send_modal(modal)
     
     @discord.ui.button(label="Set Title", style=ButtonStyle.primary, emoji="📝")
-    async def set_title(self, button: Button, interaction: discord.Interaction):
+    async def set_title(self, interaction: discord.Interaction, button: Button):
         """Set welcome title"""
         modal = Modal(title="Set Welcome Title")
         title_input = discord.ui.TextInput(
@@ -853,7 +858,7 @@ class WelcomeSetupView(View):
         await interaction.response.send_modal(modal)
     
     @discord.ui.button(label="Set Image", style=ButtonStyle.primary, emoji="🖼️")
-    async def set_image(self, button: Button, interaction: discord.Interaction):
+    async def set_image(self, interaction: discord.Interaction, button: Button):
         """Set welcome image"""
         modal = Modal(title="Set Welcome Image")
         image_input = discord.ui.TextInput(
@@ -885,7 +890,7 @@ class BirthdaySetupView(View):
         self.db_manager = db_manager
         
     @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="📢")
-    async def set_channel(self, button: Button, interaction: discord.Interaction):
+    async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set birthday announcement channel"""
         view = View()
         select = ChannelSelect(
@@ -916,7 +921,7 @@ class BirthdaySetupView(View):
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
     @discord.ui.button(label="Set Time", style=ButtonStyle.primary, emoji="⏰")
-    async def set_time(self, button: Button, interaction: discord.Interaction):
+    async def set_time(self, interaction: discord.Interaction, button: Button):
         """Set birthday announcement time"""
         modal = Modal(title="Set Birthday Announcement Time")
         time_input = discord.ui.TextInput(
@@ -956,7 +961,7 @@ class BirthdaySetupView(View):
         await interaction.response.send_modal(modal)
     
     @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="💬")
-    async def set_message(self, button: Button, interaction: discord.Interaction):
+    async def set_message(self, interaction: discord.Interaction, button: Button):
         """Set birthday message"""
         modal = Modal(title="Set Birthday Message")
         message_input = discord.ui.TextInput(
@@ -988,7 +993,7 @@ class XPSetupView(View):
         self.db_manager = db_manager
         
     @discord.ui.button(label="Set Level-up Channel", style=ButtonStyle.primary, emoji="📢")
-    async def set_channel(self, button: Button, interaction: discord.Interaction):
+    async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set level-up announcement channel"""
         view = View()
         select = ChannelSelect(
@@ -1019,7 +1024,7 @@ class XPSetupView(View):
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
     @discord.ui.button(label="Set XP Rates", style=ButtonStyle.primary, emoji="⚡")
-    async def set_rates(self, button: Button, interaction: discord.Interaction):
+    async def set_rates(self, interaction: discord.Interaction, button: Button):
         """Set XP gain rates"""
         modal = Modal(title="Set XP Gain Rates")
         min_xp = discord.ui.TextInput(
@@ -1068,7 +1073,7 @@ class XPSetupView(View):
         await interaction.response.send_modal(modal)
     
     @discord.ui.button(label="Set Level-up Message", style=ButtonStyle.primary, emoji="💬")
-    async def set_message(self, button: Button, interaction: discord.Interaction):
+    async def set_message(self, interaction: discord.Interaction, button: Button):
         """Set level-up message"""
         modal = Modal(title="Set Level-up Message")
         message_input = discord.ui.TextInput(
