@@ -545,21 +545,18 @@ class SetupSelect(Select):
             title="👋 Welcome System Setup",
             description=(
                 "Configure your welcome system:\n\n"
-                "**Commands to use:**\n"
-                "`/welcome setchannel #channel` - Set welcome channel\n"
-                "`/welcome setmessage <message>` - Set welcome message\n"
-                "`/welcome settitle <title>` - Set welcome title\n"
-                "`/welcome setimage <url>` - Set welcome image\n"
-                "`/welcome toggle` - Enable/disable welcome messages\n\n"
-                "**Variables you can use:**\n"
+                "**Available Variables:**\n"
                 "`{member}` - Mentions the new member\n"
                 "`{member.name}` - Member's username\n"
                 "`{server}` - Server name\n"
-                "`{member.count}` - Total member count"
+                "`{member.count}` - Total member count\n\n"
+                "Click the buttons below to configure each setting."
             ),
             color=COLORS["welcome"],
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        view = WelcomeSetupView(interaction.guild.id, self.bot.db_manager)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     async def setup_birthday(self, interaction: discord.Interaction):
         """Setup birthday system"""
@@ -567,19 +564,22 @@ class SetupSelect(Select):
             title="🎂 Birthday System Setup",
             description=(
                 "Configure your birthday system:\n\n"
-                "**Commands to use:**\n"
-                "`/bday setchannel #channel` - Set birthday announcement channel\n"
-                "`/bday setposttime <time>` - Set announcement time (e.g., 08:00 AM)\n"
-                "`/settimezone <timezone>` - Set server timezone (e.g., UTC-6)\n\n"
+                "**Available Variables:**\n"
+                "`{member}` - Mentions the birthday person\n"
+                "`{member.name}` - Member's username\n"
+                "`{age}` - Age (if year provided)\n\n"
                 "**User Commands:**\n"
                 "`/bday set <MM-DD>` - Users set their birthday\n"
                 "`/bday view [@user]` - View birthday\n"
                 "`/bday list` - View all birthdays\n"
-                "`/bday next` - See next upcoming birthday"
+                "`/bday next` - See next upcoming birthday\n\n"
+                "Click the buttons below to configure each setting."
             ),
             color=COLORS["birthday"],
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        view = BirthdaySetupView(interaction.guild.id, self.bot.db_manager)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     async def setup_xp(self, interaction: discord.Interaction):
         """Setup XP system"""
@@ -587,23 +587,21 @@ class SetupSelect(Select):
             title="🏆 XP System Setup",
             description=(
                 "Configure your XP system:\n\n"
-                "**Admin Commands:**\n"
-                "`/xpadmin add @user <amount>` - Add XP to user\n"
-                "`/xpadmin remove @user <amount>` - Remove XP from user\n"
-                "`/xpadmin set @user <amount>` - Set user's XP\n"
-                "`/xpadmin reset @user` - Reset user's XP\n\n"
                 "**User Commands:**\n"
                 "`/xp rank [@user]` - View XP rank\n"
                 "`/xp leaderboard` - View server leaderboard\n"
                 "`/xp daily` - Claim daily XP bonus\n\n"
-                "**XP Settings:**\n"
+                "**Default Settings:**\n"
                 "• Users gain 5-15 XP per message\n"
                 "• 60 second cooldown between XP gains\n"
-                "• Daily check-in: 50 XP + streak bonus"
+                "• Daily check-in: 50 XP + streak bonus\n\n"
+                "Click the buttons below to configure XP settings."
             ),
             color=COLORS["xp"],
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        view = XPSetupView(interaction.guild.id, self.bot.db_manager)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     async def setup_general(self, interaction: discord.Interaction):
         """Setup general settings with interactive configuration"""
@@ -632,10 +630,14 @@ class SetupSelect(Select):
         # Fetch all settings
         verify_channel_id = await db.get_setting(f"verify_channel_{guild_id}")
         verify_role_id = await db.get_setting(f"verify_role_{guild_id}")
-        # Welcome uses a global key without guild_id suffix
         welcome_channel_id = await db.get_setting("welcome_channel_id")
-        # Birthday channel is not yet implemented in the birthday cog
-        birthday_channel_id = None  # TODO: Add birthday channel configuration
+        welcome_message = await db.get_setting("welcome_message")
+        birthday_channel_id = await db.get_setting(f"birthday_channel_{guild_id}")
+        birthday_time = await db.get_setting(f"birthday_time_{guild_id}")
+        birthday_message = await db.get_setting(f"birthday_message_{guild_id}")
+        xp_channel_id = await db.get_setting(f"xp_channel_{guild_id}")
+        xp_min = await db.get_setting(f"xp_min_{guild_id}", "5")
+        xp_max = await db.get_setting(f"xp_max_{guild_id}", "15")
         timezone = await db.get_setting(f"timezone_{guild_id}", "UTC-6")
         online_message = await db.get_setting(f"online_message_{guild_id}", "Not set")
 
@@ -659,6 +661,8 @@ class SetupSelect(Select):
         welcome_text = ""
         if welcome_channel_id:
             welcome_text += f"Channel: <#{welcome_channel_id}>\n"
+            if welcome_message:
+                welcome_text += f"Message: {welcome_message[:50]}{'...' if len(welcome_message) > 50 else ''}\n"
         else:
             welcome_text = "Not configured"
         embed.add_field(name="👋 Welcome", value=welcome_text, inline=False)
@@ -667,9 +671,20 @@ class SetupSelect(Select):
         birthday_text = ""
         if birthday_channel_id:
             birthday_text += f"Channel: <#{birthday_channel_id}>\n"
+            if birthday_time:
+                birthday_text += f"Time: {birthday_time}\n"
+            if birthday_message:
+                birthday_text += f"Message: {birthday_message[:50]}{'...' if len(birthday_message) > 50 else ''}\n"
         else:
-            birthday_text = "Configure using `/bday` commands\n(Channel configuration not yet implemented)"
+            birthday_text = "Not configured"
         embed.add_field(name="🎂 Birthday", value=birthday_text, inline=False)
+        
+        # XP settings
+        xp_text = ""
+        if xp_channel_id:
+            xp_text += f"Level-up Channel: <#{xp_channel_id}>\n"
+        xp_text += f"XP per Message: {xp_min}-{xp_max}\n"
+        embed.add_field(name="🏆 XP System", value=xp_text, inline=False)
 
         # General settings
         general_text = f"Timezone: {timezone}\nOnline Message: {online_message}"
@@ -682,6 +697,334 @@ class SetupView(View):
     def __init__(self):
         super().__init__(timeout=300)
         self.add_item(SetupSelect())
+
+
+class WelcomeSetupView(View):
+    def __init__(self, guild_id: int, db_manager):
+        super().__init__(timeout=300)
+        self.guild_id = guild_id
+        self.db_manager = db_manager
+        
+    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="📢")
+    async def set_channel(self, button: Button, interaction: discord.Interaction):
+        """Set welcome channel"""
+        view = View()
+        select = ChannelSelect(
+            placeholder="Select welcome channel",
+            channel_types=[discord.ChannelType.text],
+            min_values=1,
+            max_values=1
+        )
+        
+        async def channel_callback(interaction: discord.Interaction):
+            channel = select.values[0]
+            await self.db_manager.set_setting("welcome_channel_id", str(channel.id))
+            embed = discord.Embed(
+                title="✅ Welcome Channel Set",
+                description=f"Welcome messages will be sent to {channel.mention}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        select.callback = channel_callback
+        view.add_item(select)
+        
+        embed = discord.Embed(
+            title="📢 Select Welcome Channel",
+            description="Choose the channel where welcome messages will be sent.",
+            color=COLORS["primary"]
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    
+    @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="💬")
+    async def set_message(self, button: Button, interaction: discord.Interaction):
+        """Set welcome message"""
+        modal = Modal(title="Set Welcome Message")
+        message_input = discord.ui.TextInput(
+            label="Welcome Message",
+            placeholder="Welcome {member} to {server}!",
+            style=discord.TextStyle.paragraph,
+            required=True,
+            max_length=1000
+        )
+        modal.add_item(message_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            await self.db_manager.set_setting("welcome_message", message_input.value)
+            embed = discord.Embed(
+                title="✅ Welcome Message Set",
+                description=f"Message: {message_input.value}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Set Title", style=ButtonStyle.primary, emoji="📝")
+    async def set_title(self, button: Button, interaction: discord.Interaction):
+        """Set welcome title"""
+        modal = Modal(title="Set Welcome Title")
+        title_input = discord.ui.TextInput(
+            label="Welcome Title",
+            placeholder="Welcome to the Server!",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=100
+        )
+        modal.add_item(title_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            await self.db_manager.set_setting("welcome_title", title_input.value)
+            embed = discord.Embed(
+                title="✅ Welcome Title Set",
+                description=f"Title: {title_input.value}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Set Image", style=ButtonStyle.primary, emoji="🖼️")
+    async def set_image(self, button: Button, interaction: discord.Interaction):
+        """Set welcome image"""
+        modal = Modal(title="Set Welcome Image")
+        image_input = discord.ui.TextInput(
+            label="Image URL",
+            placeholder="https://example.com/image.png",
+            style=discord.TextStyle.short,
+            required=False,
+            max_length=500
+        )
+        modal.add_item(image_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            await self.db_manager.set_setting("welcome_image", image_input.value or "")
+            embed = discord.Embed(
+                title="✅ Welcome Image Set",
+                description=f"Image URL: {image_input.value or 'None (removed)'}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+
+
+class BirthdaySetupView(View):
+    def __init__(self, guild_id: int, db_manager):
+        super().__init__(timeout=300)
+        self.guild_id = guild_id
+        self.db_manager = db_manager
+        
+    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="📢")
+    async def set_channel(self, button: Button, interaction: discord.Interaction):
+        """Set birthday announcement channel"""
+        view = View()
+        select = ChannelSelect(
+            placeholder="Select birthday announcement channel",
+            channel_types=[discord.ChannelType.text],
+            min_values=1,
+            max_values=1
+        )
+        
+        async def channel_callback(interaction: discord.Interaction):
+            channel = select.values[0]
+            await self.db_manager.set_setting(f"birthday_channel_{self.guild_id}", str(channel.id))
+            embed = discord.Embed(
+                title="✅ Birthday Channel Set",
+                description=f"Birthday announcements will be sent to {channel.mention}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        select.callback = channel_callback
+        view.add_item(select)
+        
+        embed = discord.Embed(
+            title="📢 Select Birthday Channel",
+            description="Choose the channel where birthday announcements will be sent.",
+            color=COLORS["primary"]
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    
+    @discord.ui.button(label="Set Time", style=ButtonStyle.primary, emoji="⏰")
+    async def set_time(self, button: Button, interaction: discord.Interaction):
+        """Set birthday announcement time"""
+        modal = Modal(title="Set Birthday Announcement Time")
+        time_input = discord.ui.TextInput(
+            label="Announcement Time (24-hour format)",
+            placeholder="08:00",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=5
+        )
+        modal.add_item(time_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            # Validate time format
+            try:
+                hour, minute = time_input.value.split(":")
+                hour = int(hour)
+                minute = int(minute)
+                if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                    raise ValueError
+                
+                await self.db_manager.set_setting(f"birthday_time_{self.guild_id}", time_input.value)
+                embed = discord.Embed(
+                    title="✅ Birthday Time Set",
+                    description=f"Announcements will be posted at {time_input.value} (server timezone)",
+                    color=COLORS["success"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            except:
+                embed = discord.Embed(
+                    title="❌ Invalid Time Format",
+                    description="Please use 24-hour format (HH:MM), e.g., 08:00 or 14:30",
+                    color=COLORS["error"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="💬")
+    async def set_message(self, button: Button, interaction: discord.Interaction):
+        """Set birthday message"""
+        modal = Modal(title="Set Birthday Message")
+        message_input = discord.ui.TextInput(
+            label="Birthday Message",
+            placeholder="🎂 Happy Birthday {member}! Have a great day!",
+            style=discord.TextStyle.paragraph,
+            required=True,
+            max_length=500
+        )
+        modal.add_item(message_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            await self.db_manager.set_setting(f"birthday_message_{self.guild_id}", message_input.value)
+            embed = discord.Embed(
+                title="✅ Birthday Message Set",
+                description=f"Message: {message_input.value}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+
+
+class XPSetupView(View):
+    def __init__(self, guild_id: int, db_manager):
+        super().__init__(timeout=300)
+        self.guild_id = guild_id
+        self.db_manager = db_manager
+        
+    @discord.ui.button(label="Set Level-up Channel", style=ButtonStyle.primary, emoji="📢")
+    async def set_channel(self, button: Button, interaction: discord.Interaction):
+        """Set level-up announcement channel"""
+        view = View()
+        select = ChannelSelect(
+            placeholder="Select level-up announcement channel",
+            channel_types=[discord.ChannelType.text],
+            min_values=1,
+            max_values=1
+        )
+        
+        async def channel_callback(interaction: discord.Interaction):
+            channel = select.values[0]
+            await self.db_manager.set_setting(f"xp_channel_{self.guild_id}", str(channel.id))
+            embed = discord.Embed(
+                title="✅ Level-up Channel Set",
+                description=f"Level-up announcements will be sent to {channel.mention}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        select.callback = channel_callback
+        view.add_item(select)
+        
+        embed = discord.Embed(
+            title="📢 Select Level-up Channel",
+            description="Choose the channel where level-up announcements will be sent.",
+            color=COLORS["primary"]
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    
+    @discord.ui.button(label="Set XP Rates", style=ButtonStyle.primary, emoji="⚡")
+    async def set_rates(self, button: Button, interaction: discord.Interaction):
+        """Set XP gain rates"""
+        modal = Modal(title="Set XP Gain Rates")
+        min_xp = discord.ui.TextInput(
+            label="Minimum XP per message",
+            placeholder="5",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=3
+        )
+        max_xp = discord.ui.TextInput(
+            label="Maximum XP per message",
+            placeholder="15",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=3
+        )
+        modal.add_item(min_xp)
+        modal.add_item(max_xp)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            try:
+                min_val = int(min_xp.value)
+                max_val = int(max_xp.value)
+                
+                if min_val < 1 or max_val < min_val:
+                    raise ValueError
+                
+                await self.db_manager.set_setting(f"xp_min_{self.guild_id}", str(min_val))
+                await self.db_manager.set_setting(f"xp_max_{self.guild_id}", str(max_val))
+                
+                embed = discord.Embed(
+                    title="✅ XP Rates Set",
+                    description=f"Users will gain {min_val}-{max_val} XP per message",
+                    color=COLORS["success"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            except:
+                embed = discord.Embed(
+                    title="❌ Invalid Values",
+                    description="Please enter valid numbers. Min must be at least 1, and Max must be greater than Min.",
+                    color=COLORS["error"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Set Level-up Message", style=ButtonStyle.primary, emoji="💬")
+    async def set_message(self, button: Button, interaction: discord.Interaction):
+        """Set level-up message"""
+        modal = Modal(title="Set Level-up Message")
+        message_input = discord.ui.TextInput(
+            label="Level-up Message",
+            placeholder="🎉 {member} reached level {level}!",
+            style=discord.TextStyle.paragraph,
+            required=True,
+            max_length=500
+        )
+        modal.add_item(message_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            await self.db_manager.set_setting(f"xp_levelup_message_{self.guild_id}", message_input.value)
+            embed = discord.Embed(
+                title="✅ Level-up Message Set",
+                description=f"Message: {message_input.value}\n\nAvailable variables: `{member}`, `{level}`",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
 
 
 class Setup(commands.Cog):
