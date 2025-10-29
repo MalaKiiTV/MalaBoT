@@ -369,6 +369,40 @@ class Owner(commands.Cog):
         except:
             pass
 
+    @app_commands.command(name="clear-commands", description="Clear and re-sync slash commands (Bot Owner only)")
+    async def clear_commands(self, interaction: discord.Interaction):
+        """Clear all slash commands and re-sync them."""
+        try:
+            await interaction.response.defer(ephemeral=True)
+            
+            # Get debug guild
+            import os
+            debug_guild_id = int(os.getenv("DEBUG_GUILDS", "542004156513255445"))
+            guild = discord.Object(id=debug_guild_id)
+            
+            # Clear guild commands
+            self.bot.tree.clear_commands(guild=guild)
+            self.logger.info("Cleared guild commands")
+            
+            # Sync again
+            synced = await self.bot.tree.sync(guild=guild)
+            self.logger.info(f"Re-synced {len(synced)} commands")
+            
+            embed = embed_helper.success_embed(
+                title="Commands Cleared &amp; Re-synced",
+                description=f"✅ Cleared old commands\n✅ Synced {len(synced)} commands to guild"
+            )
+            
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            
+        except Exception as e:
+            self.logger.error(f"Error clearing commands: {e}")
+            embed = embed_helper.error_embed(
+                title="Error",
+                description=f"Failed to clear commands: {str(e)}"
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
 async def setup(bot: commands.Bot):
     """Setup function for the cog."""
     await bot.add_cog(Owner(bot))
