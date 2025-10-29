@@ -64,17 +64,19 @@ class Welcome(commands.Cog):
         except Exception as e:
             self.logger.error(f"Error in on_member_join: {e}")
     
-    @app_commands.command(name="welcome", description="Welcome system configuration (Server Owner only)")
-    @app_commands.describe(
-        action="What welcome action would you like to perform?"
-    )
-    @app_commands.choices(action=[
-        app_commands.Choice(name="setchannel", value="setchannel"),
-        app_commands.Choice(name="settitle", value="settitle"),
-        app_commands.Choice(name="setmessage", value="setmessage"),
-        app_commands.Choice(name="setimage", value="setimage")
-    ])
-    async def welcome(self, interaction: discord.Interaction, action: str):
+    # DEPRECATED: Welcome command moved to /setup
+    # Keeping the helper methods below for potential future use
+    # @app_commands.command(name="welcome", description="Welcome system configuration (Server Owner only)")
+    # @app_commands.describe(
+    #     action="What welcome action would you like to perform?"
+    # )
+    # @app_commands.choices(action=[
+    #     app_commands.Choice(name="setchannel", value="setchannel"),
+    #     app_commands.Choice(name="settitle", value="settitle"),
+    #     app_commands.Choice(name="setmessage", value="setmessage"),
+    #     app_commands.Choice(name="setimage", value="setimage")
+    # ])
+    async def _welcome_deprecated(self, interaction: discord.Interaction, action: str):
         """Welcome system configuration commands."""
         try:
             # Check permissions - Both admin and owner should be able to use this

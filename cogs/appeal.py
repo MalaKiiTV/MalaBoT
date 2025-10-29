@@ -293,4 +293,7 @@ class Appeal(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(Appeal(bot))
+    appeal_cog = Appeal(bot)
+    appeal_group = AppealGroup(appeal_cog)
+    await bot.add_cog(appeal_cog)
+    bot.tree.add_command(appeal_group)
