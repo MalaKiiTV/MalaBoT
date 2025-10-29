@@ -625,8 +625,8 @@ class SetupSelect(Select):
             color=COLORS["welcome"],
         )
         
-        view = WelcomeSetupView(interaction.guild.id, self.bot.db_manager)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        view = WelcomeSetupView(interaction.guild.id, interaction.client.db_manager)
+        await interaction.response.edit_message(embed=embed, view=view)
 
     async def setup_birthday(self, interaction: discord.Interaction):
         """Setup birthday system"""
@@ -648,8 +648,8 @@ class SetupSelect(Select):
             color=COLORS["birthday"],
         )
         
-        view = BirthdaySetupView(interaction.guild.id, self.bot.db_manager)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        view = BirthdaySetupView(interaction.guild.id, interaction.client.db_manager)
+        await interaction.response.edit_message(embed=embed, view=view)
 
     async def setup_xp(self, interaction: discord.Interaction):
         """Setup XP system"""
@@ -670,8 +670,8 @@ class SetupSelect(Select):
             color=COLORS["xp"],
         )
         
-        view = XPSetupView(interaction.guild.id, self.bot.db_manager)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        view = XPSetupView(interaction.guild.id, interaction.client.db_manager)
+        await interaction.response.edit_message(embed=embed, view=view)
 
     async def setup_general(self, interaction: discord.Interaction):
         """Setup general settings with interactive configuration"""
@@ -693,6 +693,9 @@ class SetupSelect(Select):
         # Fetch all settings
         verify_channel_id = await db.get_setting(f"verify_channel_{guild_id}")
         verify_role_id = await db.get_setting(f"verify_role_{guild_id}")
+        cheater_role_id = await db.get_setting(f"cheater_role_{guild_id}")
+        cheater_jail_id = await db.get_setting(f"cheater_jail_channel_{guild_id}")
+        mod_role_id = await db.get_setting(f"mod_role_{guild_id}")
         welcome_channel_id = await db.get_setting("welcome_channel_id")
         welcome_message = await db.get_setting("welcome_message")
         birthday_channel_id = await db.get_setting(f"birthday_channel_{guild_id}")
