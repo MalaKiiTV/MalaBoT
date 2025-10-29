@@ -304,7 +304,7 @@ class TimezoneSelect(discord.ui.Select):
                 description="Click the buttons below to configure each setting.",
                 color=COLORS["primary"]
             )
-            await interaction.message.edit(embed=embed, view=general_view)
+            await interaction.edit_original_response(embed=embed, view=general_view)
             
         except Exception as e:
             log_system(f"Error setting timezone: {e}", level="error")
@@ -381,7 +381,7 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
                 description="Click the buttons below to configure each setting.",
                 color=COLORS["primary"]
             )
-            await interaction.message.edit(embed=embed, view=general_view)
+            await interaction.edit_original_response(embed=embed, view=general_view)
         except Exception as e:
             log_system(f"Error setting online message: {e}", level="error")
             await interaction.response.send_message(
@@ -470,7 +470,7 @@ class GeneralSettingsView(View):
                 description="Click the buttons below to configure each setting.",
                 color=COLORS["primary"]
             )
-            await interaction.message.edit(embed=embed, view=general_view)
+            await interaction.edit_original_response(embed=embed, view=general_view)
         
         select.callback = role_callback
         view = View(timeout=60)
