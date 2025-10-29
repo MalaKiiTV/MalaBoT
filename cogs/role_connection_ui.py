@@ -509,7 +509,7 @@ class ManageConnectionSelect(Select):
 
 
 class ConnectionActionsView(View):
-    """View for connection actions (toggle/delete)"""
+    """View for connection actions (toggle/delete/edit)"""
     def __init__(self, manager, guild: discord.Guild, connection):
         super().__init__(timeout=300)
         self.manager = manager
@@ -532,6 +532,33 @@ class ConnectionActionsView(View):
             ephemeral=True
         )
 
+    @discord.ui.button(label="Edit Logic", style=discord.ButtonStyle.gray, emoji="✏️")
+    async def edit_logic(self, interaction: discord.Interaction, button: Button):
+        view = EditConnectionLogicView(self.manager, self.guild, self.connection)
+        
+        # Build current connection details
+        target_role = self.guild.get_role(self.connection.target_role_id)
+        cond_text = []
+        for cond in self.connection.conditions:
+            role = self.guild.get_role(cond["role_id"])
+            if role:
+                cond_type = "HAS" if cond["type"] == "has" else "DOESN'T HAVE"
+                cond_text.append(f"• User {cond_type} {role.mention}")
+        
+        embed = discord.Embed(
+            title="✏️ Edit Connection Logic",
+            description=(
+                f"**Connection #{self.connection.id}**\n\n"
+                f"Target Role: {target_role.mention if target_role else 'Unknown'}\n"
+                f"Action: **{self.connection.action.title()}**\n\n"
+                f"**Current Conditions ({self.connection.logic}):**\n" + "\n".join(cond_text) + "\n\n"
+                f"Click the button below to toggle between AND/OR logic."
+            ),
+            color=COLORS["primary"]
+        )
+        
+        await interaction.response.edit_message(embed=embed, view=view)
+
     @discord.ui.button(label="Delete", style=discord.ButtonStyle.red, emoji="🗑️")
     async def delete(self, interaction: discord.Interaction, button: Button):
         await self.manager.remove_connection(self.guild.id, self.connection.id)
@@ -544,6 +571,82 @@ class ConnectionActionsView(View):
             ),
             ephemeral=True
         )
+
+
+class EditConnectionLogicView(View):
+    """View for editing connection logic (AND/OR)"""
+    def __init__(self, manager, guild: discord.Guild, connection):
+        super().__init__(timeout=300)
+        self.manager = manager
+        self.guild = guild
+        self.connection = connection
+
+    @discord.ui.button(label="Toggle Logic (AND ↔ OR)", style=discord.ButtonStyle.blurple, emoji="🔀")
+    async def toggle_logic(self, interaction: discord.Interaction, button: Button):
+        # Toggle the logic
+        new_logic = "OR" if self.connection.logic == "AND" else "AND"
+        
+        # Update in database
+        await self.manager.update_connection_logic(self.guild.id, self.connection.id, new_logic)
+        self.connection.logic = new_logic
+        
+        # Build updated display
+        target_role = self.guild.get_role(self.connection.target_role_id)
+        cond_text = []
+        for cond in self.connection.conditions:
+            role = self.guild.get_role(cond["role_id"])
+            if role:
+                cond_type = "HAS" if cond["type"] == "has" else "DOESN'T HAVE"
+                cond_text.append(f"• User {cond_type} {role.mention}")
+        
+        embed = discord.Embed(
+            title="✅ Logic Updated",
+            description=(
+                f"**Connection #{self.connection.id}**\n\n"
+                f"Target Role: {target_role.mention if target_role else 'Unknown'}\n"
+                f"Action: **{self.connection.action.title()}**\n\n"
+                f"**Updated Conditions ({new_logic}):**\n" + "\n".join(cond_text) + "\n\n"
+                f"Logic has been changed to **{new_logic}**"
+            ),
+            color=COLORS["success"]
+        )
+        
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="Back to Connections", style=discord.ButtonStyle.gray, emoji="◀️")
+    async def back(self, interaction: discord.Interaction, button: Button):
+        # Return to role connections menu
+        from cogs.setup import RoleConnectionSetupView
+        view = RoleConnectionSetupView(self.manager, self.guild)
+        
+        # Reload connections from database
+        await self.manager.load_connections(self.guild.id)
+        connections = self.manager.connections_cache.get(self.guild.id, [])
+        
+        embed = discord.Embed(
+            title="🔗 Role Connection System",
+            description=(
+                "Automatically assign or remove roles based on conditions.\n\n"
+                "**How it works:**\n"
+                "• Create rules that give/remove roles when conditions are met\n"
+                "• Conditions: User HAS or DOESN'T HAVE specific roles\n"
+                "• Logic: Combine conditions with AND/OR\n"
+                "• Protected Roles: Users with these roles are exempt from all rules"
+            ),
+            color=COLORS["primary"]
+        )
+        
+        # Show current connections
+        if connections:
+            conn_text = ""
+            for i, conn in enumerate(connections[:10], 1):
+                target_role = self.guild.get_role(conn.target_role_id)
+                if target_role:
+                    status = "✅" if conn.enabled else "❌"
+                    conn_text += f"{status} {i}. {conn.action.title()} **{target_role.name}**\n"
+            embed.add_field(name="Active Connections", value=conn_text or "None", inline=False)
+        
+        await interaction.response.edit_message(embed=embed, view=view)
 
 
 class ProtectedRolesView(View):
