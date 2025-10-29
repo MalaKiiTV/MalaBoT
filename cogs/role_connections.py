@@ -69,7 +69,16 @@ class RoleConnectionManager:
         connections_data = await self.db.get_setting(f"role_connections_{guild_id}")
         if connections_data:
             try:
-                data = json.loads(connections_data)
+                # Handle both string (JSON) and list (already parsed) formats
+                if isinstance(connections_data, str):
+                    data = json.loads(connections_data)
+                elif isinstance(connections_data, list):
+                    data = connections_data
+                else:
+                    log_system(f"[ROLE_CONNECTION] Unexpected data type: {type(connections_data)}", level="error")
+                    self.connections_cache[guild_id] = []
+                    return
+                
                 self.connections_cache[guild_id] = [
                     RoleConnection(
                         connection_id=conn["id"],
