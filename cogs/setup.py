@@ -284,42 +284,32 @@ class TimezoneSelect(discord.ui.Select):
                 guild_id=self.guild_id,
             )
             
-            # Add back button
-            back_view = View()
-            back_button = Button(label="Back to Settings", style=ButtonStyle.secondary, emoji="◀️")
-            async def back_callback(interaction: discord.Interaction):
-                general_view = GeneralSettingsView(self.db, self.guild_id)
-                await general_view.show_general_settings(interaction)
-            back_button.callback = back_callback
-            back_view.add_item(back_button)
-            
+            # Show brief confirmation
             await interaction.response.edit_message(
                 embed=create_embed(
                     "✅ Timezone Set",
-                    f"Server timezone set to **{self.values[0]}**\n\nThis affects birthday announcements and scheduled tasks.\n\nClick the button below to return to settings.",
+                    f"Timezone set to **{self.values[0]}**",
                     COLORS["success"],
                 ),
-                view=back_view
+                view=None
             )
+            
+            # Wait 2 seconds then return to general settings
+            import asyncio
+            await asyncio.sleep(2)
+            
+            general_view = GeneralSettingsView(self.db, self.guild_id)
+            await general_view.show_general_settings(interaction, is_followup=True)
+            
         except Exception as e:
             log_system(f"Error setting timezone: {e}", level="error")
-            
-            # Add back button even on error
-            back_view = View()
-            back_button = Button(label="Back to Settings", style=ButtonStyle.secondary, emoji="◀️")
-            async def back_callback(interaction: discord.Interaction):
-                general_view = GeneralSettingsView(self.db, self.guild_id)
-                await general_view.show_general_settings(interaction)
-            back_button.callback = back_callback
-            back_view.add_item(back_button)
-            
             await interaction.response.edit_message(
                 embed=create_embed(
                     "❌ Error",
-                    "Failed to set timezone. Please try again.",
+                    "Failed to set timezone.",
                     COLORS["error"],
                 ),
-                view=back_view
+                view=None
             )
 
 
@@ -365,14 +355,28 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
             )
             channel = interaction.guild.get_channel(self.channel_id)
             channel_name = channel.name if channel else "Unknown"
+            
+            # Show brief confirmation
             await interaction.response.send_message(
                 embed=create_embed(
-                    "Online Message Set",
-                    f"✅ Bot online message set in **#{channel_name}**:\n\n{self.message.value}",
+                    "✅ Online Message Set",
+                    f"Message set in **#{channel_name}**",
                     COLORS["success"],
                 ),
                 ephemeral=True,
             )
+            
+            # Wait 2 seconds then show general settings again
+            import asyncio
+            await asyncio.sleep(2)
+            
+            general_view = GeneralSettingsView(self.db, self.guild_id)
+            embed = discord.Embed(
+                title="⚙️ General Settings",
+                description="Click the buttons below to configure each setting.",
+                color=COLORS["primary"]
+            )
+            await interaction.followup.send(embed=embed, view=general_view, ephemeral=True)
         except Exception as e:
             log_system(f"Error setting online message: {e}", level="error")
             await interaction.response.send_message(
@@ -392,22 +396,19 @@ class GeneralSettingsView(View):
         self.db = db_manager
         self.guild_id = guild_id
 
-    async def show_general_settings(self, interaction: discord.Interaction):
+    async def show_general_settings(self, interaction: discord.Interaction, is_followup: bool = False):
         """Show the general settings menu"""
         embed = discord.Embed(
-            title="⚙️ General Settings Setup",
-            description=(
-                "Configure general bot settings using the buttons below:\n\n"
-                "**Available Settings:**\n"
-                "• **Timezone** - Affects birthday announcements and scheduled tasks\n"
-                "• **Bot Online Message** - Message sent when bot comes online\n"
-                "• **Mod Role** - Role that can use moderation commands\n\n"
-                "Click the buttons below to configure each setting."
-            ),
+            title="⚙️ General Settings",
+            description="Click the buttons below to configure each setting.",
             color=COLORS["primary"]
         )
         new_view = GeneralSettingsView(self.db, self.guild_id)
-        await interaction.response.edit_message(embed=embed, view=new_view)
+        
+        if is_followup:
+            await interaction.followup.send(embed=embed, view=new_view, ephemeral=True)
+        else:
+            await interaction.response.edit_message(embed=embed, view=new_view)
 
     @discord.ui.button(label="Set Timezone", style=discord.ButtonStyle.primary, emoji="🌍")
     async def set_timezone(self, interaction: discord.Interaction, button: Button):
@@ -415,16 +416,9 @@ class GeneralSettingsView(View):
         view = discord.ui.View()
         view.add_item(TimezoneSelect(self.db, self.guild_id))
         
-        # Add back button
-        back_button = Button(label="Back", style=discord.ButtonStyle.secondary, emoji="◀️")
-        async def back_callback(interaction: discord.Interaction):
-            await self.show_general_settings(interaction)
-        back_button.callback = back_callback
-        view.add_item(back_button)
-        
         embed = discord.Embed(
             title="🌍 Select Timezone",
-            description="Choose your server's timezone. This affects birthday announcements and scheduled tasks.",
+            description="Choose your server's timezone.",
             color=COLORS["primary"]
         )
         await interaction.response.edit_message(embed=embed, view=view)
@@ -435,16 +429,9 @@ class GeneralSettingsView(View):
         view = View()
         view.add_item(OnlineMessageChannelSelect(self.db, self.guild_id))
         
-        # Add back button
-        back_button = Button(label="Back", style=discord.ButtonStyle.secondary, emoji="◀️")
-        async def back_callback(interaction: discord.Interaction):
-            await self.show_general_settings(interaction)
-        back_button.callback = back_callback
-        view.add_item(back_button)
-        
         embed = discord.Embed(
             title="💬 Set Online Message",
-            description="Select a channel where the bot will send a message when it comes online.",
+            description="Select a channel for the online message.",
             color=COLORS["primary"]
         )
         await interaction.response.edit_message(embed=embed, view=view)
@@ -462,38 +449,28 @@ class GeneralSettingsView(View):
             role = select.values[0]
             await self.db.set_setting(f"mod_role_{self.guild_id}", str(role.id))
             
+            # Show brief confirmation
             embed = discord.Embed(
                 title="✅ Mod Role Set",
-                description=f"Mod role has been set to {role.mention}\n\n"
-                           f"Users with this role can verify users and review appeals.\n\n"
-                           f"Click the button below to return to settings.",
+                description=f"Mod role set to {role.mention}",
                 color=COLORS["success"],
             )
+            await interaction.response.edit_message(embed=embed, view=None)
             
-            # Add back button
-            back_view = View()
-            back_button = Button(label="Back to Settings", style=discord.ButtonStyle.secondary, emoji="◀️")
-            async def back_callback(interaction: discord.Interaction):
-                await self.show_general_settings(interaction)
-            back_button.callback = back_callback
-            back_view.add_item(back_button)
+            # Wait 2 seconds then return to general settings
+            import asyncio
+            await asyncio.sleep(2)
             
-            await interaction.response.edit_message(embed=embed, view=back_view)
+            general_view = GeneralSettingsView(self.db, self.guild_id)
+            await general_view.show_general_settings(interaction, is_followup=True)
         
         select.callback = role_callback
         view = View(timeout=60)
         view.add_item(select)
         
-        # Add back button
-        back_button = Button(label="Back", style=discord.ButtonStyle.secondary, emoji="◀️")
-        async def back_callback(interaction: discord.Interaction):
-            await self.show_general_settings(interaction)
-        back_button.callback = back_callback
-        view.add_item(back_button)
-        
         embed = discord.Embed(
             title="🛡️ Select Mod Role",
-            description="Choose the role that will have moderator permissions for bot commands.",
+            description="Choose the mod role.",
             color=COLORS["primary"],
         )
         await interaction.response.edit_message(embed=embed, view=view)
@@ -693,18 +670,11 @@ class SetupSelect(Select):
         view = GeneralSettingsView(interaction.client.db_manager, interaction.guild.id)
         
         embed = discord.Embed(
-            title="⚙️ General Settings Setup",
-            description=(
-                "Configure general bot settings using the buttons below:\n\n"
-                "**Available Settings:**\n"
-                "• **Timezone** - Affects birthday announcements and scheduled tasks\n"
-                "• **Bot Online Message** - Message sent when bot comes online\n"
-                "• **Mod Role** - Role that can use moderation commands\n\n"
-                "Click the buttons below to configure each setting."
-            ),
+            title="⚙️ General Settings",
+            description="Click the buttons below to configure each setting.",
             color=COLORS["primary"],
         )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.response.edit_message(embed=embed, view=view)
 
     async def view_config(self, interaction: discord.Interaction):
         """View current configuration"""
