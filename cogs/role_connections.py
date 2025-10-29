@@ -5,7 +5,8 @@ import asyncio
 import json
 from typing import Optional, List, Dict
 from utils.logger import log_system
-from utils.embed_builder import create_embed, COLORS
+from utils.helpers import create_embed
+from config.constants import COLORS
 
 class RoleConnection:
     """Represents a single role connection rule"""

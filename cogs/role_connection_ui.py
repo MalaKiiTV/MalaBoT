@@ -5,7 +5,8 @@ Supporting views and modals for role connection management
 
 import discord
 from discord.ui import View, Select, Button, Modal, TextInput, RoleSelect
-from utils.embed_builder import create_embed, COLORS
+from utils.helpers import create_embed
+from config.constants import COLORS
 from utils.logger import log_system
 
 
