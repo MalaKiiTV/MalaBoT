@@ -248,28 +248,37 @@ class VerifyGroup(app_commands.Group):
                     
                     if cheater_role and cheater_channel:
                         try:
-                            # Remove all roles except @everyone
-                            roles_to_remove = [role for role in member.roles if role != guild.default_role]
-                            await member.remove_roles(*roles_to_remove, reason=f"Marked as cheater by {interaction.user}")
+                            # Lock member to prevent role connections from interfering
+                            bot = interaction.client
+                            bot.processing_members.add(member.id)
                             
-                            # Add cheater role
-                            await member.add_roles(cheater_role, reason=f"Marked as cheater by {interaction.user}")
-                            
-                            # Send notification to cheater jail
-                            jail_embed = discord.Embed(
-                                title="🚨 New Arrival",
-                                description=(
-                                    f"{member.mention} has been sent to cheater jail.\n\n"
-                                    f"**Reason:** Confirmed cheater during verification\n"
-                                    f"**Reviewed by:** {interaction.user.mention}\n"
-                                    f"**Notes:** {notes or 'None provided'}\n\n"
-                                    f"You can submit ONE appeal using `/appeal`"
-                                ),
-                                color=COLORS["error"],
-                            )
-                            await cheater_channel.send(content=f"{member.mention}", embed=jail_embed)
-                            
-                            result_text = f"🔒 Sent {member.mention} to cheater jail ({cheater_channel.mention}) with {cheater_role.mention} role."
+                            try:
+                                # Remove all roles except @everyone
+                                roles_to_remove = [role for role in member.roles if role != guild.default_role]
+                                await member.remove_roles(*roles_to_remove, reason=f"Marked as cheater by {interaction.user}")
+                                
+                                # Add cheater role
+                                await member.add_roles(cheater_role, reason=f"Marked as cheater by {interaction.user}")
+                                
+                                # Send notification to cheater jail
+                                jail_embed = discord.Embed(
+                                    title="🚨 New Arrival",
+                                    description=(
+                                        f"{member.mention} has been sent to cheater jail.\n\n"
+                                        f"**Reason:** Confirmed cheater during verification\n"
+                                        f"**Reviewed by:** {interaction.user.mention}\n"
+                                        f"**Notes:** {notes or 'None provided'}\n\n"
+                                        f"You can submit ONE appeal using `/appeal`"
+                                    ),
+                                    color=COLORS["error"],
+                                )
+                                await cheater_channel.send(content=f"{member.mention}", embed=jail_embed)
+                                
+                                result_text = f"🔒 Sent {member.mention} to cheater jail ({cheater_channel.mention}) with {cheater_role.mention} role."
+                            finally:
+                                # Always release the lock
+                                bot.processing_members.discard(member.id)
+                                
                         except discord.Forbidden:
                             result_text = f"❌ Failed to assign cheater role to {member.mention}. Missing permissions."
                     else:

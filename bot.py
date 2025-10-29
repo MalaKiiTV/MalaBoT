@@ -55,6 +55,9 @@ class MalaBoT(commands.Bot):
         self.safe_mode: bool = False
         self.logger = get_logger('bot')
         
+        # Processing locks for role operations
+        self.processing_members: set = set()  # Member IDs being processed (e.g., cheater assignment)
+        
         # Feature flags
         self.enabled_features = {
             'music': settings.ENABLE_MUSIC,

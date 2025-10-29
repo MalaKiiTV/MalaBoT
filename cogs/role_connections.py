@@ -268,6 +268,11 @@ class RoleConnections(commands.Cog):
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         """Process role connections when member roles change"""
         if before.roles != after.roles:
+            # Skip if member is being processed by another system (e.g., cheater assignment)
+            if after.id in self.bot.processing_members:
+                log_system(f"[ROLE_CONNECTION] Skipping {after.name} - member is locked for processing")
+                return
+                
             try:
                 await self.manager.load_connections(after.guild.id)
                 await self.manager.load_protected_roles(after.guild.id)
