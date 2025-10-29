@@ -4,7 +4,7 @@ Supporting views and modals for role connection management
 """
 
 import discord
-from discord.ui import View, Select, Button, Modal, TextInput, RoleSelect
+from discord.ui import View, Select, Button, Modal, TextInput
 from utils.helpers import create_embed
 from config.constants import COLORS
 from utils.logger import log_system
@@ -24,18 +24,53 @@ class AddConnectionView(View):
         # Add role selector
         self.add_item(AddConnectionRoleSelect(self))
 
-class AddConnectionRoleSelect(RoleSelect):
+class AddConnectionRoleSelect(Select):
     """Select target role for connection"""
     def __init__(self, parent_view):
+        # Get all roles from guild (excluding @everyone)
+        roles = [r for r in parent_view.guild.roles if r.name != "@everyone"]
+        
+        # Sort by position (highest first) and take top 25
+        roles.sort(key=lambda r: r.position, reverse=True)
+        roles = roles[:25]
+        
+        options = [
+            discord.SelectOption(
+                label=role.name[:100],  # Discord limit
+                value=str(role.id),
+                description=f"Position: {role.position}"
+            )
+            for role in roles
+        ]
+        
+        if not options:
+            options = [discord.SelectOption(label="No roles available", value="none")]
+        
         super().__init__(
             placeholder="Select target role...",
             min_values=1,
-            max_values=1
+            max_values=1,
+            options=options
         )
         self.parent_view = parent_view
 
     async def callback(self, interaction: discord.Interaction):
-        self.parent_view.target_role = self.values[0]
+        if self.values[0] == "none":
+            await interaction.response.send_message(
+                embed=create_embed("Error", "No roles available.", COLORS["error"]),
+                ephemeral=True
+            )
+            return
+        
+        role_id = int(self.values[0])
+        self.parent_view.target_role = interaction.guild.get_role(role_id)
+        
+        if not self.parent_view.target_role:
+            await interaction.response.send_message(
+                embed=create_embed("Error", "Role not found.", COLORS["error"]),
+                ephemeral=True
+            )
+            return
         
         # Move to action selection
         view = SelectActionView(self.parent_view.manager, self.parent_view.guild, self.parent_view.target_role)
@@ -173,18 +208,53 @@ class SelectConditionRoleView(View):
         self.add_item(ConditionRoleSelect(self))
 
 
-class ConditionRoleSelect(RoleSelect):
+class ConditionRoleSelect(Select):
     """Select role for condition"""
     def __init__(self, parent_view):
+        # Get all roles from guild (excluding @everyone)
+        roles = [r for r in parent_view.guild.roles if r.name != "@everyone"]
+        
+        # Sort by position (highest first) and take top 25
+        roles.sort(key=lambda r: r.position, reverse=True)
+        roles = roles[:25]
+        
+        options = [
+            discord.SelectOption(
+                label=role.name[:100],
+                value=str(role.id),
+                description=f"Position: {role.position}"
+            )
+            for role in roles
+        ]
+        
+        if not options:
+            options = [discord.SelectOption(label="No roles available", value="none")]
+        
         super().__init__(
             placeholder="Select role for condition...",
             min_values=1,
-            max_values=1
+            max_values=1,
+            options=options
         )
         self.parent_view = parent_view
 
     async def callback(self, interaction: discord.Interaction):
-        condition_role = self.values[0]
+        if self.values[0] == "none":
+            await interaction.response.send_message(
+                embed=create_embed("Error", "No roles available.", COLORS["error"]),
+                ephemeral=True
+            )
+            return
+        
+        role_id = int(self.values[0])
+        condition_role = interaction.guild.get_role(role_id)
+        
+        if not condition_role:
+            await interaction.response.send_message(
+                embed=create_embed("Error", "Role not found.", COLORS["error"]),
+                ephemeral=True
+            )
+            return
         
         # Add condition to list
         self.parent_view.conditions.append({
@@ -508,19 +578,55 @@ class AddProtectedRoleView(View):
         self.add_item(AddProtectedRoleSelect(manager, guild))
 
 
-class AddProtectedRoleSelect(RoleSelect):
+class AddProtectedRoleSelect(Select):
     """Select role to protect"""
     def __init__(self, manager, guild: discord.Guild):
+        # Get all roles from guild (excluding @everyone)
+        roles = [r for r in guild.roles if r.name != "@everyone"]
+        
+        # Sort by position (highest first) and take top 25
+        roles.sort(key=lambda r: r.position, reverse=True)
+        roles = roles[:25]
+        
+        options = [
+            discord.SelectOption(
+                label=role.name[:100],
+                value=str(role.id),
+                description=f"Position: {role.position}"
+            )
+            for role in roles
+        ]
+        
+        if not options:
+            options = [discord.SelectOption(label="No roles available", value="none")]
+        
         super().__init__(
             placeholder="Select role to protect...",
             min_values=1,
-            max_values=1
+            max_values=1,
+            options=options
         )
         self.manager = manager
         self.guild = guild
 
     async def callback(self, interaction: discord.Interaction):
-        role = self.values[0]
+        if self.values[0] == "none":
+            await interaction.response.send_message(
+                embed=create_embed("Error", "No roles available.", COLORS["error"]),
+                ephemeral=True
+            )
+            return
+        
+        role_id = int(self.values[0])
+        role = interaction.guild.get_role(role_id)
+        
+        if not role:
+            await interaction.response.send_message(
+                embed=create_embed("Error", "Role not found.", COLORS["error"]),
+                ephemeral=True
+            )
+            return
+        
         await self.manager.add_protected_role(self.guild.id, role.id)
         
         await interaction.response.send_message(
