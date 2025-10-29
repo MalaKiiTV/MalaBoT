@@ -283,23 +283,23 @@ class TimezoneSelect(discord.ui.Select):
                 details=f"Set timezone to {self.values[0]}",
                 guild_id=self.guild_id,
             )
-            await interaction.response.send_message(
+            await interaction.response.edit_message(
                 embed=create_embed(
-                    "Timezone Set",
-                    f"✅ Server timezone set to **{self.values[0]}**\n\nThis affects birthday announcements and scheduled tasks.",
+                    "✅ Timezone Set",
+                    f"Server timezone set to **{self.values[0]}**\n\nThis affects birthday announcements and scheduled tasks.",
                     COLORS["success"],
                 ),
-                ephemeral=True,
+                view=None
             )
         except Exception as e:
             log_system(f"Error setting timezone: {e}", level="error")
-            await interaction.response.send_message(
+            await interaction.response.edit_message(
                 embed=create_embed(
-                    "Error",
+                    "❌ Error",
                     "Failed to set timezone. Please try again.",
                     COLORS["error"],
                 ),
-                ephemeral=True,
+                view=None
             )
 
 
@@ -377,14 +377,26 @@ class GeneralSettingsView(View):
         """Set server timezone"""
         view = discord.ui.View()
         view.add_item(TimezoneSelect(self.db, self.guild_id))
-        await interaction.response.send_message("Select your timezone:", view=view, ephemeral=True)
+        
+        embed = discord.Embed(
+            title="🌍 Select Timezone",
+            description="Choose your server's timezone. This affects birthday announcements and scheduled tasks.",
+            color=COLORS["primary"]
+        )
+        await interaction.response.edit_message(embed=embed, view=view)
 
     @discord.ui.button(label="Set Online Message", style=discord.ButtonStyle.primary, emoji="💬")
     async def set_online_message(self, interaction: discord.Interaction, button: Button):
         """Set bot online message"""
         view = View()
         view.add_item(OnlineMessageChannelSelect(self.db, self.guild_id))
-        await interaction.response.send_message("Select a channel for the online message:", view=view, ephemeral=True)
+        
+        embed = discord.Embed(
+            title="💬 Set Online Message",
+            description="Select a channel where the bot will send a message when it comes online.",
+            color=COLORS["primary"]
+        )
+        await interaction.response.edit_message(embed=embed, view=view)
 
     @discord.ui.button(label="Set Mod Role", style=discord.ButtonStyle.primary, emoji="🛡️")
     async def set_mod_role(self, interaction: discord.Interaction, button: Button):
@@ -405,7 +417,7 @@ class GeneralSettingsView(View):
                            f"Users with this role can verify users and review appeals.",
                 color=COLORS["success"],
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.response.edit_message(embed=embed, view=None)
         
         select.callback = role_callback
         view = View(timeout=60)
@@ -416,7 +428,7 @@ class GeneralSettingsView(View):
             description="Choose the role that will have moderator permissions for bot commands.",
             color=COLORS["primary"],
         )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.response.edit_message(embed=embed, view=view)
 
     @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
     async def view_config(self, interaction: discord.Interaction, button: Button):
