@@ -299,7 +299,12 @@ class TimezoneSelect(discord.ui.Select):
             await asyncio.sleep(2)
             
             general_view = GeneralSettingsView(self.db, self.guild_id)
-            await general_view.show_general_settings(interaction, is_followup=True)
+               embed = discord.Embed(
+                   title="⚙️ General Settings",
+                   description="Click the buttons below to configure each setting.",
+                   color=COLORS["primary"]
+               )
+               await interaction.message.edit(embed=embed, view=general_view)
             
         except Exception as e:
             log_system(f"Error setting timezone: {e}", level="error")
@@ -376,7 +381,7 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
                 description="Click the buttons below to configure each setting.",
                 color=COLORS["primary"]
             )
-            await interaction.followup.send(embed=embed, view=general_view, ephemeral=True)
+            await interaction.message.edit(embed=embed, view=general_view)
         except Exception as e:
             log_system(f"Error setting online message: {e}", level="error")
             await interaction.response.send_message(
@@ -405,10 +410,8 @@ class GeneralSettingsView(View):
         )
         new_view = GeneralSettingsView(self.db, self.guild_id)
         
-        if is_followup:
-            await interaction.followup.send(embed=embed, view=new_view, ephemeral=True)
-        else:
-            await interaction.response.edit_message(embed=embed, view=new_view)
+        # Always edit the original message to avoid creating duplicates
+        await interaction.message.edit(embed=embed, view=new_view)
 
     @discord.ui.button(label="Set Timezone", style=discord.ButtonStyle.primary, emoji="🌍")
     async def set_timezone(self, interaction: discord.Interaction, button: Button):
@@ -462,7 +465,12 @@ class GeneralSettingsView(View):
             await asyncio.sleep(2)
             
             general_view = GeneralSettingsView(self.db, self.guild_id)
-            await general_view.show_general_settings(interaction, is_followup=True)
+               embed = discord.Embed(
+                   title="⚙️ General Settings",
+                   description="Click the buttons below to configure each setting.",
+                   color=COLORS["primary"]
+               )
+               await interaction.message.edit(embed=embed, view=general_view)
         
         select.callback = role_callback
         view = View(timeout=60)
