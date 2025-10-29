@@ -901,6 +901,10 @@ class SetupSelect(Select):
             verify_text += f"Review Channel: <#{verify_channel_id}>\n"
         if verify_role_id:
             verify_text += f"Verified Role: <@&{verify_role_id}>\n"
+        if cheater_role_id:
+            verify_text += f"Cheater Role: <@&{cheater_role_id}>\n"
+        if cheater_jail_id:
+            verify_text += f"Cheater Jail: <#{cheater_jail_id}>\n"
         if not verify_text:
             verify_text = "Not configured"
         embed.add_field(name="✅ Verification", value=verify_text, inline=False)
@@ -942,6 +946,25 @@ class SetupSelect(Select):
         if mod_role_id:
             general_text += f"\nMod Role: <@&{mod_role_id}>"
         embed.add_field(name="⚙️ General", value=general_text, inline=False)
+
+        # Role Connections settings
+        role_conn_cog = interaction.client.get_cog("RoleConnections")
+        if role_conn_cog:
+            manager = role_conn_cog.manager
+            await manager.load_connections(guild_id)
+            await manager.load_protected_roles(guild_id)
+            
+            connections = manager.connections_cache.get(guild_id, [])
+            protected_roles = manager.protected_roles_cache.get(guild_id, [])
+            
+            active_count = sum(1 for conn in connections if conn.enabled)
+            disabled_count = sum(1 for conn in connections if not conn.enabled)
+            
+            role_conn_text = f"Active Connections: {active_count}\n"
+            role_conn_text += f"Disabled Connections: {disabled_count}\n"
+            role_conn_text += f"Protected Roles: {len(protected_roles)}"
+            
+            embed.add_field(name="🔗 Role Connections", value=role_conn_text, inline=False)
 
         await interaction.response.edit_message(embed=embed, view=None)
 
