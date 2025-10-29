@@ -13,6 +13,9 @@ from typing import Optional
 from utils.helpers import create_embed, safe_send_message
 from utils.logger import log_system
 from config.constants import COLORS
+from cogs.role_connection_ui import (
+    AddConnectionView, ManageConnectionsView, ProtectedRolesView
+)
 
 
 # ============================================================
@@ -517,6 +520,175 @@ class GeneralSettingsView(View):
 
 
 # ============================================================
+# ROLE CONNECTION SYSTEM COMPONENTS
+# ============================================================
+
+class RoleConnectionSetupView(View):
+    """Main view for role connection management"""
+    def __init__(self, manager, guild: discord.Guild):
+        super().__init__(timeout=300)
+        self.manager = manager
+        self.guild = guild
+        self.add_item(RoleConnectionMainSelect(manager, guild))
+
+class RoleConnectionMainSelect(Select):
+    """Main menu for role connections"""
+    def __init__(self, manager, guild: discord.Guild):
+        self.manager = manager
+        self.guild = guild
+        options = [
+            discord.SelectOption(
+                label="Add Connection",
+                value="add",
+                description="Create a new role connection rule",
+                emoji="➕"
+            ),
+            discord.SelectOption(
+                label="Manage Connections",
+                value="manage",
+                description="View, edit, or delete existing connections",
+                emoji="📝"
+            ),
+            discord.SelectOption(
+                label="Protected Roles",
+                value="protected",
+                description="Manage roles exempt from connections",
+                emoji="🛡️"
+            ),
+            discord.SelectOption(
+                label="Back to Setup",
+                value="back",
+                description="Return to main setup menu",
+                emoji="◀️"
+            ),
+        ]
+        super().__init__(
+            placeholder="Select an option...",
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        selection = self.values[0]
+        
+        if selection == "add":
+            await self.add_connection(interaction)
+        elif selection == "manage":
+            await self.manage_connections(interaction)
+        elif selection == "protected":
+            await self.manage_protected_roles(interaction)
+        elif selection == "back":
+            await self.back_to_setup(interaction)
+
+    async def add_connection(self, interaction: discord.Interaction):
+        """Start the process of adding a new connection"""
+        view = AddConnectionView(self.manager, self.guild)
+        
+        embed = discord.Embed(
+            title="➕ Add Role Connection",
+            description=(
+                "**Step 1: Select Target Role**\n"
+                "Choose the role that will be given or removed.\n\n"
+                "After selecting the role, you'll configure:\n"
+                "• Action (Give or Remove)\n"
+                "• Conditions (Has/Doesn't Have roles)\n"
+                "• Logic (AND/OR)"
+            ),
+            color=COLORS["primary"]
+        )
+        
+        await interaction.response.edit_message(embed=embed, view=view)
+
+    async def manage_connections(self, interaction: discord.Interaction):
+        """Show list of connections to manage"""
+        await self.manager.load_connections(self.guild.id)
+        connections = self.manager.connections_cache.get(self.guild.id, [])
+        
+        if not connections:
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "No Connections",
+                    "No role connections have been configured yet.\nUse 'Add Connection' to create one.",
+                    COLORS["warning"]
+                ),
+                ephemeral=True
+            )
+            return
+        
+        view = ManageConnectionsView(self.manager, self.guild, connections)
+        
+        embed = discord.Embed(
+            title="📝 Manage Connections",
+            description="Select a connection to toggle, edit, or delete:",
+            color=COLORS["primary"]
+        )
+        
+        for i, conn in enumerate(connections[:25], 1):
+            target_role = self.guild.get_role(conn.target_role_id)
+            if target_role:
+                status = "✅ Enabled" if conn.enabled else "❌ Disabled"
+                
+                # Build condition text
+                cond_text = []
+                for cond in conn.conditions:
+                    role = self.guild.get_role(cond["role_id"])
+                    if role:
+                        cond_type = "HAS" if cond["type"] == "has" else "DOESN'T HAVE"
+                        cond_text.append(f"{cond_type} {role.name}")
+                
+                conditions_str = f" {conn.logic} ".join(cond_text) if cond_text else "No conditions"
+                
+                embed.add_field(
+                    name=f"{i}. {conn.action.title()} {target_role.name} ({status})",
+                    value=f"When: {conditions_str}",
+                    inline=False
+                )
+        
+        await interaction.response.edit_message(embed=embed, view=view)
+
+    async def manage_protected_roles(self, interaction: discord.Interaction):
+        """Manage protected roles"""
+        await self.manager.load_protected_roles(self.guild.id)
+        protected = self.manager.protected_roles_cache.get(self.guild.id, [])
+        
+        view = ProtectedRolesView(self.manager, self.guild)
+        
+        embed = discord.Embed(
+            title="🛡️ Protected Roles",
+            description=(
+                "Users with protected roles are exempt from ALL role connection rules.\n\n"
+                "**Current Protected Roles:**"
+            ),
+            color=COLORS["primary"]
+        )
+        
+        if protected:
+            role_list = []
+            for role_id in protected:
+                role = self.guild.get_role(role_id)
+                if role:
+                    role_list.append(f"• {role.mention}")
+            embed.add_field(name="Protected", value="\n".join(role_list) or "None", inline=False)
+        else:
+            embed.add_field(name="Protected", value="*No protected roles set*", inline=False)
+        
+        await interaction.response.edit_message(embed=embed, view=view)
+
+    async def back_to_setup(self, interaction: discord.Interaction):
+        """Return to main setup menu"""
+        view = SetupView()
+        
+        embed = discord.Embed(
+            title="⚙️ MalaBoT Setup",
+            description="Select a system to configure:",
+            color=COLORS["primary"]
+        )
+        
+        await interaction.response.edit_message(embed=embed, view=view)
+
+
+# ============================================================
 # MAIN SETUP SELECT MENU
 # ============================================================
 
@@ -554,6 +726,12 @@ class SetupSelect(Select):
                 emoji="⚙️"
             ),
             discord.SelectOption(
+                label="Role Connections",
+                value="role_connections",
+                description="Configure automatic role assignment rules",
+                emoji="🔗"
+            ),
+            discord.SelectOption(
                 label="View Current Config",
                 value="view",
                 description="View all current bot settings",
@@ -580,6 +758,8 @@ class SetupSelect(Select):
             await self.setup_xp(interaction)
         elif selection == "general":
             await self.setup_general(interaction)
+        elif selection == "role_connections":
+            await self.setup_role_connections(interaction)
         elif selection == "view":
             await self.view_config(interaction)
 
@@ -762,6 +942,63 @@ class SetupSelect(Select):
         embed.add_field(name="⚙️ General", value=general_text, inline=False)
 
         await interaction.response.edit_message(embed=embed, view=None)
+
+    async def setup_role_connections(self, interaction: discord.Interaction):
+        """Setup role connections system"""
+        # Get the role connections manager from the bot
+        role_conn_cog = interaction.client.get_cog("RoleConnections")
+        if not role_conn_cog:
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Error",
+                    "Role Connections system is not loaded. Please contact an administrator.",
+                    COLORS["error"]
+                ),
+                ephemeral=True
+            )
+            return
+        
+        manager = role_conn_cog.manager
+        await manager.load_connections(interaction.guild.id)
+        await manager.load_protected_roles(interaction.guild.id)
+        
+        view = RoleConnectionSetupView(manager, interaction.guild)
+        
+        embed = discord.Embed(
+            title="🔗 Role Connection System",
+            description=(
+                "Automatically assign or remove roles based on conditions.\n\n"
+                "**How it works:**\n"
+                "• Create rules that give/remove roles when conditions are met\n"
+                "• Conditions: User HAS or DOESN'T HAVE specific roles\n"
+                "• Logic: Combine conditions with AND/OR\n"
+                "• Protected Roles: Users with these roles are exempt from all rules\n\n"
+                "**Example Rules:**\n"
+                "• Give 'Sus' when user doesn't have 'Mala'\n"
+                "• Give 'VIP' when user has 'Subscriber' AND 'Active'\n"
+                "• Remove 'Guest' when user has 'Member'"
+            ),
+            color=COLORS["primary"]
+        )
+        
+        # Show current connections
+        connections = manager.connections_cache.get(interaction.guild.id, [])
+        if connections:
+            conn_text = ""
+            for i, conn in enumerate(connections[:10], 1):
+                target_role = interaction.guild.get_role(conn.target_role_id)
+                if target_role:
+                    status = "✅" if conn.enabled else "❌"
+                    conn_text += f"{status} {i}. {conn.action.title()} **{target_role.name}**\n"
+            embed.add_field(name="Active Connections", value=conn_text or "None", inline=False)
+        
+        # Show protected roles
+        protected = manager.protected_roles_cache.get(interaction.guild.id, [])
+        if protected:
+            protected_text = " ".join([f"<@&amp;{role_id}>" for role_id in protected[:10]])
+            embed.add_field(name="🛡️ Protected Roles", value=protected_text, inline=False)
+        
+        await interaction.response.edit_message(embed=embed, view=view)
 
 
 class SetupView(View):
