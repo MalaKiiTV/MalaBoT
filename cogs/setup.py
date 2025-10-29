@@ -299,12 +299,12 @@ class TimezoneSelect(discord.ui.Select):
             await asyncio.sleep(2)
             
             general_view = GeneralSettingsView(self.db, self.guild_id)
-               embed = discord.Embed(
-                   title="⚙️ General Settings",
-                   description="Click the buttons below to configure each setting.",
-                   color=COLORS["primary"]
-               )
-               await interaction.message.edit(embed=embed, view=general_view)
+            embed = discord.Embed(
+                title="⚙️ General Settings",
+                description="Click the buttons below to configure each setting.",
+                color=COLORS["primary"]
+            )
+            await interaction.message.edit(embed=embed, view=general_view)
             
         except Exception as e:
             log_system(f"Error setting timezone: {e}", level="error")
@@ -465,12 +465,12 @@ class GeneralSettingsView(View):
             await asyncio.sleep(2)
             
             general_view = GeneralSettingsView(self.db, self.guild_id)
-               embed = discord.Embed(
-                   title="⚙️ General Settings",
-                   description="Click the buttons below to configure each setting.",
-                   color=COLORS["primary"]
-               )
-               await interaction.message.edit(embed=embed, view=general_view)
+            embed = discord.Embed(
+                title="⚙️ General Settings",
+                description="Click the buttons below to configure each setting.",
+                color=COLORS["primary"]
+            )
+            await interaction.message.edit(embed=embed, view=general_view)
         
         select.callback = role_callback
         view = View(timeout=60)
