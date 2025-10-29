@@ -380,21 +380,42 @@ class Owner(commands.Cog):
             debug_guild_id = int(os.getenv("DEBUG_GUILDS", "542004156513255445"))
             guild = discord.Object(id=debug_guild_id)
             
-            # Clear guild commands
+            # First, get all current commands
+            current_commands = await self.bot.tree.fetch_commands(guild=guild)
+            self.logger.info(f"Found {len(current_commands)} existing commands")
+            
+            # Clear guild commands completely
             self.bot.tree.clear_commands(guild=guild)
-            self.logger.info("Cleared guild commands")
             
-            # Copy commands from cogs to tree
+            # Also clear global commands to be safe
+            self.bot.tree.clear_commands(guild=None)
+            
+            # Sync empty tree to remove all commands from Discord
+            await self.bot.tree.sync(guild=guild)
+            self.logger.info("Cleared all commands from Discord")
+            
+            # Now copy commands from cogs to tree
             self.bot.tree.copy_global_to(guild=guild)
-            self.logger.info("Copied commands to tree")
+            self.logger.info("Copied commands from cogs to tree")
             
-            # Sync again
+            # Sync again with new commands
             synced = await self.bot.tree.sync(guild=guild)
             self.logger.info(f"Re-synced {len(synced)} commands")
             
+            # List synced commands
+            command_list = "\n".join([f"• {cmd.name}" for cmd in synced[:20]])
+            if len(synced) > 20:
+                command_list += f"\n... and {len(synced) - 20} more"
+            
             embed = embed_helper.success_embed(
                 title="Commands Cleared & Re-synced",
-                description=f"✅ Cleared old commands\n✅ Copied commands from cogs\n✅ Synced {len(synced)} commands to guild"
+                description=(
+                    f"✅ Removed {len(current_commands)} old commands\n"
+                    f"✅ Cleared from Discord\n"
+                    f"✅ Copied commands from cogs\n"
+                    f"✅ Synced {len(synced)} new commands\n\n"
+                    f"**Commands:**\n{command_list}"
+                )
             )
             
             await interaction.followup.send(embed=embed, ephemeral=True)
