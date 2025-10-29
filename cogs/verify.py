@@ -211,8 +211,10 @@ class VerifyGroup(app_commands.Group):
                 result_text = f"❌ Marked {user.mention} as unverified. They remain unverified."
                 
             elif decision_value == "cheater" and member:
+                print(f"DEBUG: Processing cheater for {member.name}")
                 # Get cheater role and channel from settings
                 cheater_role_id = await self.cog.db.get_setting(f"cheater_role_{guild_id}")
+                print(f"DEBUG: Cheater role ID: {cheater_role_id}")
                 cheater_channel_id = await self.cog.db.get_setting(f"cheater_jail_channel_{guild_id}")
                 
                 if cheater_role_id and cheater_channel_id:
