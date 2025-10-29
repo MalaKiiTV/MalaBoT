@@ -276,7 +276,8 @@ The bot will start in safe mode to prevent further issues.
                 'cogs.verify',
                 'cogs.setup',
                 'cogs.appeal',
-                'cogs.bot_control'
+                'cogs.bot_control',
+                'cogs.role_connections'
             ]
             
             self.logger.info("Loading all cogs...")
