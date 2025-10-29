@@ -160,6 +160,17 @@ class RoleConnectionManager:
                 break
         await self.save_connections(guild_id)
 
+    async def update_connection_logic(self, guild_id: int, connection_id: int, new_logic: str):
+        """Update the logic (AND/OR) of a connection"""
+        await self.load_connections(guild_id)
+        connections = self.connections_cache.get(guild_id, [])
+        for conn in connections:
+            if conn.id == connection_id:
+                conn.logic = new_logic
+                log_system(f"[ROLE_CONNECTION] Updated connection #{connection_id} logic to {new_logic}")
+                break
+        await self.save_connections(guild_id)
+
     async def add_protected_role(self, guild_id: int, role_id: int):
         """Add a protected role"""
         await self.load_protected_roles(guild_id)
