@@ -318,7 +318,7 @@ class Verify(commands.Cog):
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         """Listen for role changes and handle cheater role assignment"""
-        # Check if cheater role was added
+        # Check if any roles were added
         before_roles = set(before.roles)
         after_roles = set(after.roles)
         added_roles = after_roles - before_roles
@@ -333,19 +333,21 @@ class Verify(commands.Cog):
             return
         
         cheater_role = after.guild.get_role(int(cheater_role_id))
-        if not cheater_role or cheater_role not in added_roles:
+        if not cheater_role:
             return
         
-        # Cheater role was just added - remove all other roles
-        try:
-            roles_to_remove = [role for role in after.roles if role != after.guild.default_role and role != cheater_role]
-            if roles_to_remove:
-                await after.remove_roles(*roles_to_remove, reason="Cheater role assigned - removing all other roles")
-                log_system(f"[CHEATER_ROLE] Removed {len(roles_to_remove)} roles from {after.name} after cheater role assignment")
-        except discord.Forbidden:
-            log_system(f"[CHEATER_ROLE] Failed to remove roles from {after.name} - missing permissions", level="error")
-        except Exception as e:
-            log_system(f"[CHEATER_ROLE] Error removing roles from {after.name}: {e}", level="error")
+        # Check if user currently has cheater role (not just if it was added)
+        if cheater_role in after.roles:
+            # User has cheater role - remove ANY other roles that were added
+            try:
+                roles_to_remove = [role for role in after.roles if role != after.guild.default_role and role != cheater_role]
+                if roles_to_remove:
+                    await after.remove_roles(*roles_to_remove, reason="Cheater role active - removing all other roles")
+                    log_system(f"[CHEATER_ROLE] Removed {len(roles_to_remove)} roles from {after.name} (cheater role protection)")
+            except discord.Forbidden:
+                log_system(f"[CHEATER_ROLE] Failed to remove roles from {after.name} - missing permissions", level="error")
+            except Exception as e:
+                log_system(f"[CHEATER_ROLE] Error removing roles from {after.name}: {e}", level="error")
     
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
