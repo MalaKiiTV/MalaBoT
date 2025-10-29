@@ -177,6 +177,7 @@ class AppealGroup(app_commands.Group):
                 return
             
             await interaction.response.defer(ephemeral=True, thinking=True)
+            guild_id = interaction.guild.id
             
             # Check if appeal exists
             conn = await self.cog.db.get_connection()
