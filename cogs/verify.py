@@ -213,7 +213,7 @@ class VerifyGroup(app_commands.Group):
             elif decision_value == "cheater" and member:
                 # Get cheater role and channel from settings
                 cheater_role_id = await self.cog.db.get_setting(f"cheater_role_{guild_id}")
-                cheater_channel_id = await self.cog.db.get_setting(f"cheater_channel_{guild_id}")
+                cheater_channel_id = await self.cog.db.get_setting(f"cheater_jail_channel_{guild_id}")
                 
                 if cheater_role_id and cheater_channel_id:
                     cheater_role = guild.get_role(int(cheater_role_id))
@@ -285,14 +285,8 @@ class Verify(commands.Cog):
         # Store pending verifications temporarily
         if not hasattr(bot, 'pending_verifications'):
             bot.pending_verifications = {}
-        
-        # Create and add the verify group
-        self.verify_group = VerifyGroup(self)
-        self.bot.tree.add_command(self.verify_group)
 
-    async def cog_unload(self):
-        """Remove the command group when cog is unloaded"""
-        self.bot.tree.remove_command(self.verify_group.name)
+    
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

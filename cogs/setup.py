@@ -104,56 +104,99 @@ class RoleSelect(discord.ui.RoleSelect):
             )
 
 
-class VerificationModRoleSelect(discord.ui.RoleSelect):
-    """Role selector for verification mod role"""
+class CheaterRoleSelect(discord.ui.RoleSelect):
+    """Role selector for cheater role"""
     def __init__(self, db_manager, guild_id: int):
         super().__init__(
-            placeholder="Select verification mod role (optional)...",
-            min_values=0,
+            placeholder="Select cheater role...",
+            min_values=1,
             max_values=1
         )
         self.db = db_manager
         self.guild_id = guild_id
 
     async def callback(self, interaction: discord.Interaction):
-        if not self.values:
-            # Clear the role if none selected
-            await self.db.set_setting(f"verification_mod_role_{self.guild_id}", None)
+        role = self.values[0]
+        try:
+            await self.db.set_setting(f"cheater_role_{self.guild_id}", role.id)
+            await self.db.log_event(
+                category="VERIFY",
+                action="CONFIG_CHEATER_ROLE",
+                user_id=interaction.user.id,
+                details=f"Set cheater role to {role.name}",
+                guild_id=self.guild_id,
+            )
             await interaction.response.send_message(
                 embed=create_embed(
-                    "Verification Mod Role Cleared",
-                    "✅ Verification mod role has been cleared. General mod role will be used.",
+                    "Cheater Role Set",
+                    f"✅ Cheaters will receive {role.mention} and have all other roles removed",
+                    COLORS["success"],
+                ),
+                ephemeral=True,
+            )
+        except Exception as e:
+            log_system(f"Error setting cheater role: {e}", level="error")
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Error",
+                    "Failed to set cheater role. Please try again.",
+                    COLORS["error"],
+                ),
+                ephemeral=True,
+            )
+
+
+class CheaterJailChannelSelect(discord.ui.ChannelSelect):
+    """Channel selector for cheater jail"""
+    def __init__(self, db_manager, guild_id: int):
+        super().__init__(
+            placeholder="Select cheater jail channel (optional)...",
+            min_values=0,
+            max_values=1,
+            channel_types=[discord.ChannelType.text]
+        )
+        self.db = db_manager
+        self.guild_id = guild_id
+
+    async def callback(self, interaction: discord.Interaction):
+        if not self.values:
+            # Clear the channel if none selected
+            await self.db.set_setting(f"cheater_jail_channel_{self.guild_id}", None)
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Cheater Jail Channel Cleared",
+                    "✅ Cheater jail channel has been cleared.",
                     COLORS["success"],
                 ),
                 ephemeral=True,
             )
             return
             
-        role = self.values[0]
+        channel = self.values[0]
         try:
-            await self.db.set_setting(f"verification_mod_role_{self.guild_id}", role.id)
+            await self.db.set_setting(f"cheater_jail_channel_{self.guild_id}", channel.id)
             await self.db.log_event(
                 category="VERIFY",
-                action="CONFIG_MOD_ROLE",
+                action="CONFIG_CHEATER_JAIL",
                 user_id=interaction.user.id,
-                details=f"Set verification mod role to {role.name}",
+                details=f"Set cheater jail channel to {channel.name}",
                 guild_id=self.guild_id,
             )
             await interaction.response.send_message(
                 embed=create_embed(
-                    "Verification Mod Role Set",
-                    f"✅ Users with {role.mention} can review verifications\n\n"
-                    f"If not set, the general mod role will be used.",
+                    "Cheater Jail Channel Set",
+                    f"✅ Cheater jail channel set to {channel.mention}\n\n"
+                    f"Users marked as cheaters will be moved here and have all other roles removed.",
                     COLORS["success"],
                 ),
                 ephemeral=True,
             )
         except Exception as e:
-            log_system(f"Error setting verification mod role: {e}", level="error")
+            log_system(f"Error setting cheater jail channel: {e}", level="error")
             await interaction.response.send_message(
                 embed=create_embed(
                     "Error",
-                    "Failed to set verification mod role. Please try again.",
+                    "Failed to set cheater jail channel. Please try again.",
                     COLORS["error"],
                 ),
                 ephemeral=True,
@@ -170,13 +213,16 @@ class VerificationSetupView(View):
         # Add channel and role selects
         self.add_item(ChannelSelect(db_manager, guild.id))
         self.add_item(RoleSelect(db_manager, guild.id))
-        self.add_item(VerificationModRoleSelect(db_manager, guild.id))
+        self.add_item(CheaterRoleSelect(db_manager, guild.id))
+        self.add_item(CheaterJailChannelSelect(db_manager, guild.id))
 
     @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
     async def view_config(self, interaction: discord.Interaction, button: Button):
         """View current verification configuration"""
         verify_channel_id = await self.db.get_setting(f"verify_channel_{self.guild.id}")
         verify_role_id = await self.db.get_setting(f"verify_role_{self.guild.id}")
+        cheater_role_id = await self.db.get_setting(f"cheater_role_{self.guild.id}")
+        cheater_jail_id = await self.db.get_setting(f"cheater_jail_channel_{self.guild.id}")
 
         config_text = ""
         if verify_channel_id:
@@ -188,6 +234,16 @@ class VerificationSetupView(View):
             config_text += f"**Verified Role:** <@&{verify_role_id}>\n"
         else:
             config_text += "**Verified Role:** Not configured\n"
+
+        if cheater_role_id:
+            config_text += f"**Cheater Role:** <@&{cheater_role_id}>\n"
+        else:
+            config_text += "**Cheater Role:** Not configured\n"
+
+        if cheater_jail_id:
+            config_text += f"**Cheater Jail:** <#{cheater_jail_id}>\n"
+        else:
+            config_text += "**Cheater Jail:** Not configured\n"
 
         embed = discord.Embed(
             title="Current Verification Configuration",
@@ -201,11 +257,12 @@ class VerificationSetupView(View):
 # GENERAL SETTINGS COMPONENTS
 # ============================================================
 
-class TimezoneModal(Modal, title="Set Timezone"):
-    """Modal for setting server timezone"""
-    timezone = discord.ui.Select(
-        placeholder="Select your timezone",
-        options=[
+class TimezoneSelect(discord.ui.Select):
+    """Dropdown for timezone selection"""
+    def __init__(self, db_manager, guild_id: int):
+        self.db = db_manager
+        self.guild_id = guild_id
+        options = [
             discord.SelectOption(label="Eastern Time (ET)", value="America/New_York"),
             discord.SelectOption(label="Central Time (CT)", value="America/Chicago"),
             discord.SelectOption(label="Mountain Time (MT)", value="America/Denver"),
@@ -213,28 +270,23 @@ class TimezoneModal(Modal, title="Set Timezone"):
             discord.SelectOption(label="Alaska Time (AKT)", value="America/Anchorage"),
             discord.SelectOption(label="Hawaii Time (HT)", value="Pacific/Honolulu"),
             discord.SelectOption(label="Arizona Time (AZ)", value="America/Phoenix"),
-        ],
-    )
+        ]
+        super().__init__(placeholder="Select your timezone", options=options, min_values=1, max_values=1)
 
-    def __init__(self, db_manager, guild_id: int):
-        super().__init__()
-        self.db = db_manager
-        self.guild_id = guild_id
-
-    async def on_submit(self, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         try:
-            await self.db.set_setting(f"timezone_{self.guild_id}", self.timezone.values[0])
+            await self.db.set_setting(f"timezone_{self.guild_id}", self.values[0])
             await self.db.log_event(
                 category="SETTINGS",
                 action="SET_TIMEZONE",
                 user_id=interaction.user.id,
-                details=f"Set timezone to {self.timezone.values[0]}",
+                details=f"Set timezone to {self.values[0]}",
                 guild_id=self.guild_id,
             )
             await interaction.response.send_message(
                 embed=create_embed(
                     "Timezone Set",
-                    f"✅ Server timezone set to **{self.timezone.values[0]}**\n\nThis affects birthday announcements and scheduled tasks.",
+                    f"✅ Server timezone set to **{self.values[0]}**\n\nThis affects birthday announcements and scheduled tasks.",
                     COLORS["success"],
                 ),
                 ephemeral=True,
@@ -323,8 +375,9 @@ class GeneralSettingsView(View):
     @discord.ui.button(label="Set Timezone", style=discord.ButtonStyle.primary, emoji="🌍")
     async def set_timezone(self, interaction: discord.Interaction, button: Button):
         """Set server timezone"""
-        modal = TimezoneModal(self.db, self.guild_id)
-        await interaction.response.send_modal(modal)
+        view = discord.ui.View()
+        view.add_item(TimezoneSelect(self.db, self.guild_id))
+        await interaction.response.send_message("Select your timezone:", view=view, ephemeral=True)
 
     @discord.ui.button(label="Set Online Message", style=discord.ButtonStyle.primary, emoji="💬")
     async def set_online_message(self, interaction: discord.Interaction, button: Button):
@@ -374,7 +427,14 @@ class GeneralSettingsView(View):
         
         mod_role_text = "Not set"
         if mod_role_id:
-            mod_role_text = f"<@&amp;{mod_role_id}>"
+            try:
+                mod_role = interaction.guild.get_role(int(mod_role_id))
+                if mod_role:
+                    mod_role_text = f"{mod_role.name}"
+                else:
+                    mod_role_text = f"<@&{mod_role_id}>"
+            except:
+                mod_role_text = f"<@&{mod_role_id}>"
 
         config_text = f"**Timezone:** {timezone}\n**Online Message:** {online_message}\n**Mod Role:** {mod_role_text}"
 
