@@ -169,9 +169,9 @@ class VerifyGroup(app_commands.Group):
         notes: str = None,
     ):
         try:
-            # Check staff permission
+            # Check staff permission (uses general mod role)
             from utils.helpers import check_mod_permission
-            if not await check_mod_permission(interaction, self.cog.db, "verification_mod_role"):
+            if not await check_mod_permission(interaction, self.cog.db):
                 return
 
             await interaction.response.defer(ephemeral=True, thinking=True)
