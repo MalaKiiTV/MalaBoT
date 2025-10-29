@@ -385,23 +385,18 @@ REM Stash any local changes including untracked files
 git add -A >nul 2>&1
 git stash --include-untracked >nul 2>&1
 REM Pull from GitHub
-echo [INFO] Fetching latest changes from GitHub...
-git fetch origin main
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Failed to fetch from GitHub
-    timeout /T 3 /NOBREAK >NUL
-    goto menu
-)
-
-echo [INFO] Resetting local changes to match remote...
-git reset --hard origin/main
+echo [INFO] Pulling latest changes from GitHub...
+echo.
+git pull origin main
 if %ERRORLEVEL% EQU 0 (
+    echo.
     echo [SUCCESS] Pulled from GitHub successfully!
-    echo [INFO] Local repository now matches remote
 ) else (
-    echo [ERROR] Failed to reset to remote version
+    echo.
+    echo [ERROR] Failed to pull from GitHub
 )
-timeout /T 3 /NOBREAK >NUL
+echo.
+pause
 goto menu
 
 :githistory
