@@ -386,15 +386,38 @@ class FinalizeConnectionView(View):
             # Auto-return to role connections menu after 2 seconds
             await asyncio.sleep(2)
             
+            # Reload connections from database to update cache
+            await self.manager.load_connections(self.guild.id)
+            
             # Return to role connections menu
             from cogs.setup import RoleConnectionSetupView
             view = RoleConnectionSetupView(self.manager, self.guild)
             
+            # Build updated embed with current connections
+            connections = self.manager.connections_cache.get(self.guild.id, [])
+            
             embed = discord.Embed(
                 title="🔗 Role Connection System",
-                description="Connection created successfully! Select an option:",
+                description=(
+                    "Automatically assign or remove roles based on conditions.\n\n"
+                    "**How it works:**\n"
+                    "• Create rules that give/remove roles when conditions are met\n"
+                    "• Conditions: User HAS or DOESN'T HAVE specific roles\n"
+                    "• Logic: Combine conditions with AND/OR\n"
+                    "• Protected Roles: Users with these roles are exempt from all rules"
+                ),
                 color=COLORS["primary"]
             )
+            
+            # Show current connections
+            if connections:
+                conn_text = ""
+                for i, conn in enumerate(connections[:10], 1):
+                    target_role = self.guild.get_role(conn.target_role_id)
+                    if target_role:
+                        status = "✅" if conn.enabled else "❌"
+                        conn_text += f"{status} {i}. {conn.action.title()} **{target_role.name}**\n"
+                embed.add_field(name="Active Connections", value=conn_text or "None", inline=False)
             
             await interaction.message.edit(embed=embed, view=view)
             

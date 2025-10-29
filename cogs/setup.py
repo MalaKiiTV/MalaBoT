@@ -602,6 +602,8 @@ class RoleConnectionMainSelect(Select):
 
     async def manage_connections(self, interaction: discord.Interaction):
         """Show list of connections to manage"""
+        # Force reload from database to ensure fresh data
+        self.manager.connections_cache[self.guild.id] = []  # Clear cache
         await self.manager.load_connections(self.guild.id)
         connections = self.manager.connections_cache.get(self.guild.id, [])
         
