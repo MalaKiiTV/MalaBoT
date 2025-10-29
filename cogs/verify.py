@@ -327,6 +327,10 @@ class Verify(commands.Cog):
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         """Listen for role changes and handle cheater role assignment"""
+        # Skip if member is being processed by another system
+        if after.id in self.bot.processing_members:
+            return
+            
         # Check if any roles were added
         before_roles = set(before.roles)
         after_roles = set(after.roles)
@@ -349,10 +353,18 @@ class Verify(commands.Cog):
         if cheater_role in after.roles:
             # User has cheater role - remove ANY other roles that were added
             try:
-                roles_to_remove = [role for role in after.roles if role != after.guild.default_role and role != cheater_role]
-                if roles_to_remove:
-                    await after.remove_roles(*roles_to_remove, reason="Cheater role active - removing all other roles")
-                    log_system(f"[CHEATER_ROLE] Removed {len(roles_to_remove)} roles from {after.name} (cheater role protection)")
+                # Lock member to prevent role connections from interfering
+                self.bot.processing_members.add(after.id)
+                
+                try:
+                    roles_to_remove = [role for role in after.roles if role != after.guild.default_role and role != cheater_role]
+                    if roles_to_remove:
+                        await after.remove_roles(*roles_to_remove, reason="Cheater role active - removing all other roles")
+                        log_system(f"[CHEATER_ROLE] Removed {len(roles_to_remove)} roles from {after.name} (cheater role protection)")
+                finally:
+                    # Always release the lock
+                    self.bot.processing_members.discard(after.id)
+                    
             except discord.Forbidden:
                 log_system(f"[CHEATER_ROLE] Failed to remove roles from {after.name} - missing permissions", level="error")
             except Exception as e:
