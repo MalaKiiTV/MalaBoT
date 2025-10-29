@@ -331,15 +331,23 @@ async def is_mod(interaction: discord.Interaction, db_manager, specific_mod_role
                                If provided, checks this role first, then falls back to general mod role
     
     Returns:
-        bool: True if user is owner or has mod role
+        bool: True if user is bot owner, server owner, administrator, or has mod role
     """
-    # Owner always has access
+    # Bot owner always has access
     if is_owner(interaction.user):
         return True
     
     guild_id = interaction.guild_id
     if not guild_id:
         return False
+    
+    # Server owner always has access
+    if interaction.guild.owner_id == interaction.user.id:
+        return True
+    
+    # Administrator always has access
+    if interaction.user.guild_permissions.administrator:
+        return True
     
     # Check specific mod role first if provided
     if specific_mod_role_key:
@@ -394,13 +402,20 @@ async def check_mod_permission(interaction: discord.Interaction, db_manager, spe
     
     role_list = "\n".join([f"• {name}" for name in role_names]) if role_names else "• No mod role configured"
     
+    is_server_owner = interaction.guild.owner_id == interaction.user.id
+    is_administrator = interaction.user.guild_permissions.administrator
+    
     embed = embed_helper.error_embed(
         title="🚫 Permission Denied",
         description=f"This command is only available to:\n\n"
                    f"• Bot Owners\n"
+                   f"• Server Owner\n"
+                   f"• Administrators\n"
                    f"• Users with mod role:\n{role_list}\n\n"
                    f"Your current permissions:\n"
-                   f"• Bot Owner: {'✅' if is_owner(interaction.user) else '❌'}"
+                   f"• Bot Owner: {'✅' if is_owner(interaction.user) else '❌'}\n"
+                   f"• Server Owner: {'✅' if is_server_owner else '❌'}\n"
+                   f"• Administrator: {'✅' if is_administrator else '❌'}"
     )
     await interaction.response.send_message(embed=embed, ephemeral=True)
     return False
