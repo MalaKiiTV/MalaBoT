@@ -384,13 +384,17 @@ class Owner(commands.Cog):
             self.bot.tree.clear_commands(guild=guild)
             self.logger.info("Cleared guild commands")
             
+            # Copy commands from cogs to tree
+            self.bot.tree.copy_global_to(guild=guild)
+            self.logger.info("Copied commands to tree")
+            
             # Sync again
             synced = await self.bot.tree.sync(guild=guild)
             self.logger.info(f"Re-synced {len(synced)} commands")
             
             embed = embed_helper.success_embed(
-                title="Commands Cleared &amp; Re-synced",
-                description=f"✅ Cleared old commands\n✅ Synced {len(synced)} commands to guild"
+                title="Commands Cleared & Re-synced",
+                description=f"✅ Cleared old commands\n✅ Copied commands from cogs\n✅ Synced {len(synced)} commands to guild"
             )
             
             await interaction.followup.send(embed=embed, ephemeral=True)
