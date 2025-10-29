@@ -589,6 +589,13 @@ The bot will start in safe mode to prevent further issues.
             # This prevents duplicate commands (guild + global)
             if settings.DEBUG_GUILDS:
                 self.logger.info("🔧 DEBUG MODE: Syncing only to debug guilds (no global sync)")
+                
+                # TEMPORARY: Clear global commands to remove duplicates
+                self.logger.info("🧹 Clearing global commands...")
+                self.tree.clear_commands(guild=None)
+                await self.tree.sync()
+                self.logger.info("✅ Global commands cleared")
+                
                 for guild_id in settings.DEBUG_GUILDS:
                     try:
                         guild = discord.Object(id=guild_id)
