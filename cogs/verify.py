@@ -168,7 +168,9 @@ class VerifyGroup(app_commands.Group):
         decision: app_commands.Choice[str],
         notes: str = None,
     ):
+           print(f"[VERIFY DEBUG] Review command started by {interaction.user.name} for {user.name} with decision {decision.value}")
         try:
+           print(f"[VERIFY DEBUG] Checking staff permission...")
             # Check staff permission (uses general mod role)
             from utils.helpers import check_mod_permission
             if not await check_mod_permission(interaction, self.cog.db):
@@ -213,11 +215,15 @@ class VerifyGroup(app_commands.Group):
             elif decision_value == "cheater" and member:
                 # Get cheater role and channel from settings
                 cheater_role_id = await self.cog.db.get_setting(f"cheater_role_{guild_id}")
+                   print(f"[VERIFY DEBUG] Cheater role ID from database: {cheater_role_id}")
                 cheater_channel_id = await self.cog.db.get_setting(f"cheater_jail_channel_{guild_id}")
+                   print(f"[VERIFY DEBUG] Cheater channel ID from database: {cheater_channel_id}")
                 
                 if cheater_role_id and cheater_channel_id:
                     cheater_role = guild.get_role(int(cheater_role_id))
+                       print(f"[VERIFY DEBUG] Cheater role object: {cheater_role}")
                     cheater_channel = guild.get_channel(int(cheater_channel_id))
+                       print(f"[VERIFY DEBUG] Cheater channel object: {cheater_channel}")
                     
                     if cheater_role and cheater_channel:
                         try:
@@ -227,6 +233,7 @@ class VerifyGroup(app_commands.Group):
                             
                             # Add cheater role
                             await member.add_roles(cheater_role, reason=f"Marked as cheater by {interaction.user}")
+                               print(f"[VERIFY DEBUG] Successfully added cheater role to {member.name}")
                             
                             # Send notification to cheater jail
                             jail_embed = discord.Embed(
