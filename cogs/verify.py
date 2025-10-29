@@ -271,7 +271,7 @@ class VerifyGroup(app_commands.Group):
                             
                             result_text = f"🔒 Sent {member.mention} to cheater jail ({cheater_channel.mention}) with {cheater_role.mention} role."
                         except discord.Forbidden:
-                            result_text = f"❌ Failed to assign cheater role to {user.mention}. Missing permissions."
+                            result_text = f"❌ Failed to assign cheater role to {member.mention}. Missing permissions."
                     else:
                         result_text = f"❌ Cheater role or channel not found. Please configure in `/setup` → Verification System"
                 else:
