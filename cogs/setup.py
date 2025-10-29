@@ -813,7 +813,7 @@ class WelcomeSetupView(View):
         modal = Modal(title="Set Welcome Message")
         message_input = discord.ui.TextInput(
             label="Welcome Message",
-            placeholder="Welcome {member} to {server}!",
+            default="Welcome {member} to {server}!",
             style=discord.TextStyle.paragraph,
             required=True,
             max_length=1000
@@ -966,7 +966,7 @@ class BirthdaySetupView(View):
         modal = Modal(title="Set Birthday Message")
         message_input = discord.ui.TextInput(
             label="Birthday Message",
-            placeholder="🎂 Happy Birthday {member}! Have a great day!",
+            default="🎂 Happy Birthday {member}! Have a great day!",
             style=discord.TextStyle.paragraph,
             required=True,
             max_length=500
@@ -1078,7 +1078,7 @@ class XPSetupView(View):
         modal = Modal(title="Set Level-up Message")
         message_input = discord.ui.TextInput(
             label="Level-up Message",
-            placeholder="🎉 {member} reached level {level}!",
+            default="🎉 {member} reached level {level}!",
             style=discord.TextStyle.paragraph,
             required=True,
             max_length=500
