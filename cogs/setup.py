@@ -7,7 +7,7 @@ Command: /setup
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord.ui import Select, View, Modal, TextInput, Button
+from discord.ui import Select, View, Modal, TextInput, Button, ChannelSelect, ButtonStyle
 from typing import Optional
 
 from utils.helpers import create_embed, safe_send_message
