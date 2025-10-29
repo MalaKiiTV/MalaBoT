@@ -253,12 +253,13 @@ class VerifyGroup(app_commands.Group):
                             bot.processing_members.add(member.id)
                             
                             try:
-                                # Remove all roles except @everyone
-                                roles_to_remove = [role for role in member.roles if role != guild.default_role]
-                                await member.remove_roles(*roles_to_remove, reason=f"Marked as cheater by {interaction.user}")
-                                
-                                # Add cheater role
+                                # Add cheater role FIRST
                                 await member.add_roles(cheater_role, reason=f"Marked as cheater by {interaction.user}")
+                                
+                                # Then remove all other roles except @everyone and cheater
+                                roles_to_remove = [role for role in member.roles if role != guild.default_role and role != cheater_role]
+                                if roles_to_remove:
+                                    await member.remove_roles(*roles_to_remove, reason=f"Marked as cheater by {interaction.user}")
                                 
                                 # Send notification to cheater jail
                                 jail_embed = discord.Embed(
