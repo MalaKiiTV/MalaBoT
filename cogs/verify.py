@@ -161,136 +161,122 @@ class VerifyGroup(app_commands.Group):
         app_commands.Choice(name="Cheater", value="cheater"),
         app_commands.Choice(name="Unverified", value="unverified"),
     ])
-async def review(
-    self,
-    interaction: discord.Interaction,
-    user: discord.User,
-    decision: app_commands.Choice[str],
-    notes: str = None,
-):
-    print(f"[VERIFY_DEBUG] Review called by {interaction.user.name} for {user.name} with decision {decision.value}")
-    try:
-        # Check staff permission (uses general mod role)
-        from utils.helpers import check_mod_permission
-        has_perm = await check_mod_permission(interaction, self.cog.db)
-        print(f"[VERIFY_DEBUG] Permission check result: {has_perm}")
-        if not has_perm:
-            print(f"[VERIFY_DEBUG] Permission denied for {interaction.user.name}")
-            return
+    async def review(
+        self,
+        interaction: discord.Interaction,
+        user: discord.User,
+        decision: app_commands.Choice[str],
+        notes: str = None,
+    ):
+        try:
+            # Check staff permission (uses general mod role)
+            from utils.helpers import check_mod_permission
+            if not await check_mod_permission(interaction, self.cog.db):
+                return
 
-        await interaction.response.defer(ephemeral=True, thinking=True)
-        guild_id = interaction.guild.id
-        decision_value = decision.value
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            guild_id = interaction.guild.id
+            decision_value = decision.value
 
-        if decision_value not in ["verified", "cheater", "unverified"]:
-            await safe_send_message(interaction, content="Use `verified`, `cheater`, or `unverified`.", ephemeral=True)
-            return
+            if decision_value not in ["verified", "cheater", "unverified"]:
+                await safe_send_message(interaction, content="Use `verified`, `cheater`, or `unverified`.", ephemeral=True)
+                return
 
-        conn = await self.cog.db.get_connection()
-        await conn.execute(
-            "UPDATE verifications SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, notes = ? WHERE discord_id = ?",
-            (decision_value, interaction.user.id, notes, user.id),
-        )
-        await conn.commit()
+            conn = await self.cog.db.get_connection()
+            await conn.execute(
+                "UPDATE verifications SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, notes = ? WHERE discord_id = ?",
+                (decision_value, interaction.user.id, notes, user.id),
+            )
+            await conn.commit()
 
-        guild = interaction.guild
-        member = guild.get_member(user.id)
-        result_text = ""
+            guild = interaction.guild
+            member = guild.get_member(user.id)
+            result_text = ""
 
-        if decision_value == "verified" and member:
-            # Get verified role from settings
-            verified_role_id = await self.cog.db.get_setting(f"verify_role_{guild_id}")
-            
-            if verified_role_id:
-                verified_role = guild.get_role(int(verified_role_id))
-                if verified_role:
-                    await member.add_roles(verified_role)
-                    result_text = f"✅ Verified {member.mention} and assigned {verified_role.mention} role."
-                else:
-                    result_text = f"✅ Verified {member.mention} but verified role not found. Please run `/setup` and select Verification System to configure."
-            else:
-                result_text = f"✅ Verified {member.mention} but no verified role configured. Please run `/setup` and select Verification System to configure."
+            if decision_value == "verified" and member:
+                # Get verified role from settings
+                verified_role_id = await self.cog.db.get_setting(f"verify_role_{guild_id}")
                 
-        elif decision_value == "unverified" and member:
-            result_text = f"❌ Marked {user.mention} as unverified. They remain unverified."
-            
-        elif decision_value == "cheater" and member:
-            print(f"[VERIFY_DEBUG] Processing CHEATER decision for {member.name}")
-            # Get cheater role and channel from settings
-            cheater_role_id = await self.cog.db.get_setting(f"cheater_role_{guild_id}")
-            cheater_channel_id = await self.cog.db.get_setting(f"cheater_jail_channel_{guild_id}")
-            print(f"[VERIFY_DEBUG] Cheater role ID: {cheater_role_id}, Channel ID: {cheater_channel_id}")
-            
-            if cheater_role_id and cheater_channel_id:
-                cheater_role = guild.get_role(int(cheater_role_id))
-                cheater_channel = guild.get_channel(int(cheater_channel_id))
-                print(f"[VERIFY_DEBUG] Cheater role object: {cheater_role}, Channel object: {cheater_channel}")
-                
-                if cheater_role and cheater_channel:
-                    try:
-                        # Remove all roles except @everyone
-                        roles_to_remove = [role for role in member.roles if role != guild.default_role]
-                        await member.remove_roles(*roles_to_remove, reason=f"Marked as cheater by {interaction.user}")
-                        
-                        # Add cheater role
-                        await member.add_roles(cheater_role, reason=f"Marked as cheater by {interaction.user}")
-                        print(f"[VERIFY_DEBUG] Successfully added cheater role to {member.name}")
-                        
-                        # Send notification to cheater jail
-                        jail_embed = discord.Embed(
-                            title="🚨 New Arrival",
-                            description=(
-                                f"{member.mention} has been sent to cheater jail.\n\n"
-                                f"**Reason:** Confirmed cheater during verification\n"
-                                f"**Reviewed by:** {interaction.user.mention}\n"
-                                f"**Notes:** {notes or 'None provided'}\n\n"
-                                f"You can submit ONE appeal using `/appeal`"
-                            ),
-                            color=COLORS["error"],
-                        )
-                        await cheater_channel.send(content=f"{member.mention}", embed=jail_embed)
-                        
-                        result_text = f"🔒 Sent {member.mention} to cheater jail ({cheater_channel.mention}) with {cheater_role.mention} role."
-                        print(f"[VERIFY_DEBUG] Cheater jail process completed: {result_text}")
-                    except discord.Forbidden:
-                        result_text = f"❌ Failed to assign cheater role to {user.mention}. Missing permissions."
-                        print(f"[VERIFY_DEBUG] FORBIDDEN ERROR: {result_text}")
-                    except Exception as e:
-                        result_text = f"❌ Failed to assign cheater role to {user.mention}. Error: {str(e)}"
-                        print(f"[VERIFY_DEBUG] GENERAL ERROR: {result_text}")
+                if verified_role_id:
+                    verified_role = guild.get_role(int(verified_role_id))
+                    if verified_role:
+                        await member.add_roles(verified_role)
+                        result_text = f"✅ Verified {member.mention} and assigned {verified_role.mention} role."
+                    else:
+                        result_text = f"✅ Verified {member.mention} but verified role not found. Please run `/setup` and select Verification System to configure."
                 else:
-                    result_text = f"❌ Cheater role or channel not found. Please configure in `/setup` → Verification System"
-                    print(f"[VERIFY_DEBUG] ROLE/CHANNEL NOT FOUND: {result_text}")
-            else:
-                result_text = f"❌ Cheater jail system not configured. Please run `/setup` → Verification System to set up cheater role and channel."
-                print(f"[VERIFY_DEBUG] SYSTEM NOT CONFIGURED: {result_text}")
+                    result_text = f"✅ Verified {member.mention} but no verified role configured. Please run `/setup` and select Verification System to configure."
+                    
+            elif decision_value == "unverified" and member:
+                result_text = f"❌ Marked {user.mention} as unverified. They remain unverified."
+                
+            elif decision_value == "cheater" and member:
+                # Get cheater role and channel from settings
+                cheater_role_id = await self.cog.db.get_setting(f"cheater_role_{guild_id}")
+                cheater_channel_id = await self.cog.db.get_setting(f"cheater_jail_channel_{guild_id}")
+                
+                if cheater_role_id and cheater_channel_id:
+                    cheater_role = guild.get_role(int(cheater_role_id))
+                    cheater_channel = guild.get_channel(int(cheater_channel_id))
+                    
+                    if cheater_role and cheater_channel:
+                        try:
+                            # Remove all roles except @everyone
+                            roles_to_remove = [role for role in member.roles if role != guild.default_role]
+                            await member.remove_roles(*roles_to_remove, reason=f"Marked as cheater by {interaction.user}")
+                            
+                            # Add cheater role
+                            await member.add_roles(cheater_role, reason=f"Marked as cheater by {interaction.user}")
+                            
+                            # Send notification to cheater jail
+                            jail_embed = discord.Embed(
+                                title="🚨 New Arrival",
+                                description=(
+                                    f"{member.mention} has been sent to cheater jail.\n\n"
+                                    f"**Reason:** Confirmed cheater during verification\n"
+                                    f"**Reviewed by:** {interaction.user.mention}\n"
+                                    f"**Notes:** {notes or 'None provided'}\n\n"
+                                    f"You can submit ONE appeal using `/appeal`"
+                                ),
+                                color=COLORS["error"],
+                            )
+                            await cheater_channel.send(content=f"{member.mention}", embed=jail_embed)
+                            
+                            result_text = f"🔒 Sent {member.mention} to cheater jail ({cheater_channel.mention}) with {cheater_role.mention} role."
+                        except discord.Forbidden:
+                            result_text = f"❌ Failed to assign cheater role to {user.mention}. Missing permissions."
+                    else:
+                        result_text = f"❌ Cheater role or channel not found. Please configure in `/setup` → Verification System"
+                else:
+                    result_text = f"❌ Cheater jail system not configured. Please run `/setup` → Verification System to set up cheater role and channel."
 
-        await safe_send_message(interaction, content=result_text, ephemeral=True)
+            await safe_send_message(interaction, content=result_text, ephemeral=True)
 
-        log_system(f"[VERIFY_REVIEW] {interaction.user} {decision_value.upper()} {user} ({notes or 'no notes'})")
-        await self.cog.db.log_event(
-            category="VERIFY",
-            action="REVIEW",
-            user_id=user.id,
-            target_id=interaction.user.id,
-            details=f"{decision_value.upper()} - {notes or 'No notes'}",
-        )
+            log_system(f"[VERIFY_REVIEW] {interaction.user} {decision_value.upper()} {user} ({notes or 'no notes'})")
+            await self.cog.db.log_event(
+                category="VERIFY",
+                action="REVIEW",
+                user_id=user.id,
+                target_id=interaction.user.id,
+                details=f"{decision_value.upper()} - {notes or 'No notes'}",
+            )
 
-        # DM user about decision (except for cheaters)
-        if decision_value != "cheater":
-            try:
-                dm_embed = create_embed(
-                    "Verification Update",
-                    f"Your verification was **{decision_value.upper()}**.\nNotes: {notes or 'None provided.'}",
-                    COLORS["info"] if decision_value == "verified" else COLORS["error"],
-                )
-                await user.send(embed=dm_embed)
-            except discord.Forbidden:
-                log_system(f"Could not DM {user} about verification result.", level="warning")
+            # DM user about decision (except for cheaters)
+            if decision_value != "cheater":
+                try:
+                    dm_embed = create_embed(
+                        "Verification Update",
+                        f"Your verification was **{decision_value.upper()}**.\nNotes: {notes or 'None provided.'}",
+                        COLORS["info"] if decision_value == "verified" else COLORS["error"],
+                    )
+                    await user.send(embed=dm_embed)
+                except discord.Forbidden:
+                    log_system(f"Could not DM {user} about verification result.", level="warning")
 
-    except Exception as e:
-        log_system(f"Verification review error: {e}", level="error")
-        await safe_send_message(interaction, content="An error occurred while processing review.", ephemeral=True)
+        except Exception as e:
+            log_system(f"Verification review error: {e}", level="error")
+            await safe_send_message(interaction, content="An error occurred while processing review.", ephemeral=True)
+
 
 class Verify(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -299,6 +285,9 @@ class Verify(commands.Cog):
         # Store pending verifications temporarily
         if not hasattr(bot, 'pending_verifications'):
             bot.pending_verifications = {}
+
+    
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         """Listen for screenshot uploads from users with pending verifications."""
