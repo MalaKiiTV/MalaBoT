@@ -66,9 +66,23 @@ class BotControlGroup(app_commands.Group):
         super().__init__(name="bot", description="Bot control commands (Server Owner only)")
         self.cog = cog
     
+    async def channel_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str,
+    ) -> list[app_commands.Choice[str]]:
+        """Autocomplete for channel selection - shows all text channels"""
+        channels = [
+            app_commands.Choice(name=f"#{channel.name}", value=str(channel.id))
+            for channel in interaction.guild.text_channels
+            if current.lower() in channel.name.lower()
+        ]
+        return channels[:25]  # Discord limits to 25 choices
+    
     @app_commands.command(name="send", description="Send a message as the bot to a channel (Server Owner only)")
     @app_commands.describe(channel="The channel to send the message to")
-    async def send(self, interaction: discord.Interaction, channel: discord.TextChannel):
+    @app_commands.autocomplete(channel=channel_autocomplete)
+    async def send(self, interaction: discord.Interaction, channel: str):
         """Send a message as the bot to a specific channel"""
         
         # Check server owner permissions
@@ -81,8 +95,19 @@ class BotControlGroup(app_commands.Group):
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         
+        # Get the channel object from the ID
+        channel_obj = interaction.guild.get_channel(int(channel))
+        if not channel_obj or not isinstance(channel_obj, discord.TextChannel):
+            embed = create_embed(
+                "❌ Error",
+                "Invalid channel selected.",
+                COLORS["error"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
         # Open modal for message input
-        modal = SendMessageModal(channel)
+        modal = SendMessageModal(channel_obj)
         await interaction.response.send_modal(modal)
 
 
