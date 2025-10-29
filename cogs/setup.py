@@ -632,8 +632,10 @@ class SetupSelect(Select):
         # Fetch all settings
         verify_channel_id = await db.get_setting(f"verify_channel_{guild_id}")
         verify_role_id = await db.get_setting(f"verify_role_{guild_id}")
-        welcome_channel_id = await db.get_setting(f"welcome_channel_{guild_id}")
-        birthday_channel_id = await db.get_setting(f"birthday_channel_{guild_id}")
+        # Welcome uses a global key without guild_id suffix
+        welcome_channel_id = await db.get_setting("welcome_channel_id")
+        # Birthday channel is not yet implemented in the birthday cog
+        birthday_channel_id = None  # TODO: Add birthday channel configuration
         timezone = await db.get_setting(f"timezone_{guild_id}", "UTC-6")
         online_message = await db.get_setting(f"online_message_{guild_id}", "Not set")
 
@@ -666,7 +668,7 @@ class SetupSelect(Select):
         if birthday_channel_id:
             birthday_text += f"Channel: <#{birthday_channel_id}>\n"
         else:
-            birthday_text = "Not configured"
+            birthday_text = "Configure using `/bday` commands\n(Channel configuration not yet implemented)"
         embed.add_field(name="🎂 Birthday", value=birthday_text, inline=False)
 
         # General settings
