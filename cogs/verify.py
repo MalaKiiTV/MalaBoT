@@ -168,10 +168,9 @@ class VerifyGroup(app_commands.Group):
         decision: app_commands.Choice[str],
         notes: str = None,
     ):
-           print(f"[VERIFY DEBUG] Review command started by {interaction.user.name} for {user.name} with decision {decision.value}")
-        try:
-           print(f"[VERIFY DEBUG] Checking staff permission...")
-            # Check staff permission (uses general mod role)
+            print(f"[VERIFY_DEBUG] Review called: {interaction.user.name} reviewing {user.name} - Decision: {decision.value}")
+    try:
+                       # Check staff permission (uses general mod role)
             from utils.helpers import check_mod_permission
             if not await check_mod_permission(interaction, self.cog.db):
                 return
@@ -213,6 +212,7 @@ class VerifyGroup(app_commands.Group):
                 result_text = f"❌ Marked {user.mention} as unverified. They remain unverified."
                 
             elif decision_value == "cheater" and member:
+                print(f"[VERIFY_DEBUG] Processing CHEATER decision for {member.name}")
                 # Get cheater role and channel from settings
                 cheater_role_id = await self.cog.db.get_setting(f"cheater_role_{guild_id}")
                    print(f"[VERIFY DEBUG] Cheater role ID from database: {cheater_role_id}")
