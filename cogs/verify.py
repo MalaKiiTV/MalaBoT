@@ -295,17 +295,20 @@ class VerifyGroup(app_commands.Group):
             await safe_send_message(interaction, content=result_text, ephemeral=True)
             
             # Send public message to the channel
-            public_embed = discord.Embed(
-                title="✅ Verification Reviewed" if decision_value == "verified" else "❌ Verification Decision",
-                description=(
-                    f"**User:** {user.mention}\n"
-                    f"**Decision:** {decision_value.upper()}\n"
-                    f"**Reviewed by:** {interaction.user.mention}\n"
-                    f"**Notes:** {notes or 'None provided'}"
-                ),
-                color=COLORS["success"] if decision_value == "verified" else COLORS["error"],
-            )
-            await interaction.channel.send(embed=public_embed)
+            try:
+                public_embed = discord.Embed(
+                    title="✅ Verification Reviewed" if decision_value == "verified" else "❌ Verification Decision",
+                    description=(
+                        f"**User:** {user.mention}\n"
+                        f"**Decision:** {decision_value.upper()}\n"
+                        f"**Reviewed by:** {interaction.user.mention}\n"
+                        f"**Notes:** {notes or 'None provided'}"
+                    ),
+                    color=COLORS["success"] if decision_value == "verified" else COLORS["error"],
+                )
+                await interaction.channel.send(embed=public_embed)
+            except Exception as e:
+                log_system(f"Failed to send public verification message: {e}", level="error")
 
             log_system(f"[VERIFY_REVIEW] {interaction.user} {decision_value.upper()} {user} ({notes or 'no notes'})")
             await self.cog.db.log_event(
