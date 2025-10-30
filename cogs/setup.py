@@ -486,6 +486,50 @@ class GeneralSettingsView(View):
         )
         await interaction.response.edit_message(embed=embed, view=view)
 
+    @discord.ui.button(label="Set Join Role", style=discord.ButtonStyle.primary, emoji="👋")
+    async def set_join_role(self, interaction: discord.Interaction, button: Button):
+        """Set role to auto-assign to new members"""
+        select = discord.ui.RoleSelect(
+            placeholder="Select the join role...",
+            min_values=1,
+            max_values=1
+        )
+        
+        async def role_callback(interaction: discord.Interaction):
+            role = select.values[0]
+            await self.db.set_setting(f"join_role_{self.guild_id}", str(role.id))
+            
+            # Show brief confirmation
+            embed = discord.Embed(
+                title="✅ Join Role Set",
+                description=f"New members will automatically receive {role.mention}",
+                color=COLORS["success"],
+            )
+            await interaction.response.edit_message(embed=embed, view=None)
+            
+            # Wait 2 seconds then return to general settings
+            import asyncio
+            await asyncio.sleep(2)
+            
+            general_view = GeneralSettingsView(self.db, self.guild_id)
+            embed = discord.Embed(
+                title="⚙️ General Settings",
+                description="Click the buttons below to configure each setting.",
+                color=COLORS["primary"]
+            )
+            await interaction.edit_original_response(embed=embed, view=general_view)
+        
+        select.callback = role_callback
+        view = View(timeout=60)
+        view.add_item(select)
+        
+        embed = discord.Embed(
+            title="👋 Select Join Role",
+            description="Choose the role to automatically assign to new members.",
+            color=COLORS["primary"],
+        )
+        await interaction.response.edit_message(embed=embed, view=view)
+
     @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
     async def view_config(self, interaction: discord.Interaction, button: Button):
         """View current general settings"""
@@ -493,6 +537,7 @@ class GeneralSettingsView(View):
         online_message = await self.db.get_setting(f"online_message_{self.guild_id}", "Not set")
         online_channel_id = await self.db.get_setting(f"online_message_channel_{self.guild_id}")
         mod_role_id = await self.db.get_setting(f"mod_role_{self.guild_id}")
+        join_role_id = await self.db.get_setting(f"join_role_{self.guild_id}")
         
         mod_role_text = "Not set"
         if mod_role_id:
@@ -505,11 +550,22 @@ class GeneralSettingsView(View):
             except:
                 mod_role_text = f"<@&{mod_role_id}>"
         
+        join_role_text = "Not set"
+        if join_role_id:
+            try:
+                join_role = interaction.guild.get_role(int(join_role_id))
+                if join_role:
+                    join_role_text = f"{join_role.name}"
+                else:
+                    join_role_text = f"<@&{join_role_id}>"
+            except:
+                join_role_text = f"<@&{join_role_id}>"
+        
         online_channel_text = "Not set"
         if online_channel_id:
             online_channel_text = f"<#{online_channel_id}>"
 
-        config_text = f"**Timezone:** {timezone}\n**Online Message:** {online_message}\n**Online Channel:** {online_channel_text}\n**Mod Role:** {mod_role_text}"
+        config_text = f"**Timezone:** {timezone}\n**Online Message:** {online_message}\n**Online Channel:** {online_channel_text}\n**Mod Role:** {mod_role_text}\n**Join Role:** {join_role_text}"
 
         embed = discord.Embed(
             title="Current General Settings",
@@ -940,11 +996,14 @@ class SetupSelect(Select):
 
         # General settings
         online_channel_id = await db.get_setting(f"online_message_channel_{guild_id}")
+        join_role_id = await db.get_setting(f"join_role_{guild_id}")
         general_text = f"Timezone: {timezone}\nOnline Message: {online_message}"
         if online_channel_id:
             general_text += f"\nOnline Channel: <#{online_channel_id}>"
         if mod_role_id:
             general_text += f"\nMod Role: <@&{mod_role_id}>"
+        if join_role_id:
+            general_text += f"\nJoin Role: <@&{join_role_id}>"
         embed.add_field(name="⚙️ General", value=general_text, inline=False)
 
         # Role Connections settings
