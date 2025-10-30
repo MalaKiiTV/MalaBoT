@@ -1012,9 +1012,9 @@ class SetupSelect(Select):
         cheater_role_id = await db.get_setting(f"cheater_role_{guild_id}")
         cheater_jail_id = await db.get_setting(f"cheater_jail_channel_{guild_id}")
         mod_role_id = await db.get_setting(f"mod_role_{guild_id}")
-        welcome_channel_id = await db.get_setting("welcome_channel_id")
-        welcome_message = await db.get_setting("welcome_message")
-        welcome_title = await db.get_setting("welcome_title")
+        welcome_channel_id = await db.get_setting(f"welcome_channel_{guild_id}")
+        welcome_message = await db.get_setting(f"welcome_message_{guild_id}")
+        welcome_title = await db.get_setting(f"welcome_title_{guild_id}")
         goodbye_channel_id = await db.get_setting(f"goodbye_channel_{guild_id}")
         goodbye_message = await db.get_setting(f"goodbye_message_{guild_id}")
         goodbye_title = await db.get_setting(f"goodbye_title_{guild_id}")
@@ -1220,7 +1220,7 @@ class WelcomeSetupView(View):
         
         async def channel_callback(interaction: discord.Interaction):
             channel = select.values[0]
-            await self.db_manager.set_setting("welcome_channel_id", str(channel.id))
+            await self.db_manager.set_setting(f"welcome_channel_{self.guild_id}", str(channel.id))
             embed = discord.Embed(
                 title="✅ Welcome Channel Set",
                 description=f"Welcome messages will be sent to {channel.mention}",
@@ -1252,7 +1252,7 @@ class WelcomeSetupView(View):
         modal.add_item(message_input)
         
         async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting("welcome_message", message_input.value)
+            await self.db_manager.set_setting(f"welcome_message_{self.guild_id}", message_input.value)
             embed = discord.Embed(
                 title="✅ Welcome Message Set",
                 description=f"Message: {message_input.value}",
@@ -1277,7 +1277,7 @@ class WelcomeSetupView(View):
         modal.add_item(title_input)
         
         async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting("welcome_title", title_input.value)
+            await self.db_manager.set_setting(f"welcome_title_{self.guild_id}", title_input.value)
             embed = discord.Embed(
                 title="✅ Welcome Title Set",
                 description=f"Title: {title_input.value}",
@@ -1302,7 +1302,7 @@ class WelcomeSetupView(View):
         modal.add_item(image_input)
         
         async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting("welcome_image", image_input.value or "")
+            await self.db_manager.set_setting(f"welcome_image_{self.guild_id}", image_input.value or "")
             embed = discord.Embed(
                 title="✅ Welcome Image Set",
                 description=f"Image URL: {image_input.value or 'None (removed)'}\n\n**Tip:** Upload your image to Discord, right-click it, and select 'Copy Link' to get a URL!",

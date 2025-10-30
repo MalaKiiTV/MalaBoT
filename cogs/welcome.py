@@ -47,9 +47,11 @@ class Welcome(commands.Cog):
                     self.logger.error(f"Error assigning join role to {member.name}: {e}")
             
             # Get welcome settings
-            welcome_channel_id = await self.bot.db_manager.get_setting('welcome_channel_id')
-            welcome_title = await self.bot.db_manager.get_setting('welcome_title', DEFAULT_WELCOME_TITLE)
-            welcome_message = await self.bot.db_manager.get_setting('welcome_message', DEFAULT_WELCOME_MESSAGE)
+            guild_id = member.guild.id
+            welcome_channel_id = await self.bot.db_manager.get_setting(f'welcome_channel_{guild_id}')
+            welcome_title = await self.bot.db_manager.get_setting(f'welcome_title_{guild_id}', DEFAULT_WELCOME_TITLE)
+            welcome_message = await self.bot.db_manager.get_setting(f'welcome_message_{guild_id}', DEFAULT_WELCOME_MESSAGE)
+            welcome_image = await self.bot.db_manager.get_setting(f'welcome_image_{guild_id}')
             
             if not welcome_channel_id:
                 return
@@ -63,6 +65,7 @@ class Welcome(commands.Cog):
             formatted_message = welcome_message.replace('{member.mention}', member.mention)
             formatted_message = formatted_message.replace('{member.name}', member.name)
             formatted_message = formatted_message.replace('{server.name}', member.guild.name)
+            formatted_message = formatted_message.replace('{member.count}', str(len(member.guild.members)))
             
             # Create welcome embed
             embed = create_embed(
@@ -73,6 +76,10 @@ class Welcome(commands.Cog):
             
             embed.set_thumbnail(url=member.display_avatar.url if member.display_avatar else member.default_avatar.url)
             embed.set_footer(text=f"Member #{len(member.guild.members)}")
+            
+            # Add image if configured
+            if welcome_image:
+                embed.set_image(url=welcome_image)
             
             await safe_send_message(channel, embed=embed)
             
@@ -94,6 +101,7 @@ class Welcome(commands.Cog):
             goodbye_channel_id = await self.bot.db_manager.get_setting(f'goodbye_channel_{guild_id}')
             goodbye_title = await self.bot.db_manager.get_setting(f'goodbye_title_{guild_id}', DEFAULT_GOODBYE_TITLE)
             goodbye_message = await self.bot.db_manager.get_setting(f'goodbye_message_{guild_id}', DEFAULT_GOODBYE_MESSAGE)
+            goodbye_image = await self.bot.db_manager.get_setting(f'goodbye_image_{guild_id}')
             
             if not goodbye_channel_id:
                 return
@@ -107,6 +115,7 @@ class Welcome(commands.Cog):
             formatted_message = goodbye_message.replace('{member.mention}', member.mention)
             formatted_message = formatted_message.replace('{member.name}', member.name)
             formatted_message = formatted_message.replace('{server.name}', member.guild.name)
+            formatted_message = formatted_message.replace('{member.count}', str(len(member.guild.members)))
             
             # Create goodbye embed
             embed = create_embed(
@@ -117,6 +126,10 @@ class Welcome(commands.Cog):
             
             embed.set_thumbnail(url=member.display_avatar.url if member.display_avatar else member.default_avatar.url)
             embed.set_footer(text=f"Member count: {len(member.guild.members)}")
+            
+            # Add image if configured
+            if goodbye_image:
+                embed.set_image(url=goodbye_image)
             
             await safe_send_message(channel, embed=embed)
             
