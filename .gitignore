@@ -56,6 +56,17 @@ Thumbs.db
 cache/
 .tmp/
 outputs/
+*_temp.py
+*_backup.py
+*.bak
+
+# Temporary documentation
+*_FIX.md
+*_UPDATE.md
+*_GUIDE.md
+*_ANALYSIS.md
+*_SUMMARY.md
+*_REPORT.md
 
 # Crash flags
 data/flags/
