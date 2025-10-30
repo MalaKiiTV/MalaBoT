@@ -195,12 +195,14 @@ class VerifyGroup(app_commands.Group):
         notes: typing.Optional[str] = None,
     ):
         try:
+            # Defer immediately to prevent timeout
+            await interaction.response.defer(ephemeral=True, thinking=True)
+            
             # Check staff permission (uses general mod role)
             from utils.helpers import check_mod_permission
             if not await check_mod_permission(interaction, self.cog.db):
                 return
 
-            await interaction.response.defer(ephemeral=True, thinking=True)
             guild_id = interaction.guild.id
             decision_value = decision.value
             
