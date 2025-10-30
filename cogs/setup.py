@@ -1280,6 +1280,236 @@ class WelcomeSetupView(View):
         await interaction.response.send_modal(modal)
 
 
+
+
+class GoodbyeSetupView(View):
+    def __init__(self, guild_id: int, db_manager):
+        super().__init__(timeout=300)
+        self.guild_id = guild_id
+        self.db_manager = db_manager
+        
+    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="📢")
+    async def set_channel(self, interaction: discord.Interaction, button: Button):
+        """Set goodbye channel"""
+        view = View()
+        select = ChannelSelect(
+            placeholder="Select goodbye channel",
+            channel_types=[discord.ChannelType.text],
+            min_values=1,
+            max_values=1
+        )
+        
+        async def channel_callback(interaction: discord.Interaction):
+            channel = select.values[0]
+            await self.db_manager.set_setting(f"goodbye_channel_{self.guild_id}", str(channel.id))
+            embed = discord.Embed(
+                title="✅ Goodbye Channel Set",
+                description=f"Goodbye messages will be sent to {channel.mention}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        select.callback = channel_callback
+        view.add_item(select)
+        
+        embed = discord.Embed(
+            title="📢 Select Goodbye Channel",
+            description="Choose the channel where goodbye messages will be sent.",
+            color=COLORS["primary"]
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    
+    @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="💬")
+    async def set_message(self, interaction: discord.Interaction, button: Button):
+        """Set goodbye message"""
+        modal = Modal(title="Set Goodbye Message")
+        message_input = discord.ui.TextInput(
+            label="Goodbye Message",
+            default="{member.name} has left {server}. We'll miss you!",
+            style=discord.TextStyle.paragraph,
+            required=True,
+            max_length=1000
+        )
+        modal.add_item(message_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            await self.db_manager.set_setting(f"goodbye_message_{self.guild_id}", message_input.value)
+            embed = discord.Embed(
+                title="✅ Goodbye Message Set",
+                description=f"Message: {message_input.value}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Set Title", style=ButtonStyle.primary, emoji="📝")
+    async def set_title(self, interaction: discord.Interaction, button: Button):
+        """Set goodbye title"""
+        modal = Modal(title="Set Goodbye Title")
+        title_input = discord.ui.TextInput(
+            label="Goodbye Title",
+            placeholder="Goodbye!",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=100
+        )
+        modal.add_item(title_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            await self.db_manager.set_setting(f"goodbye_title_{self.guild_id}", title_input.value)
+            embed = discord.Embed(
+                title="✅ Goodbye Title Set",
+                description=f"Title: {title_input.value}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Set Image", style=ButtonStyle.primary, emoji="🖼️")
+    async def set_image(self, interaction: discord.Interaction, button: Button):
+        """Set goodbye image"""
+        modal = Modal(title="Set Goodbye Image")
+        image_input = discord.ui.TextInput(
+            label="Image URL",
+            placeholder="https://example.com/image.png",
+            style=discord.TextStyle.short,
+            required=False,
+            max_length=500
+        )
+        modal.add_item(image_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            await self.db_manager.set_setting(f"goodbye_image_{self.guild_id}", image_input.value or "")
+            embed = discord.Embed(
+                title="✅ Goodbye Image Set",
+                description=f"Image URL: {image_input.value or 'None (removed)'}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+
+
+
+
+class GoodbyeSetupView(View):
+    def __init__(self, guild_id: int, db_manager):
+        super().__init__(timeout=300)
+        self.guild_id = guild_id
+        self.db_manager = db_manager
+        
+    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="📢")
+    async def set_channel(self, interaction: discord.Interaction, button: Button):
+        """Set goodbye channel"""
+        view = View()
+        select = ChannelSelect(
+            placeholder="Select goodbye channel",
+            channel_types=[discord.ChannelType.text],
+            min_values=1,
+            max_values=1
+        )
+        
+        async def channel_callback(interaction: discord.Interaction):
+            channel = select.values[0]
+            await self.db_manager.set_setting(f"goodbye_channel_{self.guild_id}", str(channel.id))
+            embed = discord.Embed(
+                title="✅ Goodbye Channel Set",
+                description=f"Goodbye messages will be sent to {channel.mention}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        select.callback = channel_callback
+        view.add_item(select)
+        
+        embed = discord.Embed(
+            title="📢 Select Goodbye Channel",
+            description="Choose the channel where goodbye messages will be sent.",
+            color=COLORS["primary"]
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    
+    @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="💬")
+    async def set_message(self, interaction: discord.Interaction, button: Button):
+        """Set goodbye message"""
+        modal = Modal(title="Set Goodbye Message")
+        message_input = discord.ui.TextInput(
+            label="Goodbye Message",
+            default="{member.name} has left {server}. We'll miss you!",
+            style=discord.TextStyle.paragraph,
+            required=True,
+            max_length=1000
+        )
+        modal.add_item(message_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            await self.db_manager.set_setting(f"goodbye_message_{self.guild_id}", message_input.value)
+            embed = discord.Embed(
+                title="✅ Goodbye Message Set",
+                description=f"Message: {message_input.value}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Set Title", style=ButtonStyle.primary, emoji="📝")
+    async def set_title(self, interaction: discord.Interaction, button: Button):
+        """Set goodbye title"""
+        modal = Modal(title="Set Goodbye Title")
+        title_input = discord.ui.TextInput(
+            label="Goodbye Title",
+            placeholder="Goodbye!",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=100
+        )
+        modal.add_item(title_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            await self.db_manager.set_setting(f"goodbye_title_{self.guild_id}", title_input.value)
+            embed = discord.Embed(
+                title="✅ Goodbye Title Set",
+                description=f"Title: {title_input.value}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Set Image", style=ButtonStyle.primary, emoji="🖼️")
+    async def set_image(self, interaction: discord.Interaction, button: Button):
+        """Set goodbye image"""
+        modal = Modal(title="Set Goodbye Image")
+        image_input = discord.ui.TextInput(
+            label="Image URL",
+            placeholder="https://example.com/image.png",
+            style=discord.TextStyle.short,
+            required=False,
+            max_length=500
+        )
+        modal.add_item(image_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            await self.db_manager.set_setting(f"goodbye_image_{self.guild_id}", image_input.value or "")
+            embed = discord.Embed(
+                title="✅ Goodbye Image Set",
+                description=f"Image URL: {image_input.value or 'None (removed)'}",
+                color=COLORS["success"]
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+
+
 class BirthdaySetupView(View):
     def __init__(self, guild_id: int, db_manager):
         super().__init__(timeout=300)
