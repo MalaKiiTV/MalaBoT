@@ -120,8 +120,14 @@ class AppealGroup(app_commands.Group):
         """Submit an appeal - can only be used once"""
         guild_id = interaction.guild.id
         
+        # Get settings in parallel to reduce latency
+        import asyncio
+        cheater_role_id, cheater_channel_id = await asyncio.gather(
+            self.cog.db.get_setting(f"cheater_role_{guild_id}"),
+            self.cog.db.get_setting(f"cheater_channel_{guild_id}")
+        )
+        
         # Check if user is in cheater jail
-        cheater_role_id = await self.cog.db.get_setting(f"cheater_role_{guild_id}")
         if cheater_role_id:
             cheater_role = interaction.guild.get_role(int(cheater_role_id))
             if cheater_role and cheater_role not in interaction.user.roles:
@@ -136,7 +142,6 @@ class AppealGroup(app_commands.Group):
                 return
         
         # Check if in cheater jail channel
-        cheater_channel_id = await self.cog.db.get_setting(f"cheater_channel_{guild_id}")
         if cheater_channel_id and interaction.channel_id != int(cheater_channel_id):
             cheater_channel = interaction.guild.get_channel(int(cheater_channel_id))
             await interaction.response.send_message(
