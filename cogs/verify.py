@@ -434,6 +434,12 @@ class Verify(commands.Cog):
             ),
             view=view,
         )
+        
+        # Delete the screenshot message after processing
+        try:
+            await message.delete()
+        except Exception as e:
+            log_system(f"Failed to delete screenshot message: {e}", level="warning")
 
 
 async def setup(bot: commands.Bot):
