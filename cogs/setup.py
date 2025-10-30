@@ -397,6 +397,111 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
             )
 
 
+class JoinRoleSelectView(View):
+    """View for selecting join role from dropdown"""
+    def __init__(self, db_manager, guild_id: int, guild: discord.Guild):
+        super().__init__(timeout=300)
+        self.db = db_manager
+        self.guild_id = guild_id
+        self.guild = guild
+        
+        # Get all roles except @everyone and sort by position (highest first)
+        roles = [r for r in guild.roles if r.name != "@everyone"]
+        roles.sort(key=lambda r: r.position, reverse=True)
+        
+        # Discord has a limit of 25 options per select menu
+        # We'll take the top 25 roles by position
+        roles = roles[:25]
+        
+        # Create select menu options
+        options = [
+            discord.SelectOption(
+                label=role.name,
+                value=str(role.id),
+                description=f"Position: {role.position}",
+                emoji="🎭"
+            )
+            for role in roles
+        ]
+        
+        # Add the select menu
+        select = discord.ui.Select(
+            placeholder="Choose a role to auto-assign...",
+            options=options,
+            custom_id="join_role_select"
+        )
+        select.callback = self.role_selected
+        self.add_item(select)
+        
+        # Add cancel button
+        cancel_button = Button(
+            label="Cancel",
+            style=discord.ButtonStyle.secondary,
+            emoji="❌"
+        )
+        cancel_button.callback = self.cancel
+        self.add_item(cancel_button)
+    
+    async def role_selected(self, interaction: discord.Interaction):
+        """Handle role selection"""
+        role_id = interaction.data["values"][0]
+        role = self.guild.get_role(int(role_id))
+        
+        if not role:
+            embed = discord.Embed(
+                title="❌ Error",
+                description="Could not find the selected role. Please try again.",
+                color=COLORS["error"]
+            )
+            await interaction.response.edit_message(embed=embed, view=None)
+            
+            # Wait 3 seconds then return to general settings
+            import asyncio
+            await asyncio.sleep(3)
+            
+            general_view = GeneralSettingsView(self.db, self.guild_id)
+            embed = discord.Embed(
+                title="⚙️ General Settings",
+                description="Click the buttons below to configure each setting.",
+                color=COLORS["primary"]
+            )
+            await interaction.edit_original_response(embed=embed, view=general_view)
+            return
+        
+        # Save the role
+        await self.db.set_setting(f"join_role_{self.guild_id}", str(role.id))
+        
+        # Show confirmation
+        embed = discord.Embed(
+            title="✅ Join Role Set",
+            description=f"New members will automatically receive {role.mention}",
+            color=COLORS["success"],
+        )
+        await interaction.response.edit_message(embed=embed, view=None)
+        
+        # Wait 2 seconds then return to general settings
+        import asyncio
+        await asyncio.sleep(2)
+        
+        general_view = GeneralSettingsView(self.db, self.guild_id)
+        embed = discord.Embed(
+            title="⚙️ General Settings",
+            description="Click the buttons below to configure each setting.",
+            color=COLORS["primary"]
+        )
+        await interaction.edit_original_response(embed=embed, view=general_view)
+    
+    async def cancel(self, interaction: discord.Interaction):
+        """Cancel and return to general settings"""
+        general_view = GeneralSettingsView(self.db, self.guild_id)
+        embed = discord.Embed(
+            title="⚙️ General Settings",
+            description="Click the buttons below to configure each setting.",
+            color=COLORS["primary"]
+        )
+        await interaction.response.edit_message(embed=embed, view=general_view)
+
+
 class GeneralSettingsView(View):
     """View for general settings setup"""
     def __init__(self, db_manager, guild_id: int):
@@ -489,71 +594,17 @@ class GeneralSettingsView(View):
     @discord.ui.button(label="Set Join Role", style=discord.ButtonStyle.primary, emoji="👋")
     async def set_join_role(self, interaction: discord.Interaction, button: Button):
         """Set role to auto-assign to new members"""
-        modal = discord.ui.Modal(title="Set Join Role")
-        role_input = discord.ui.TextInput(
-            label="Role Name",
-            placeholder="Enter the exact role name (e.g., Sus)",
-            style=discord.TextStyle.short,
-            required=True
+        # Create a view with role selection dropdown
+        view = JoinRoleSelectView(self.db, self.guild_id, interaction.guild)
+        
+        embed = discord.Embed(
+            title="👋 Set Join Role",
+            description="Select a role from the dropdown below to auto-assign to new members.\n\n"
+                       "**Note:** The role must be below the bot's highest role in the role hierarchy.",
+            color=COLORS["primary"]
         )
-        modal.add_item(role_input)
         
-        async def modal_callback(interaction: discord.Interaction):
-            role_name = role_input.value.strip()
-            
-            # Find role by name (case-insensitive)
-            role = discord.utils.get(interaction.guild.roles, name=role_name)
-            
-            if not role:
-                # Try case-insensitive search
-                role = discord.utils.find(lambda r: r.name.lower() == role_name.lower(), interaction.guild.roles)
-            
-            if not role:
-                embed = discord.Embed(
-                    title="❌ Role Not Found",
-                    description=f"Could not find a role named '{role_name}'.\n\nPlease check the spelling and try again.",
-                    color=COLORS["error"],
-                )
-                await interaction.response.edit_message(embed=embed, view=None)
-                
-                # Wait 3 seconds then return to general settings
-                import asyncio
-                await asyncio.sleep(3)
-                
-                general_view = GeneralSettingsView(self.db, self.guild_id)
-                embed = discord.Embed(
-                    title="⚙️ General Settings",
-                    description="Click the buttons below to configure each setting.",
-                    color=COLORS["primary"]
-                )
-                await interaction.edit_original_response(embed=embed, view=general_view)
-                return
-            
-            # Save the role
-            await self.db.set_setting(f"join_role_{self.guild_id}", str(role.id))
-            
-            # Show confirmation
-            embed = discord.Embed(
-                title="✅ Join Role Set",
-                description=f"New members will automatically receive {role.mention}",
-                color=COLORS["success"],
-            )
-            await interaction.response.edit_message(embed=embed, view=None)
-            
-            # Wait 2 seconds then return to general settings
-            import asyncio
-            await asyncio.sleep(2)
-            
-            general_view = GeneralSettingsView(self.db, self.guild_id)
-            embed = discord.Embed(
-                title="⚙️ General Settings",
-                description="Click the buttons below to configure each setting.",
-                color=COLORS["primary"]
-            )
-            await interaction.edit_original_response(embed=embed, view=general_view)
-        
-        modal.on_submit = modal_callback
-        await interaction.response.send_modal(modal)
+        await interaction.response.edit_message(embed=embed, view=view)
 
     @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
     async def view_config(self, interaction: discord.Interaction, button: Button):
