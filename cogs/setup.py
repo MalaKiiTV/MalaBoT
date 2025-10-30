@@ -1207,6 +1207,9 @@ class WelcomeSetupView(View):
     @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="📢")
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set welcome channel"""
+        # Defer immediately to prevent timeout
+        await interaction.response.defer(ephemeral=True)
+        
         view = View()
         select = discord.ui.ChannelSelect(
             placeholder="Select welcome channel",
@@ -1233,7 +1236,7 @@ class WelcomeSetupView(View):
             description="Choose the channel where welcome messages will be sent.",
             color=COLORS["primary"]
         )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
     
     @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="💬")
     async def set_message(self, interaction: discord.Interaction, button: Button):
@@ -1290,8 +1293,8 @@ class WelcomeSetupView(View):
         """Set welcome image"""
         modal = Modal(title="Set Welcome Image")
         image_input = discord.ui.TextInput(
-            label="Image URL",
-            placeholder="https://example.com/image.png",
+            label="Image URL (Optional)",
+            placeholder="https://i.imgur.com/example.png",
             style=discord.TextStyle.short,
             required=False,
             max_length=500
@@ -1302,7 +1305,7 @@ class WelcomeSetupView(View):
             await self.db_manager.set_setting("welcome_image", image_input.value or "")
             embed = discord.Embed(
                 title="✅ Welcome Image Set",
-                description=f"Image URL: {image_input.value or 'None (removed)'}",
+                description=f"Image URL: {image_input.value or 'None (removed)'}\n\n**Tip:** Upload your image to Discord, right-click it, and select 'Copy Link' to get a URL!",
                 color=COLORS["success"]
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -1342,6 +1345,9 @@ class GoodbyeSetupView(View):
     @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="📢")
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set goodbye channel"""
+        # Defer immediately to prevent timeout
+        await interaction.response.defer(ephemeral=True)
+        
         view = View()
         select = discord.ui.ChannelSelect(
             placeholder="Select goodbye channel",
@@ -1368,7 +1374,7 @@ class GoodbyeSetupView(View):
             description="Choose the channel where goodbye messages will be sent.",
             color=COLORS["primary"]
         )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
     
     @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="💬")
     async def set_message(self, interaction: discord.Interaction, button: Button):
@@ -1425,8 +1431,8 @@ class GoodbyeSetupView(View):
         """Set goodbye image"""
         modal = Modal(title="Set Goodbye Image")
         image_input = discord.ui.TextInput(
-            label="Image URL",
-            placeholder="https://example.com/image.png",
+            label="Image URL (Optional)",
+            placeholder="https://i.imgur.com/example.png",
             style=discord.TextStyle.short,
             required=False,
             max_length=500
@@ -1437,7 +1443,7 @@ class GoodbyeSetupView(View):
             await self.db_manager.set_setting(f"goodbye_image_{self.guild_id}", image_input.value or "")
             embed = discord.Embed(
                 title="✅ Goodbye Image Set",
-                description=f"Image URL: {image_input.value or 'None (removed)'}",
+                description=f"Image URL: {image_input.value or 'None (removed)'}\n\n**Tip:** Upload your image to Discord, right-click it, and select 'Copy Link' to get a URL!",
                 color=COLORS["success"]
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -1476,6 +1482,9 @@ class BirthdaySetupView(View):
     @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="📢")
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set birthday announcement channel"""
+        # Defer immediately to prevent timeout
+        await interaction.response.defer(ephemeral=True)
+        
         view = View()
         select = discord.ui.ChannelSelect(
             placeholder="Select birthday announcement channel",
@@ -1502,7 +1511,7 @@ class BirthdaySetupView(View):
             description="Choose the channel where birthday announcements will be sent.",
             color=COLORS["primary"]
         )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
     
     @discord.ui.button(label="Set Time", style=ButtonStyle.primary, emoji="⏰")
     async def set_time(self, interaction: discord.Interaction, button: Button):
@@ -1579,6 +1588,9 @@ class XPSetupView(View):
     @discord.ui.button(label="Set Level-up Channel", style=ButtonStyle.primary, emoji="📢")
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set level-up announcement channel"""
+        # Defer immediately to prevent timeout
+        await interaction.response.defer(ephemeral=True)
+        
         view = View()
         select = discord.ui.ChannelSelect(
             placeholder="Select level-up announcement channel",
@@ -1605,7 +1617,7 @@ class XPSetupView(View):
             description="Choose the channel where level-up announcements will be sent.",
             color=COLORS["primary"]
         )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
     
     @discord.ui.button(label="Message XP", style=ButtonStyle.primary, emoji="💬")
     async def set_message_xp(self, interaction: discord.Interaction, button: Button):
@@ -1797,17 +1809,14 @@ class Setup(commands.Cog):
     @app_commands.command(name="setup", description="Configure bot settings (Server Owner only)")
     async def setup(self, interaction: discord.Interaction):
         """Main setup command with interactive menu"""
-        # Defer immediately to prevent timeout
-        await interaction.response.defer(ephemeral=True)
-        
-        # Check if user is server owner
+        # Check if user is server owner BEFORE any async operations
         if interaction.guild.owner_id != interaction.user.id:
             embed = discord.Embed(
                 title="🚫 Permission Denied",
                 description="This command is only available to the server owner.",
                 color=COLORS["error"],
             )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         
         embed = discord.Embed(
@@ -1828,7 +1837,7 @@ class Setup(commands.Cog):
         embed.set_footer(text="Select an option from the dropdown below")
 
         view = SetupView()
-        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
