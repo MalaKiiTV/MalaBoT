@@ -424,9 +424,16 @@ class Verify(commands.Cog):
             )
             return
 
-        # Send platform selection
+        # Delete the screenshot message BEFORE sending reply
+        try:
+            await message.delete()
+        except Exception as e:
+            log_system(f"Failed to delete screenshot message: {e}", level="warning")
+        
+        # Send platform selection to the channel (not as reply since original message is deleted)
         view = PlatformView(activision_id, screenshot.url, user_id)
-        await message.reply(
+        await message.channel.send(
+            content=message.author.mention,
             embed=create_embed(
                 "Select Your Platform",
                 f"**Activision ID:** `{activision_id}`\n\nPlease select your gaming platform from the dropdown below:",
@@ -434,12 +441,6 @@ class Verify(commands.Cog):
             ),
             view=view,
         )
-        
-        # Delete the screenshot message after processing
-        try:
-            await message.delete()
-        except Exception as e:
-            log_system(f"Failed to delete screenshot message: {e}", level="warning")
 
 
 async def setup(bot: commands.Bot):
