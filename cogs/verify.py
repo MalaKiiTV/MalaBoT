@@ -121,6 +121,9 @@ class PlatformSelect(Select):
             review_channel = bot.get_channel(int(review_channel_id)) if review_channel_id else None
 
             if review_channel:
+                # Debug logging
+                log_system(f"[VERIFY_DEBUG] Screenshot URL: {self.screenshot_url}")
+                
                 embed = discord.Embed(
                     title="📸 New Verification Submission",
                     description=(
@@ -131,7 +134,13 @@ class PlatformSelect(Select):
                     ),
                     color=COLORS["info"],
                 )
-                embed.set_image(url=self.screenshot_url)
+                
+                # Set screenshot image if URL exists
+                if self.screenshot_url:
+                    embed.set_image(url=self.screenshot_url)
+                else:
+                    log_system(f"[VERIFY_WARNING] No screenshot URL for user {self.user_id}", level="warning")
+                
                 embed.set_footer(text=f"User ID: {self.user_id}")
                 await review_channel.send(embed=embed)
 
