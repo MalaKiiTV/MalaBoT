@@ -5,6 +5,7 @@ Subcommands: submit, review
 """
 
 import discord
+import typing
 from discord import app_commands
 from discord.ext import commands
 from discord.ui import Select, View, Modal, TextInput
@@ -179,7 +180,7 @@ class VerifyGroup(app_commands.Group):
     @app_commands.describe(
         user="The user to review",
         decision="verified, cheater, or unverified",
-        notes="Optional notes about the decision"
+        notes="Optional notes about the decision (reason for decision)"
     )
     @app_commands.choices(decision=[
         app_commands.Choice(name="Verified", value="verified"),
@@ -191,7 +192,7 @@ class VerifyGroup(app_commands.Group):
         interaction: discord.Interaction,
         user: discord.User,
         decision: app_commands.Choice[str],
-        notes: str = None,
+        notes: typing.Optional[str] = None,
     ):
         try:
             # Check staff permission (uses general mod role)
@@ -287,7 +288,21 @@ class VerifyGroup(app_commands.Group):
                 else:
                     result_text = f"❌ Cheater jail system not configured. Please run `/setup` → Verification System to set up cheater role and channel."
 
+            # Send ephemeral confirmation to moderator
             await safe_send_message(interaction, content=result_text, ephemeral=True)
+            
+            # Send public message to the channel
+            public_embed = discord.Embed(
+                title="✅ Verification Reviewed" if decision_value == "verified" else "❌ Verification Decision",
+                description=(
+                    f"**User:** {user.mention}\n"
+                    f"**Decision:** {decision_value.upper()}\n"
+                    f"**Reviewed by:** {interaction.user.mention}\n"
+                    f"**Notes:** {notes or 'None provided'}"
+                ),
+                color=COLORS["success"] if decision_value == "verified" else COLORS["error"],
+            )
+            await interaction.channel.send(embed=public_embed)
 
             log_system(f"[VERIFY_REVIEW] {interaction.user} {decision_value.upper()} {user} ({notes or 'no notes'})")
             await self.cog.db.log_event(
