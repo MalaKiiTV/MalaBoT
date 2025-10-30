@@ -7,7 +7,7 @@ Command: /setup
 import discord
 from discord import app_commands, ButtonStyle
 from discord.ext import commands
-from discord.ui import Select, View, Modal, TextInput, Button, ChannelSelect
+from discord.ui import Select, View, Modal, TextInput, Button
 from typing import Optional
 
 from utils.helpers import create_embed, safe_send_message
@@ -22,7 +22,7 @@ from cogs.role_connection_ui import (
 # VERIFICATION SYSTEM COMPONENTS
 # ============================================================
 
-class ChannelSelect(discord.ui.ChannelSelect):
+class VerifyChannelSelect(discord.ui.ChannelSelect):
     """Channel selector for verification review channel"""
     def __init__(self, db_manager, guild_id: int):
         super().__init__(
@@ -214,7 +214,7 @@ class VerificationSetupView(View):
         self.guild = guild
         
         # Add channel and role selects
-        self.add_item(ChannelSelect(db_manager, guild.id))
+        self.add_item(VerifyChannelSelect(db_manager, guild.id))
         self.add_item(RoleSelect(db_manager, guild.id))
         self.add_item(CheaterRoleSelect(db_manager, guild.id))
         self.add_item(CheaterJailChannelSelect(db_manager, guild.id))
@@ -928,13 +928,14 @@ class SetupSelect(Select):
         embed = discord.Embed(
             title="👋 Welcome System Setup",
             description=(
-                "Configure your welcome system:\n\n"
+                "Configure your welcome and goodbye systems:\n\n"
                 "**Available Variables:**\n"
                 "`{member}` - Mentions the new member\n"
                 "`{member.name}` - Member's username\n"
                 "`{server}` - Server name\n"
                 "`{member.count}` - Total member count\n\n"
-                "Click the buttons below to configure each setting."
+                "Click the buttons below to configure welcome settings.\n"
+                "Use the **Goodbye System** button to configure goodbye messages."
             ),
             color=COLORS["welcome"],
         )
@@ -975,10 +976,11 @@ class SetupSelect(Select):
                 "`/xp rank [@user]` - View XP rank\n"
                 "`/xp leaderboard` - View server leaderboard\n"
                 "`/xp daily` - Claim daily XP bonus\n\n"
-                "**Default Settings:**\n"
-                "• Users gain 5-15 XP per message\n"
-                "• 60 second cooldown between XP gains\n"
-                "• Daily check-in: 50 XP + streak bonus\n\n"
+                "**XP Sources:**\n"
+                "• Message XP - XP gained per message sent\n"
+                "• Reaction XP - XP gained per reaction received\n"
+                "• Voice XP - XP gained per minute in voice chat\n"
+                "• XP Cooldown - Time between XP gains\n\n"
                 "Click the buttons below to configure XP settings."
             ),
             color=COLORS["xp"],
@@ -1177,7 +1179,7 @@ class WelcomeSetupView(View):
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set welcome channel"""
         view = View()
-        select = ChannelSelect(
+        select = discord.ui.ChannelSelect(
             placeholder="Select welcome channel",
             channel_types=[discord.ChannelType.text],
             min_values=1,
@@ -1278,6 +1280,46 @@ class WelcomeSetupView(View):
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Goodbye System", style=ButtonStyle.secondary, emoji="👋", row=1)
+    async def goto_goodbye(self, interaction: discord.Interaction, button: Button):
+        """Navigate to goodbye system setup"""
+        embed = discord.Embed(
+            title="👋 Goodbye System Setup",
+            description=(
+                "Configure your goodbye system:\n\n"
+                "**Available Variables:**\n"
+                "`{member}` - Mentions the member who left\n"
+                "`{member.name}` - Member's username\n"
+                "`{server}` - Server name\n"
+                "`{member.count}` - Total member count\n\n"
+                "Click the buttons below to configure each setting."
+            ),
+            color=COLORS["error"],
+        )
+        
+        view = GoodbyeSetupView(self.guild_id, self.db_manager)
+        await interaction.response.edit_message(embed=embed, view=view)
+    
+    @discord.ui.button(label="Goodbye System", style=ButtonStyle.secondary, emoji="👋", row=1)
+    async def goto_goodbye(self, interaction: discord.Interaction, button: Button):
+        """Navigate to goodbye system setup"""
+        embed = discord.Embed(
+            title="👋 Goodbye System Setup",
+            description=(
+                "Configure your goodbye system:\n\n"
+                "**Available Variables:**\n"
+                "`{member.mention}` - Mentions the member who left\n"
+                "`{member.name}` - Member's username\n"
+                "`{server.name}` - Server name\n"
+                "`{member.count}` - Total member count\n\n"
+                "Click the buttons below to configure each setting."
+            ),
+            color=COLORS["error"],
+        )
+        
+        view = GoodbyeSetupView(self.guild_id, self.db_manager)
+        await interaction.response.edit_message(embed=embed, view=view)
 
 
 
@@ -1292,7 +1334,7 @@ class GoodbyeSetupView(View):
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set goodbye channel"""
         view = View()
-        select = ChannelSelect(
+        select = discord.ui.ChannelSelect(
             placeholder="Select goodbye channel",
             channel_types=[discord.ChannelType.text],
             min_values=1,
@@ -1393,121 +1435,27 @@ class GoodbyeSetupView(View):
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
-
-
-
-
-class GoodbyeSetupView(View):
-    def __init__(self, guild_id: int, db_manager):
-        super().__init__(timeout=300)
-        self.guild_id = guild_id
-        self.db_manager = db_manager
-        
-    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="📢")
-    async def set_channel(self, interaction: discord.Interaction, button: Button):
-        """Set goodbye channel"""
-        view = View()
-        select = ChannelSelect(
-            placeholder="Select goodbye channel",
-            channel_types=[discord.ChannelType.text],
-            min_values=1,
-            max_values=1
-        )
-        
-        async def channel_callback(interaction: discord.Interaction):
-            channel = select.values[0]
-            await self.db_manager.set_setting(f"goodbye_channel_{self.guild_id}", str(channel.id))
-            embed = discord.Embed(
-                title="✅ Goodbye Channel Set",
-                description=f"Goodbye messages will be sent to {channel.mention}",
-                color=COLORS["success"]
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        
-        select.callback = channel_callback
-        view.add_item(select)
-        
+    
+    @discord.ui.button(label="Back to Welcome", style=ButtonStyle.secondary, emoji="◀️", row=1)
+    async def back_to_welcome(self, interaction: discord.Interaction, button: Button):
+        """Navigate back to welcome system setup"""
         embed = discord.Embed(
-            title="📢 Select Goodbye Channel",
-            description="Choose the channel where goodbye messages will be sent.",
-            color=COLORS["primary"]
+            title="👋 Welcome System Setup",
+            description=(
+                "Configure your welcome and goodbye systems:\n\n"
+                "**Available Variables:**\n"
+                "`{member}` - Mentions the new member\n"
+                "`{member.name}` - Member's username\n"
+                "`{server}` - Server name\n"
+                "`{member.count}` - Total member count\n\n"
+                "Click the buttons below to configure welcome settings.\n"
+                "Use the **Goodbye System** button to configure goodbye messages."
+            ),
+            color=COLORS["welcome"],
         )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-    
-    @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="💬")
-    async def set_message(self, interaction: discord.Interaction, button: Button):
-        """Set goodbye message"""
-        modal = Modal(title="Set Goodbye Message")
-        message_input = discord.ui.TextInput(
-            label="Goodbye Message",
-            default="{member.name} has left {server}. We'll miss you!",
-            style=discord.TextStyle.paragraph,
-            required=True,
-            max_length=1000
-        )
-        modal.add_item(message_input)
         
-        async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting(f"goodbye_message_{self.guild_id}", message_input.value)
-            embed = discord.Embed(
-                title="✅ Goodbye Message Set",
-                description=f"Message: {message_input.value}",
-                color=COLORS["success"]
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        
-        modal.on_submit = modal_callback
-        await interaction.response.send_modal(modal)
-    
-    @discord.ui.button(label="Set Title", style=ButtonStyle.primary, emoji="📝")
-    async def set_title(self, interaction: discord.Interaction, button: Button):
-        """Set goodbye title"""
-        modal = Modal(title="Set Goodbye Title")
-        title_input = discord.ui.TextInput(
-            label="Goodbye Title",
-            placeholder="Goodbye!",
-            style=discord.TextStyle.short,
-            required=True,
-            max_length=100
-        )
-        modal.add_item(title_input)
-        
-        async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting(f"goodbye_title_{self.guild_id}", title_input.value)
-            embed = discord.Embed(
-                title="✅ Goodbye Title Set",
-                description=f"Title: {title_input.value}",
-                color=COLORS["success"]
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        
-        modal.on_submit = modal_callback
-        await interaction.response.send_modal(modal)
-    
-    @discord.ui.button(label="Set Image", style=ButtonStyle.primary, emoji="🖼️")
-    async def set_image(self, interaction: discord.Interaction, button: Button):
-        """Set goodbye image"""
-        modal = Modal(title="Set Goodbye Image")
-        image_input = discord.ui.TextInput(
-            label="Image URL",
-            placeholder="https://example.com/image.png",
-            style=discord.TextStyle.short,
-            required=False,
-            max_length=500
-        )
-        modal.add_item(image_input)
-        
-        async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting(f"goodbye_image_{self.guild_id}", image_input.value or "")
-            embed = discord.Embed(
-                title="✅ Goodbye Image Set",
-                description=f"Image URL: {image_input.value or 'None (removed)'}",
-                color=COLORS["success"]
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        
-        modal.on_submit = modal_callback
-        await interaction.response.send_modal(modal)
+        view = WelcomeSetupView(self.guild_id, self.db_manager)
+        await interaction.response.edit_message(embed=embed, view=view)
 
 
 class BirthdaySetupView(View):
@@ -1520,7 +1468,7 @@ class BirthdaySetupView(View):
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set birthday announcement channel"""
         view = View()
-        select = ChannelSelect(
+        select = discord.ui.ChannelSelect(
             placeholder="Select birthday announcement channel",
             channel_types=[discord.ChannelType.text],
             min_values=1,
@@ -1623,7 +1571,7 @@ class XPSetupView(View):
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set level-up announcement channel"""
         view = View()
-        select = ChannelSelect(
+        select = discord.ui.ChannelSelect(
             placeholder="Select level-up announcement channel",
             channel_types=[discord.ChannelType.text],
             min_values=1,
@@ -1650,48 +1598,155 @@ class XPSetupView(View):
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
-    @discord.ui.button(label="Set XP Rates", style=ButtonStyle.primary, emoji="⚡")
-    async def set_rates(self, interaction: discord.Interaction, button: Button):
-        """Set XP gain rates"""
-        modal = Modal(title="Set XP Gain Rates")
-        min_xp = discord.ui.TextInput(
-            label="Minimum XP per message",
-            placeholder="5",
+    @discord.ui.button(label="Message XP", style=ButtonStyle.primary, emoji="💬")
+    async def set_message_xp(self, interaction: discord.Interaction, button: Button):
+        """Set XP per message"""
+        modal = Modal(title="Set Message XP")
+        xp_input = discord.ui.TextInput(
+            label="XP per message",
+            placeholder="10",
             style=discord.TextStyle.short,
             required=True,
             max_length=3
         )
-        max_xp = discord.ui.TextInput(
-            label="Maximum XP per message",
-            placeholder="15",
-            style=discord.TextStyle.short,
-            required=True,
-            max_length=3
-        )
-        modal.add_item(min_xp)
-        modal.add_item(max_xp)
+        modal.add_item(xp_input)
         
         async def modal_callback(interaction: discord.Interaction):
             try:
-                min_val = int(min_xp.value)
-                max_val = int(max_xp.value)
+                xp_val = int(xp_input.value)
                 
-                if min_val < 1 or max_val < min_val:
+                if xp_val < 1:
                     raise ValueError
                 
-                await self.db_manager.set_setting(f"xp_min_{self.guild_id}", str(min_val))
-                await self.db_manager.set_setting(f"xp_max_{self.guild_id}", str(max_val))
+                await self.db_manager.set_setting(f"xp_per_message_{self.guild_id}", str(xp_val))
                 
                 embed = discord.Embed(
-                    title="✅ XP Rates Set",
-                    description=f"Users will gain {min_val}-{max_val} XP per message",
+                    title="✅ Message XP Set",
+                    description=f"Users will gain {xp_val} XP per message",
                     color=COLORS["success"]
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
             except:
                 embed = discord.Embed(
-                    title="❌ Invalid Values",
-                    description="Please enter valid numbers. Min must be at least 1, and Max must be greater than Min.",
+                    title="❌ Invalid Value",
+                    description="Please enter a valid number (minimum 1).",
+                    color=COLORS["error"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Reaction XP", style=ButtonStyle.primary, emoji="👍")
+    async def set_reaction_xp(self, interaction: discord.Interaction, button: Button):
+        """Set XP per reaction received"""
+        modal = Modal(title="Set Reaction XP")
+        xp_input = discord.ui.TextInput(
+            label="XP per reaction received",
+            placeholder="2",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=3
+        )
+        modal.add_item(xp_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            try:
+                xp_val = int(xp_input.value)
+                
+                if xp_val < 0:
+                    raise ValueError
+                
+                await self.db_manager.set_setting(f"xp_per_reaction_{self.guild_id}", str(xp_val))
+                
+                embed = discord.Embed(
+                    title="✅ Reaction XP Set",
+                    description=f"Users will gain {xp_val} XP per reaction received (0 to disable)",
+                    color=COLORS["success"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            except:
+                embed = discord.Embed(
+                    title="❌ Invalid Value",
+                    description="Please enter a valid number (0 or higher).",
+                    color=COLORS["error"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Voice XP", style=ButtonStyle.primary, emoji="🎤")
+    async def set_voice_xp(self, interaction: discord.Interaction, button: Button):
+        """Set XP per minute in voice chat"""
+        modal = Modal(title="Set Voice XP")
+        xp_input = discord.ui.TextInput(
+            label="XP per minute in voice",
+            placeholder="5",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=3
+        )
+        modal.add_item(xp_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            try:
+                xp_val = int(xp_input.value)
+                
+                if xp_val < 0:
+                    raise ValueError
+                
+                await self.db_manager.set_setting(f"xp_per_voice_minute_{self.guild_id}", str(xp_val))
+                
+                embed = discord.Embed(
+                    title="✅ Voice XP Set",
+                    description=f"Users will gain {xp_val} XP per minute in voice (0 to disable)",
+                    color=COLORS["success"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            except:
+                embed = discord.Embed(
+                    title="❌ Invalid Value",
+                    description="Please enter a valid number (0 or higher).",
+                    color=COLORS["error"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="XP Cooldown", style=ButtonStyle.primary, emoji="⏱️", row=1)
+    async def set_xp_cooldown(self, interaction: discord.Interaction, button: Button):
+        """Set cooldown between XP gains"""
+        modal = Modal(title="Set XP Cooldown")
+        cooldown_input = discord.ui.TextInput(
+            label="Cooldown in seconds",
+            placeholder="60",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=4
+        )
+        modal.add_item(cooldown_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            try:
+                cooldown_val = int(cooldown_input.value)
+                
+                if cooldown_val < 0:
+                    raise ValueError
+                
+                await self.db_manager.set_setting(f"xp_cooldown_{self.guild_id}", str(cooldown_val))
+                
+                embed = discord.Embed(
+                    title="✅ XP Cooldown Set",
+                    description=f"Users must wait {cooldown_val} seconds between XP gains",
+                    color=COLORS["success"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            except:
+                embed = discord.Embed(
+                    title="❌ Invalid Value",
+                    description="Please enter a valid number (0 or higher).",
                     color=COLORS["error"]
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
