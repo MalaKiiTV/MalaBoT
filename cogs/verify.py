@@ -47,10 +47,11 @@ class ActivisionIDModal(Modal, title="Submit Verification"):
             ephemeral=True,
         )
 
-        # Store the activision_id temporarily
+        # Store the activision_id temporarily with channel context
         self.bot.pending_verifications[interaction.user.id] = {
             "activision_id": self.activision_id.value,
             "timestamp": datetime.now(),
+            "channel_id": interaction.channel_id,
         }
 
 
@@ -418,11 +419,16 @@ class Verify(commands.Cog):
         if user_id not in self.bot.pending_verifications:
             return
 
+        # Get pending verification data
+        pending = self.bot.pending_verifications[user_id]
+        
+        # CRITICAL: Only process if message is in the same channel where verification was started
+        if message.channel.id != pending.get("channel_id"):
+            return
+
         if not message.attachments:
             return
 
-        # Get pending verification data
-        pending = self.bot.pending_verifications[user_id]
         activision_id = pending["activision_id"]
         screenshot = message.attachments[0]
 
