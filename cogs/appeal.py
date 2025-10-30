@@ -33,10 +33,10 @@ class AppealModal(Modal, title="Submit Appeal"):
         try:
             user_id = interaction.user.id
             
-            # Check if user already submitted an appeal
+            # Check if user already submitted a PENDING appeal for this jail session
             conn = await self.db.get_connection()
             cursor = await conn.execute(
-                "SELECT COUNT(*) FROM appeals WHERE user_id = ? AND guild_id = ?",
+                "SELECT COUNT(*) FROM appeals WHERE user_id = ? AND guild_id = ? AND status = 'pending'",
                 (user_id, self.guild_id)
             )
             count = (await cursor.fetchone())[0]
@@ -45,7 +45,7 @@ class AppealModal(Modal, title="Submit Appeal"):
                 await interaction.response.send_message(
                     embed=create_embed(
                         "Appeal Already Submitted",
-                        "❌ You have already submitted an appeal. You can only appeal once.\n\n"
+                        "❌ You have already submitted an appeal. You can only appeal once per jail session.\n\n"
                         "Please wait for staff to review your appeal.",
                         COLORS["error"],
                     ),
@@ -290,6 +290,23 @@ class Appeal(commands.Cog):
     async def cog_unload(self):
         """Remove the command group when cog is unloaded"""
         self.bot.tree.remove_command(self.appeal_group.name)
+    
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """Cancel pending appeals when a user leaves the server"""
+        try:
+            conn = await self.db.get_connection()
+            
+            # Update any pending appeals to 'cancelled' status
+            await conn.execute(
+                "UPDATE appeals SET status = 'cancelled', reviewed_at = CURRENT_TIMESTAMP WHERE user_id = ? AND guild_id = ? AND status = 'pending'",
+                (member.id, member.guild.id)
+            )
+            await conn.commit()
+            
+            log_system(f"[APPEAL] Cancelled pending appeals for {member.name} (left server)")
+        except Exception as e:
+            log_system(f"Error cancelling appeals on member leave: {e}", level="error")
 
 
 async def setup(bot: commands.Bot):

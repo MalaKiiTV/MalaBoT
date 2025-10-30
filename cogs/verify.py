@@ -203,6 +203,9 @@ class VerifyGroup(app_commands.Group):
             await interaction.response.defer(ephemeral=True, thinking=True)
             guild_id = interaction.guild.id
             decision_value = decision.value
+            
+            # Debug logging
+            log_system(f"[VERIFY_REVIEW_DEBUG] Notes received: '{notes}' (type: {type(notes)})")
 
             if decision_value not in ["verified", "cheater", "unverified"]:
                 await safe_send_message(interaction, content="Use `verified`, `cheater`, or `unverified`.", ephemeral=True)

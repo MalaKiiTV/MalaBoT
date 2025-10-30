@@ -168,8 +168,7 @@ class DatabaseManager:
                 submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 reviewed_by INTEGER DEFAULT NULL,
                 reviewed_at TIMESTAMP DEFAULT NULL,
-                review_notes TEXT DEFAULT NULL,
-                UNIQUE(user_id, guild_id)
+                review_notes TEXT DEFAULT NULL
             )
         """)
         
