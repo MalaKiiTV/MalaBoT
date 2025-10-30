@@ -1014,12 +1014,18 @@ class SetupSelect(Select):
         mod_role_id = await db.get_setting(f"mod_role_{guild_id}")
         welcome_channel_id = await db.get_setting("welcome_channel_id")
         welcome_message = await db.get_setting("welcome_message")
+        welcome_title = await db.get_setting("welcome_title")
+        goodbye_channel_id = await db.get_setting(f"goodbye_channel_{guild_id}")
+        goodbye_message = await db.get_setting(f"goodbye_message_{guild_id}")
+        goodbye_title = await db.get_setting(f"goodbye_title_{guild_id}")
         birthday_channel_id = await db.get_setting(f"birthday_channel_{guild_id}")
         birthday_time = await db.get_setting(f"birthday_time_{guild_id}")
         birthday_message = await db.get_setting(f"birthday_message_{guild_id}")
         xp_channel_id = await db.get_setting(f"xp_channel_{guild_id}")
-        xp_min = await db.get_setting(f"xp_min_{guild_id}", "5")
-        xp_max = await db.get_setting(f"xp_max_{guild_id}", "15")
+        xp_per_message = await db.get_setting(f"xp_per_message_{guild_id}")
+        xp_per_reaction = await db.get_setting(f"xp_per_reaction_{guild_id}")
+        xp_per_voice = await db.get_setting(f"xp_per_voice_minute_{guild_id}")
+        xp_cooldown = await db.get_setting(f"xp_cooldown_{guild_id}")
         timezone = await db.get_setting(f"timezone_{guild_id}", "UTC-6")
         online_message = await db.get_setting(f"online_message_{guild_id}", "Not set")
 
@@ -1047,11 +1053,25 @@ class SetupSelect(Select):
         welcome_text = ""
         if welcome_channel_id:
             welcome_text += f"Channel: <#{welcome_channel_id}>\n"
+            if welcome_title:
+                welcome_text += f"Title: {welcome_title}\n"
             if welcome_message:
                 welcome_text += f"Message: {welcome_message[:50]}{'...' if len(welcome_message) > 50 else ''}\n"
         else:
             welcome_text = "Not configured"
         embed.add_field(name="👋 Welcome", value=welcome_text, inline=False)
+        
+        # Goodbye settings
+        goodbye_text = ""
+        if goodbye_channel_id:
+            goodbye_text += f"Channel: <#{goodbye_channel_id}>\n"
+            if goodbye_title:
+                goodbye_text += f"Title: {goodbye_title}\n"
+            if goodbye_message:
+                goodbye_text += f"Message: {goodbye_message[:50]}{'...' if len(goodbye_message) > 50 else ''}\n"
+        else:
+            goodbye_text = "Not configured"
+        embed.add_field(name="👋 Goodbye", value=goodbye_text, inline=False)
 
         # Birthday settings
         birthday_text = ""
@@ -1069,7 +1089,16 @@ class SetupSelect(Select):
         xp_text = ""
         if xp_channel_id:
             xp_text += f"Level-up Channel: <#{xp_channel_id}>\n"
-        xp_text += f"XP per Message: {xp_min}-{xp_max}\n"
+        if xp_per_message:
+            xp_text += f"Message XP: {xp_per_message}\n"
+        if xp_per_reaction:
+            xp_text += f"Reaction XP: {xp_per_reaction}\n"
+        if xp_per_voice:
+            xp_text += f"Voice XP: {xp_per_voice}/min\n"
+        if xp_cooldown:
+            xp_text += f"Cooldown: {xp_cooldown}s\n"
+        if not xp_text:
+            xp_text = "Not configured"
         embed.add_field(name="🏆 XP System", value=xp_text, inline=False)
 
         # General settings

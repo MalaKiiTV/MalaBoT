@@ -35,18 +35,31 @@ class XP(commands.Cog):
             if message.author.bot or not message.guild:
                 return
             
-            # Check cooldown
+            guild_id = message.guild.id
             user_id = message.author.id
             current_time = datetime.datetime.now().timestamp()
             
+            # Get guild-specific XP settings
+            xp_per_message = await self.bot.db_manager.get_setting(f"xp_per_message_{guild_id}")
+            xp_cooldown = await self.bot.db_manager.get_setting(f"xp_cooldown_{guild_id}")
+            
+            # Use defaults if not configured
+            if not xp_per_message:
+                xp_per_message = str(XP_PER_MESSAGE_MIN)  # Default to 10 or use old min
+            if not xp_cooldown:
+                xp_cooldown = str(XP_COOLDOWN_SECONDS)  # Default to 60
+            
+            xp_per_message = int(xp_per_message)
+            xp_cooldown = int(xp_cooldown)
+            
+            # Check cooldown
             if user_id in self.last_xp_time:
                 time_diff = current_time - self.last_xp_time[user_id]
-                if time_diff < XP_COOLDOWN_SECONDS:
+                if time_diff < xp_cooldown:
                     return
             
             # Award XP
-            xp_gained = random.randint(XP_PER_MESSAGE_MIN, XP_PER_MESSAGE_MAX)
-            await self.bot.db_manager.update_user_xp(message.author.id, xp_gained)
+            await self.bot.db_manager.update_user_xp(message.author.id, xp_per_message)
             
             # Update last XP time
             self.last_xp_time[user_id] = current_time
@@ -64,12 +77,36 @@ class XP(commands.Cog):
     async def _handle_level_up(self, member: discord.Member, guild: discord.Guild, new_level: int, old_level: int):
         """Handle user level up."""
         try:
-            # Send level up message
-            channel = member.guild.system_channel or member.guild.text_channels[0]
+            guild_id = guild.id
+            
+            # Get configured level-up channel
+            xp_channel_id = await self.bot.db_manager.get_setting(f"xp_channel_{guild_id}")
+            
+            # Get configured level-up message
+            levelup_message = await self.bot.db_manager.get_setting(f"xp_levelup_message_{guild_id}")
+            
+            # Use default channel if not configured
+            if xp_channel_id:
+                channel = guild.get_channel(int(xp_channel_id))
+            else:
+                channel = guild.system_channel or guild.text_channels[0]
+            
+            if not channel:
+                self.logger.warning(f"No channel found for level-up message in {guild.name}")
+                return
+            
+            # Use custom message if configured, otherwise use default
+            if levelup_message:
+                # Replace variables in custom message
+                message_text = levelup_message.replace("{member}", member.mention)
+                message_text = message_text.replace("{level}", str(new_level))
+                description = message_text
+            else:
+                description = f"{member.mention} has reached level **{new_level}**!"
             
             embed = create_embed(
                 title=f"🎉 Level Up!",
-                description=f"{member.mention} has reached level **{new_level}**!",
+                description=description,
                 color=COLORS["success"]
             )
             
@@ -79,7 +116,7 @@ class XP(commands.Cog):
             await self.bot.db_manager.update_user_xp(member.id, 0)  # Update level in database
             
             # Assign level role if configured
-            await xp_helper.assign_level_role(member, new_level)
+            await self._assign_level_role(member, new_level)
             
             self.logger.info(f"{member.name} leveled up to {new_level} in {guild.name}")
             
@@ -514,6 +551,217 @@ class XP(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
         except:
             pass
+    
+    async def _assign_level_role(self, member: discord.Member, level: int):
+        """Assign role based on level if configured."""
+        try:
+            guild_id = member.guild.id
+            
+            # Get level roles from database
+            level_roles_data = await self.bot.db_manager.get_setting(f"xp_level_roles_{guild_id}")
+            
+            if not level_roles_data:
+                return
+            
+            # Parse level roles (format: "level:role_id,level:role_id")
+            level_roles = {}
+            for pair in level_roles_data.split(","):
+                if ":" in pair:
+                    lvl, role_id = pair.split(":")
+                    level_roles[int(lvl)] = int(role_id)
+            
+            # Check if this level has a role
+            if level in level_roles:
+                role = member.guild.get_role(level_roles[level])
+                if role and role not in member.roles:
+                    await member.add_roles(role, reason=f"Reached level {level}")
+                    self.logger.info(f"Assigned {role.name} to {member.name} for reaching level {level}")
+        
+        except Exception as e:
+            self.logger.error(f"Error assigning level role: {e}")
+    
+    @app_commands.command(name="xplevelrole", description="Manage level role rewards (Admin only)")
+    @app_commands.describe(
+        action="Action to perform",
+        level="Level to assign role at",
+        role="Role to assign"
+    )
+    @app_commands.choices(action=[
+        app_commands.Choice(name="Add", value="add"),
+        app_commands.Choice(name="Remove", value="remove"),
+        app_commands.Choice(name="List", value="list")
+    ])
+    async def xplevelrole(
+        self, 
+        interaction: discord.Interaction, 
+        action: str,
+        level: Optional[int] = None,
+        role: Optional[discord.Role] = None
+    ):
+        """Manage level role rewards."""
+        try:
+            # Check permissions
+            if not interaction.user.guild_permissions.administrator:
+                embed = embed_helper.error_embed(
+                    title="Permission Denied",
+                    description="You need administrator permissions to manage level roles."
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+            
+            await interaction.response.defer(ephemeral=True)
+            
+            guild_id = interaction.guild.id
+            
+            if action == "list":
+                await self._list_level_roles(interaction, guild_id)
+            elif action == "add":
+                if level is None or role is None:
+                    embed = embed_helper.error_embed(
+                        title="Missing Parameters",
+                        description="Please provide both level and role for adding."
+                    )
+                    await interaction.followup.send(embed=embed, ephemeral=True)
+                    return
+                await self._add_level_role(interaction, guild_id, level, role)
+            elif action == "remove":
+                if level is None:
+                    embed = embed_helper.error_embed(
+                        title="Missing Parameter",
+                        description="Please provide the level to remove."
+                    )
+                    await interaction.followup.send(embed=embed, ephemeral=True)
+                    return
+                await self._remove_level_role(interaction, guild_id, level)
+        
+        except Exception as e:
+            self.logger.error(f"Error in xplevelrole command: {e}")
+            await self._error_response(interaction, "Failed to manage level roles")
+    
+    async def _list_level_roles(self, interaction: discord.Interaction, guild_id: int):
+        """List all configured level roles."""
+        try:
+            level_roles_data = await self.bot.db_manager.get_setting(f"xp_level_roles_{guild_id}")
+            
+            if not level_roles_data:
+                embed = embed_helper.info_embed(
+                    title="Level Roles",
+                    description="No level roles configured yet.\n\nUse `/xplevelrole add` to add level rewards."
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+            
+            # Parse and display level roles
+            level_roles = {}
+            for pair in level_roles_data.split(","):
+                if ":" in pair:
+                    lvl, role_id = pair.split(":")
+                    level_roles[int(lvl)] = int(role_id)
+            
+            # Sort by level
+            sorted_roles = sorted(level_roles.items())
+            
+            description = "**Configured Level Roles:**\n\n"
+            for lvl, role_id in sorted_roles:
+                role = interaction.guild.get_role(role_id)
+                if role:
+                    description += f"Level **{lvl}**: {role.mention}\n"
+                else:
+                    description += f"Level **{lvl}**: *Role not found (ID: {role_id})*\n"
+            
+            embed = embed_helper.info_embed(
+                title="🏆 Level Roles",
+                description=description
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        
+        except Exception as e:
+            self.logger.error(f"Error listing level roles: {e}")
+            await self._error_response(interaction, "Failed to list level roles")
+    
+    async def _add_level_role(self, interaction: discord.Interaction, guild_id: int, level: int, role: discord.Role):
+        """Add a level role reward."""
+        try:
+            level_roles_data = await self.bot.db_manager.get_setting(f"xp_level_roles_{guild_id}") or ""
+            
+            # Parse existing level roles
+            level_roles = {}
+            if level_roles_data:
+                for pair in level_roles_data.split(","):
+                    if ":" in pair:
+                        lvl, role_id = pair.split(":")
+                        level_roles[int(lvl)] = int(role_id)
+            
+            # Add or update the level role
+            level_roles[level] = role.id
+            
+            # Convert back to string format
+            new_data = ",".join([f"{lvl}:{role_id}" for lvl, role_id in level_roles.items()])
+            
+            # Save to database
+            await self.bot.db_manager.set_setting(f"xp_level_roles_{guild_id}", new_data)
+            
+            embed = embed_helper.success_embed(
+                title="✅ Level Role Added",
+                description=f"Users will now receive {role.mention} when they reach level **{level}**."
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            
+            self.logger.info(f"Added level role: Level {level} -> {role.name} in {interaction.guild.name}")
+        
+        except Exception as e:
+            self.logger.error(f"Error adding level role: {e}")
+            await self._error_response(interaction, "Failed to add level role")
+    
+    async def _remove_level_role(self, interaction: discord.Interaction, guild_id: int, level: int):
+        """Remove a level role reward."""
+        try:
+            level_roles_data = await self.bot.db_manager.get_setting(f"xp_level_roles_{guild_id}")
+            
+            if not level_roles_data:
+                embed = embed_helper.error_embed(
+                    title="No Level Roles",
+                    description="No level roles configured yet."
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+            
+            # Parse existing level roles
+            level_roles = {}
+            for pair in level_roles_data.split(","):
+                if ":" in pair:
+                    lvl, role_id = pair.split(":")
+                    level_roles[int(lvl)] = int(role_id)
+            
+            # Check if level exists
+            if level not in level_roles:
+                embed = embed_helper.error_embed(
+                    title="Level Not Found",
+                    description=f"No role configured for level **{level}**."
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+            
+            # Remove the level role
+            del level_roles[level]
+            
+            # Convert back to string format
+            new_data = ",".join([f"{lvl}:{role_id}" for lvl, role_id in level_roles.items()])
+            
+            # Save to database
+            await self.bot.db_manager.set_setting(f"xp_level_roles_{guild_id}", new_data)
+            
+            embed = embed_helper.success_embed(
+                title="✅ Level Role Removed",
+                description=f"Removed role reward for level **{level}**."
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            
+            self.logger.info(f"Removed level role for level {level} in {interaction.guild.name}")
+        
+        except Exception as e:
+            self.logger.error(f"Error removing level role: {e}")
+            await self._error_response(interaction, "Failed to remove level role")
 
 async def setup(bot: commands.Bot):
     """Setup function for the cog."""
