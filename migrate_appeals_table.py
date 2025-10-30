@@ -10,7 +10,7 @@ import os
 
 async def migrate_appeals_table():
     """Remove UNIQUE constraint from appeals table"""
-    db_path = "data/malabot.db"
+    db_path = "data/bot.db"
     
     if not os.path.exists(db_path):
         print(f"Database not found at {db_path}")
