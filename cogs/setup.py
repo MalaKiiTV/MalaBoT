@@ -1289,26 +1289,6 @@ class WelcomeSetupView(View):
             description=(
                 "Configure your goodbye system:\n\n"
                 "**Available Variables:**\n"
-                "`{member}` - Mentions the member who left\n"
-                "`{member.name}` - Member's username\n"
-                "`{server}` - Server name\n"
-                "`{member.count}` - Total member count\n\n"
-                "Click the buttons below to configure each setting."
-            ),
-            color=COLORS["error"],
-        )
-        
-        view = GoodbyeSetupView(self.guild_id, self.db_manager)
-        await interaction.response.edit_message(embed=embed, view=view)
-    
-    @discord.ui.button(label="Goodbye System", style=ButtonStyle.secondary, emoji="👋", row=1)
-    async def goto_goodbye(self, interaction: discord.Interaction, button: Button):
-        """Navigate to goodbye system setup"""
-        embed = discord.Embed(
-            title="👋 Goodbye System Setup",
-            description=(
-                "Configure your goodbye system:\n\n"
-                "**Available Variables:**\n"
                 "`{member.mention}` - Mentions the member who left\n"
                 "`{member.name}` - Member's username\n"
                 "`{server.name}` - Server name\n"
@@ -1788,6 +1768,9 @@ class Setup(commands.Cog):
     @app_commands.command(name="setup", description="Configure bot settings (Server Owner only)")
     async def setup(self, interaction: discord.Interaction):
         """Main setup command with interactive menu"""
+        # Defer immediately to prevent timeout
+        await interaction.response.defer(ephemeral=True)
+        
         # Check if user is server owner
         if interaction.guild.owner_id != interaction.user.id:
             embed = discord.Embed(
@@ -1795,8 +1778,9 @@ class Setup(commands.Cog):
                 description="This command is only available to the server owner.",
                 color=COLORS["error"],
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
             return
+        
         embed = discord.Embed(
             title="🤖 MalaBoT Setup",
             description=(
@@ -1815,7 +1799,7 @@ class Setup(commands.Cog):
         embed.set_footer(text="Select an option from the dropdown below")
 
         view = SetupView()
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
