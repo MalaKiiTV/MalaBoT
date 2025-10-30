@@ -438,6 +438,9 @@ class Verify(commands.Cog):
             )
             return
 
+        # Download screenshot bytes for later re-upload
+        screenshot_bytes = await screenshot.read()
+
         # Delete the screenshot message BEFORE sending reply
         try:
             await message.delete()
