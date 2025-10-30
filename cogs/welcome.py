@@ -12,7 +12,7 @@ from utils.logger import get_logger
 from utils.helpers import (
     embed_helper, safe_send_message, create_embed
 )
-from config.constants import COLORS, DEFAULT_WELCOME_TITLE, DEFAULT_WELCOME_MESSAGE
+from config.constants import COLORS, DEFAULT_WELCOME_TITLE, DEFAULT_WELCOME_MESSAGE, DEFAULT_GOODBYE_TITLE, DEFAULT_GOODBYE_MESSAGE, DEFAULT_GOODBYE_TITLE, DEFAULT_GOODBYE_MESSAGE, DEFAULT_GOODBYE_TITLE, DEFAULT_GOODBYE_MESSAGE, DEFAULT_GOODBYE_TITLE, DEFAULT_GOODBYE_MESSAGE
 from config.settings import settings
 
 class Welcome(commands.Cog):
@@ -80,6 +80,50 @@ class Welcome(commands.Cog):
             
         except Exception as e:
             self.logger.error(f"Error in on_member_join: {e}")
+    
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """Handle member leaves."""
+        try:
+            if not self.bot.db_manager:
+                return
+            
+            guild_id = member.guild.id
+            
+            # Get goodbye settings
+            goodbye_channel_id = await self.bot.db_manager.get_setting(f'goodbye_channel_{guild_id}')
+            goodbye_title = await self.bot.db_manager.get_setting(f'goodbye_title_{guild_id}', DEFAULT_GOODBYE_TITLE)
+            goodbye_message = await self.bot.db_manager.get_setting(f'goodbye_message_{guild_id}', DEFAULT_GOODBYE_MESSAGE)
+            
+            if not goodbye_channel_id:
+                return
+            
+            channel = self.bot.get_channel(int(goodbye_channel_id))
+            if not channel:
+                self.logger.warning(f"Goodbye channel {goodbye_channel_id} not found")
+                return
+            
+            # Format goodbye message
+            formatted_message = goodbye_message.replace('{member.mention}', member.mention)
+            formatted_message = formatted_message.replace('{member.name}', member.name)
+            formatted_message = formatted_message.replace('{server.name}', member.guild.name)
+            
+            # Create goodbye embed
+            embed = create_embed(
+                title=goodbye_title.replace('{member.name}', member.name),
+                description=formatted_message,
+                color=COLORS["error"]
+            )
+            
+            embed.set_thumbnail(url=member.display_avatar.url if member.display_avatar else member.default_avatar.url)
+            embed.set_footer(text=f"Member count: {len(member.guild.members)}")
+            
+            await safe_send_message(channel, embed=embed)
+            
+            self.logger.info(f"Sent goodbye message for {member.name} in {member.guild.name}")
+            
+        except Exception as e:
+            self.logger.error(f"Error in on_member_remove: {e}")
     
     # DEPRECATED: Welcome command moved to /setup
     # Keeping the helper methods below for potential future use

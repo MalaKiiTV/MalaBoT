@@ -98,6 +98,11 @@ DEFAULT_WELCOME_TITLE = "👋 Welcome to the server!"
 DEFAULT_WELCOME_MESSAGE = "We're glad you're here, {member.mention}!"
 DEFAULT_WELCOME_IMAGE = None
 
+# Goodbye System Configuration
+DEFAULT_GOODBYE_TITLE = "👋 Goodbye!"
+DEFAULT_GOODBYE_MESSAGE = "{member.name} has left the server. We'll miss you!"
+DEFAULT_GOODBYE_IMAGE = None
+
 # Moderation System Configuration
 DELETE_LOG_LIMIT = 10
 MAX_MESSAGES_DELETE = 100
