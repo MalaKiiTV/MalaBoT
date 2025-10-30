@@ -130,7 +130,8 @@ class PlatformSelect(Select):
                         f"**User:** <@{self.user_id}>\n"
                         f"**Activision ID:** `{self.activision_id}`\n"
                         f"**Platform:** `{platform}`\n"
-                        f"**Submitted:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                        f"**Submitted:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                        f"**Screenshot:** [View Screenshot]({self.screenshot_url})"
                     ),
                     color=COLORS["info"],
                 )
