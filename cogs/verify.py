@@ -55,7 +55,7 @@ class ActivisionIDModal(Modal, title="Submit Verification"):
 
 
 class PlatformSelect(Select):
-    def __init__(self, activision_id: str, screenshot_url: str, user_id: int):
+    def __init__(self, activision_id: str, screenshot_url: str, user_id: int, screenshot_bytes=None, screenshot_filename=None):
         super().__init__(
             placeholder="Select your gaming platform...",
             min_values=1,
@@ -65,6 +65,8 @@ class PlatformSelect(Select):
         self.activision_id = activision_id
         self.screenshot_url = screenshot_url
         self.user_id = user_id
+        self.screenshot_bytes = screenshot_bytes
+        self.screenshot_filename = screenshot_filename
 
     async def callback(self, interaction: discord.Interaction):
         platform = self.values[0]
@@ -122,7 +124,7 @@ class PlatformSelect(Select):
 
             if review_channel:
                 # Debug logging
-                log_system(f"[VERIFY_DEBUG] Screenshot URL: {self.screenshot_url}")
+                log_system(f"[VERIFY_DEBUG] Has screenshot bytes: {self.screenshot_bytes is not None}")
                 
                 embed = discord.Embed(
                     title="📸 New Verification Submission",
@@ -130,20 +132,22 @@ class PlatformSelect(Select):
                         f"**User:** <@{self.user_id}>\n"
                         f"**Activision ID:** `{self.activision_id}`\n"
                         f"**Platform:** `{platform}`\n"
-                        f"**Submitted:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-                        f"**Screenshot:** [View Screenshot]({self.screenshot_url})"
+                        f"**Submitted:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                     ),
                     color=COLORS["info"],
                 )
                 
-                # Set screenshot image if URL exists
-                if self.screenshot_url:
-                    embed.set_image(url=self.screenshot_url)
-                else:
-                    log_system(f"[VERIFY_WARNING] No screenshot URL for user {self.user_id}", level="warning")
-                
                 embed.set_footer(text=f"User ID: {self.user_id}")
-                await review_channel.send(embed=embed)
+                
+                # Send with screenshot file attachment if available
+                if self.screenshot_bytes and self.screenshot_filename:
+                    import io
+                    file = discord.File(io.BytesIO(self.screenshot_bytes), filename=self.screenshot_filename)
+                    embed.set_image(url=f"attachment://{self.screenshot_filename}")
+                    await review_channel.send(embed=embed, file=file)
+                else:
+                    log_system(f"[VERIFY_WARNING] No screenshot data for user {self.user_id}", level="warning")
+                    await review_channel.send(embed=embed)
 
             await db.log_event(
                 category="VERIFY",
@@ -169,9 +173,9 @@ class PlatformSelect(Select):
 
 
 class PlatformView(View):
-    def __init__(self, activision_id: str, screenshot_url: str, user_id: int):
+    def __init__(self, activision_id: str, screenshot_url: str, user_id: int, screenshot_bytes=None, screenshot_filename=None):
         super().__init__(timeout=180)
-        self.add_item(PlatformSelect(activision_id, screenshot_url, user_id))
+        self.add_item(PlatformSelect(activision_id, screenshot_url, user_id, screenshot_bytes, screenshot_filename))
 
 
 class VerifyGroup(app_commands.Group):
@@ -441,7 +445,7 @@ class Verify(commands.Cog):
             log_system(f"Failed to delete screenshot message: {e}", level="warning")
         
         # Send platform selection to the channel (not as reply since original message is deleted)
-        view = PlatformView(activision_id, screenshot.url, user_id)
+        view = PlatformView(activision_id, screenshot.url, user_id, screenshot_bytes, screenshot.filename)
         await message.channel.send(
             content=message.author.mention,
             embed=create_embed(
