@@ -268,6 +268,66 @@ class DatabaseManager:
         """, (user_id,))
         await conn.commit()
     
+    async def get_user_xp(self, user_id: int) -> int:
+        """Get user's current XP."""
+        user = await self.get_user(user_id)
+        return user['xp'] if user else 0
+    
+    async def get_user_level(self, user_id: int) -> int:
+        """Get user's current level."""
+        user = await self.get_user(user_id)
+        return user['level'] if user else 1
+    
+    async def set_user_xp(self, user_id: int, xp: int):
+        """Set user's XP to a specific amount."""
+        from config.constants import XP_TABLE
+        
+        # Calculate level based on XP
+        new_level = 1
+        for level, xp_required in sorted(XP_TABLE.items()):
+            if xp >= xp_required:
+                new_level = level
+            else:
+                break
+        
+        conn = await self.get_connection()
+        await conn.execute("""
+            UPDATE users 
+            SET xp = ?, level = ?
+            WHERE user_id = ?
+        """, (xp, new_level, user_id))
+        await conn.commit()
+    
+    async def get_user_last_daily(self, user_id: int) -> str:
+        """Get user's last daily claim timestamp."""
+        user = await self.get_user(user_id)
+        return user['last_daily_award_date'] if user else None
+    
+    async def update_user_last_daily(self, user_id: int, timestamp: str):
+        """Update user's last daily claim timestamp."""
+        conn = await self.get_connection()
+        await conn.execute("""
+            UPDATE users 
+            SET last_daily_award_date = ?
+            WHERE user_id = ?
+        """, (timestamp, user_id))
+        await conn.commit()
+    
+    async def get_user_streak(self, user_id: int) -> int:
+        """Get user's daily streak."""
+        user = await self.get_user(user_id)
+        return user['daily_streak'] if user else 0
+    
+    async def update_user_streak(self, user_id: int, streak: int):
+        """Update user's daily streak."""
+        conn = await self.get_connection()
+        await conn.execute("""
+            UPDATE users 
+            SET daily_streak = ?
+            WHERE user_id = ?
+        """, (streak, user_id))
+        await conn.commit()
+    
     # Birthday Methods
     async def set_birthday(self, user_id: int, birthday: str) -> bool:
         """Set user's birthday."""
