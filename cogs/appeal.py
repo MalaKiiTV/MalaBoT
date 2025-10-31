@@ -294,13 +294,7 @@ class Appeal(commands.Cog):
         self.bot = bot
         self.db = bot.db_manager
         
-        # Create and add the appeal group
-        self.appeal_group = AppealGroup(self)
-        self.bot.tree.add_command(self.appeal_group)
-
-    async def cog_unload(self):
-        """Remove the command group when cog is unloaded"""
-        self.bot.tree.remove_command(self.appeal_group.name)
+        
     
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
@@ -323,4 +317,5 @@ class Appeal(commands.Cog):
 async def setup(bot: commands.Bot):
     appeal_cog = Appeal(bot)
     await bot.add_cog(appeal_cog)
-    # Note: appeal_group is already added in __init__
+    appeal_group = AppealGroup(appeal_cog)
+    bot.tree.add_command(appeal_group)

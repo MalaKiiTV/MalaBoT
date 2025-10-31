@@ -20,13 +20,12 @@ from config.constants import COLORS, XP_TABLE, XP_PER_MESSAGE, XP_PER_REACTION, 
 from config.settings import settings
 
 
-
 class XPGroup(app_commands.Group):
     """XP command group"""
     def __init__(self, cog):
         super().__init__(name="xp", description="XP and leveling system commands")
         self.cog = cog
-    
+
     @app_commands.command(name="rank", description="Check your or another user's rank and XP")
     @app_commands.describe(user="User to check (leave empty for yourself)")
     async def rank(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
@@ -62,406 +61,385 @@ class XPGroup(app_commands.Group):
                 description=f"**Rank:** #{rank}\n**Level:** {level}\n**XP:** {xp:,} / {next_level_xp:,}\n\n{progress_bar}\n\n**XP Needed:** {xp_needed:,}",
                 color=COLORS['primary']
             )
+            
             embed.set_thumbnail(url=target.display_avatar.url)
             
-            await interaction.response.send_message(embed=embed)
-            
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed, ephemeral=True)
+            else:
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                
         except Exception as e:
-            self.cog.logger.error(f"Error in xp rank command: {e}")
-            await self.cog._error_response(interaction, "Failed to get rank")
-    
+            self.cog.logger.error(f"Error in rank command: {e}")
+            embed = embed_helper.error_embed(
+                "Error",
+                "Failed to fetch rank information."
+            )
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed, ephemeral=True)
+            else:
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+
     @app_commands.command(name="leaderboard", description="Show server XP leaderboard")
     async def leaderboard(self, interaction: discord.Interaction):
         """Show XP leaderboard."""
         try:
-            await interaction.response.defer()
-            
-            # Get top 10 users
             conn = await self.cog.bot.db_manager.get_connection()
             cursor = await conn.execute(
-                "SELECT user_id, xp FROM users WHERE xp > 0 ORDER BY xp DESC LIMIT 10"
+                """SELECT user_id, xp, level 
+                   FROM users 
+                   WHERE guild_id = ? AND xp > 0 
+                   ORDER BY xp DESC 
+                   LIMIT 10""",
+                (interaction.guild.id,)
             )
-            top_users = await cursor.fetchall()
+            rows = await cursor.fetchall()
             
-            if not top_users:
-                embed = embed_helper.warning_embed(
-                    title="📊 XP Leaderboard",
-                    description="No users have earned XP yet!"
+            if not rows:
+                embed = create_embed(
+                    title="🏆 XP Leaderboard",
+                    description="No users have XP yet!",
+                    color=COLORS['warning']
                 )
-                await interaction.followup.send(embed=embed)
+                await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            # Build leaderboard
             description = ""
-            for i, (user_id, xp) in enumerate(top_users, 1):
+            for i, (user_id, xp, level) in enumerate(rows, 1):
                 user = interaction.guild.get_member(user_id)
                 if user:
-                    level = await self.cog.bot.db_manager.get_user_level(user_id)
-                    medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"**{i}.**"
-                    description += f"{medal} {user.mention} - Level {level} ({xp:,} XP)\n"
+                    medal = ""
+                    if i == 1:
+                        medal = "🥇"
+                    elif i == 2:
+                        medal = "🥈"
+                    elif i == 3:
+                        medal = "🥉"
+                    description += f"{medal} **{i}.** {user.mention} - Level {level} ({xp:,} XP)\n"
             
             embed = create_embed(
-                title="📊 XP Leaderboard",
+                title="🏆 XP Leaderboard",
                 description=description,
                 color=COLORS['primary']
             )
             
-            await interaction.followup.send(embed=embed)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             
         except Exception as e:
-            self.cog.logger.error(f"Error in xp leaderboard command: {e}")
-            await self.cog._error_response(interaction, "Failed to get leaderboard")
-    
+            self.cog.logger.error(f"Error in leaderboard command: {e}")
+            embed = embed_helper.error_embed(
+                "Error",
+                "Failed to fetch leaderboard."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
     @app_commands.command(name="checkin", description="Claim your daily XP bonus")
     async def checkin(self, interaction: discord.Interaction):
-        """Daily XP check-in."""
+        """Daily checkin for XP bonus."""
         try:
             user_id = interaction.user.id
+            today = datetime.datetime.now().date()
             
-            # Check if user already claimed today
-            last_daily = await self.cog.bot.db_manager.get_user_last_daily(user_id)
-            now = datetime.datetime.now()
+            # Check last checkin
+            conn = await self.cog.bot.db_manager.get_connection()
+            cursor = await conn.execute(
+                "SELECT last_checkin, checkin_streak FROM daily_checkins WHERE user_id = ?",
+                (user_id,)
+            )
+            row = await cursor.fetchone()
             
-            if last_daily:
-                last_daily_date = datetime.datetime.fromisoformat(last_daily)
-                if last_daily_date.date() == now.date():
-                    # Already claimed today
-                    next_daily = last_daily_date + datetime.timedelta(days=1)
-                    time_until = next_daily - now
-                    hours = int(time_until.total_seconds() // 3600)
-                    minutes = int((time_until.total_seconds() % 3600) // 60)
-                    
-                    embed = embed_helper.warning_embed(
-                        title="⏰ Already Claimed",
-                        description=f"You've already claimed your daily XP!\n\nNext check-in available in: **{hours}h {minutes}m**"
+            if row:
+                last_checkin = datetime.datetime.strptime(row[0], '%Y-%m-%d').date()
+                if last_checkin == today:
+                    embed = create_embed(
+                        title="✅ Already Checked In",
+                        description="You've already claimed your daily bonus today!",
+                        color=COLORS['warning']
                     )
                     await interaction.response.send_message(embed=embed, ephemeral=True)
                     return
-            
-            # Award daily XP
-            xp_amount = DAILY_CHECKIN_XP
-            await self.cog.bot.db_manager.update_user_xp(user_id, xp_amount)
-            await self.cog.bot.db_manager.update_user_last_daily(user_id, now.isoformat())
-            
-            # Check for streak bonus
-            streak = await self.cog.bot.db_manager.get_user_streak(user_id)
-            if last_daily:
-                last_daily_date = datetime.datetime.fromisoformat(last_daily)
-                if (now.date() - last_daily_date.date()).days == 1:
-                    # Consecutive day, increase streak
-                    streak += 1
-                    await self.cog.bot.db_manager.update_user_streak(user_id, streak)
-                else:
-                    # Streak broken
-                    streak = 1
-                    await self.cog.bot.db_manager.update_user_streak(user_id, 1)
-            else:
-                # First daily
-                streak = 1
-                await self.cog.bot.db_manager.update_user_streak(user_id, 1)
-            
-            # Calculate streak bonus
-            if streak > 1:
-                bonus_xp = int(xp_amount * (STREAK_BONUS_PERCENT / 100) * min(streak, 7))
-                await self.cog.bot.db_manager.update_user_xp(user_id, bonus_xp)
-                total_xp = xp_amount + bonus_xp
                 
-                embed = embed_helper.success_embed(
-                    title="✅ Daily Check-in",
-                    description=f"You claimed **{xp_amount} XP**!\n\n🔥 **{streak} Day Streak!**\nBonus: **+{bonus_xp} XP**\n\n**Total: {total_xp} XP**"
-                )
+                # Calculate streak
+                streak = row[1] if (today - last_checkin).days == 1 else 0
             else:
-                embed = embed_helper.success_embed(
-                    title="✅ Daily Check-in",
-                    description=f"You claimed **{xp_amount} XP**!\n\nCome back tomorrow to start a streak! 🔥"
-                )
+                streak = 0
             
-            await interaction.response.send_message(embed=embed)
+            streak += 1
             
-        except Exception as e:
-            self.cog.logger.error(f"Error in xp checkin command: {e}")
-            await self.cog._error_response(interaction, "Failed to claim daily XP")
-    
-    # ==================== ADMIN COMMANDS ====================
-    
-    @app_commands.command(name="add", description="Add XP to a user (Server Owner only)")
-    @app_commands.describe(
-        user="User to add XP to",
-        amount="Amount of XP to add"
-    )
-    async def add(self, interaction: discord.Interaction, user: discord.Member, amount: int):
-        """Add XP to a user."""
-        try:
-            # Check server owner permissions
-            if interaction.guild.owner_id != interaction.user.id:
-                embed = embed_helper.error_embed(
-                    title="🚫 Permission Denied",
-                    description="This command is only available to the server owner."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
+            # Calculate bonus with streak
+            bonus = DAILY_CHECKIN_XP
+            if streak > 1:
+                bonus = int(bonus * (1 + (STREAK_BONUS_PERCENT * (streak - 1))))
             
-            if amount <= 0:
-                embed = embed_helper.error_embed(
-                    title="Invalid Amount",
-                    description="Amount must be greater than 0."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
+            # Give XP
+            await self.cog.bot.db_manager.add_user_xp(user_id, bonus)
             
-            await self.cog.bot.db_manager.update_user_xp(user.id, amount)
-            
-            embed = embed_helper.success_embed(
-                title="✅ XP Added",
-                description=f"Added {amount:,} XP to {user.mention}"
+            # Update checkin record
+            await conn.execute(
+                """INSERT OR REPLACE INTO daily_checkins (user_id, last_checkin, checkin_streak)
+                   VALUES (?, ?, ?)""",
+                (user_id, today.isoformat(), streak)
             )
+            await conn.commit()
+            
+            embed = create_embed(
+                title="✅ Daily Check-in Complete!",
+                description=f"You've received **{bonus:,} XP**!\nCurrent streak: **{streak}** days",
+                color=COLORS['success']
+            )
+            
             await interaction.response.send_message(embed=embed, ephemeral=True)
             
-            self.cog.logger.info(f"Admin {interaction.user.name} added {amount} XP to {user.name}")
-            
         except Exception as e:
-            self.cog.logger.error(f"Error in xp add command: {e}")
-            await self.cog._error_response(interaction, "Failed to add XP")
-    
-    @app_commands.command(name="add-all", description="Add XP to ALL users in the server (Server Owner only)")
-    @app_commands.describe(
-        amount="Amount of XP to add to each user",
-        confirm="Type 'yes' to confirm adding XP to ALL users"
-    )
-    async def add_all(self, interaction: discord.Interaction, amount: int, confirm: str):
-        """Add XP to all users."""
-        try:
-            # Check server owner permissions
-            if interaction.guild.owner_id != interaction.user.id:
-                embed = embed_helper.error_embed(
-                    title="🚫 Permission Denied",
-                    description="This command is only available to the server owner."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-            
-            if confirm != "yes":
-                embed = embed_helper.warning_embed(
-                    title="⚠️ Confirmation Required",
-                    description=f"This will add **{amount:,} XP** to **ALL users** in the server!\n\nUse: `/xp add-all amount:{amount} confirm:yes`"
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-            
-            if amount <= 0:
-                embed = embed_helper.error_embed(
-                    title="Invalid Amount",
-                    description="Amount must be greater than 0."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-            
-            await interaction.response.defer(ephemeral=True)
-            
-            # Add XP to all members
-            added_count = 0
-            for member in interaction.guild.members:
-                if not member.bot:
-                    await self.cog.bot.db_manager.update_user_xp(member.id, amount)
-                    added_count += 1
-            
-            embed = embed_helper.success_embed(
-                title="✅ XP Added to All Users",
-                description=f"Added **{amount:,} XP** to **{added_count}** users"
+            self.cog.logger.error(f"Error in checkin command: {e}")
+            embed = embed_helper.error_embed(
+                "Error",
+                "Failed to process checkin."
             )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            
-            self.cog.logger.info(f"Admin {interaction.user.name} added {amount} XP to all users ({added_count} users)")
-            
-        except Exception as e:
-            self.cog.logger.error(f"Error in xp add-all command: {e}")
-            await self.cog._error_response(interaction, "Failed to add XP to all users")
-    
-    @app_commands.command(name="remove", description="Remove XP from a user (Server Owner only)")
-    @app_commands.describe(
-        user="User to remove XP from",
-        amount="Amount of XP to remove"
-    )
-    async def remove(self, interaction: discord.Interaction, user: discord.Member, amount: int):
-        """Remove XP from a user."""
-        try:
-            # Check server owner permissions
-            if interaction.guild.owner_id != interaction.user.id:
-                embed = embed_helper.error_embed(
-                    title="🚫 Permission Denied",
-                    description="This command is only available to the server owner."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-            
-            if amount <= 0:
-                embed = embed_helper.error_embed(
-                    title="Invalid Amount",
-                    description="Amount must be greater than 0."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-            
-            current_xp = await self.cog.bot.db_manager.get_user_xp(user.id)
-            new_xp = max(0, current_xp - amount)
-            
-            await self.cog.bot.db_manager.set_user_xp(user.id, new_xp)
-            
-            embed = embed_helper.success_embed(
-                title="✅ XP Removed",
-                description=f"Removed {amount:,} XP from {user.mention}\n\nNew XP: {new_xp:,}"
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            
-            self.cog.logger.info(f"Admin {interaction.user.name} removed {amount} XP from {user.name}")
-            
-        except Exception as e:
-            self.cog.logger.error(f"Error in xp remove command: {e}")
-            await self.cog._error_response(interaction, "Failed to remove XP")
-    
-    @app_commands.command(name="set", description="Set user XP to a specific amount (Server Owner only)")
-    @app_commands.describe(
-        user="User to set XP for",
-        amount="Amount of XP to set"
-    )
-    async def set(self, interaction: discord.Interaction, user: discord.Member, amount: int):
-        """Set user XP."""
-        try:
-            # Check server owner permissions
-            if interaction.guild.owner_id != interaction.user.id:
-                embed = embed_helper.error_embed(
-                    title="🚫 Permission Denied",
-                    description="This command is only available to the server owner."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-            
-            if amount < 0:
-                embed = embed_helper.error_embed(
-                    title="Invalid Amount",
-                    description="Amount cannot be negative."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-            
-            await self.cog.bot.db_manager.set_user_xp(user.id, amount)
-            
-            embed = embed_helper.success_embed(
-                title="✅ XP Set",
-                description=f"Set {user.mention}'s XP to {amount:,}"
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            
-            self.cog.logger.info(f"Admin {interaction.user.name} set {user.name}'s XP to {amount}")
-            
-        except Exception as e:
-            self.cog.logger.error(f"Error in xp set command: {e}")
-            await self.cog._error_response(interaction, "Failed to set XP")
-    
-    @app_commands.command(name="reset", description="Reset a user's XP to 0 (Server Owner only)")
-    @app_commands.describe(user="User to reset XP for")
-    async def reset(self, interaction: discord.Interaction, user: discord.Member):
-        """Reset user XP."""
-        try:
-            # Check server owner permissions
-            if interaction.guild.owner_id != interaction.user.id:
-                embed = embed_helper.error_embed(
-                    title="🚫 Permission Denied",
-                    description="This command is only available to the server owner."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-            
-            await self.cog.bot.db_manager.reset_user_xp(user.id)
-            
-            embed = embed_helper.success_embed(
-                title="✅ XP Reset",
-                description=f"Reset {user.mention}'s XP and level to 0"
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            
-            self.cog.logger.info(f"Admin {interaction.user.name} reset {user.name}'s XP")
-            
-        except Exception as e:
-            self.cog.logger.error(f"Error in xp reset command: {e}")
-            await self.cog._error_response(interaction, "Failed to reset XP")
-    
-    @app_commands.command(name="reset-all", description="Reset ALL users' XP to 0 (Server Owner only)")
-    @app_commands.describe(confirm="Type 'yes' to confirm resetting ALL users")
-    async def reset_all(self, interaction: discord.Interaction, confirm: str):
-        """Reset all users' XP."""
-        try:
-            # Check server owner permissions
-            if interaction.guild.owner_id != interaction.user.id:
-                embed = embed_helper.error_embed(
-                    title="🚫 Permission Denied",
-                    description="This command is only available to the server owner."
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-            
-            if confirm != "yes":
-                embed = embed_helper.warning_embed(
-                    title="⚠️ Confirmation Required",
-                    description="This will reset **ALL users'** XP!\n\n`/xp reset-all confirm:yes`"
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-            
-            await interaction.response.defer(ephemeral=True)
-            conn = await self.cog.bot.db_manager.get_connection()
-            cursor = await conn.execute("SELECT user_id FROM users WHERE xp > 0")
-            users = await cursor.fetchall()
-            
-            reset_count = 0
-            for user_row in users:
-                await self.cog.bot.db_manager.reset_user_xp(user_row[0])
-                reset_count += 1
-            
-            embed = embed_helper.success_embed(
-                title="✅ All XP Reset",
-                description=f"Reset {reset_count} users"
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            
-            self.cog.logger.info(f"Admin {interaction.user.name} reset all users' XP")
-            
-        except Exception as e:
-            self.cog.logger.error(f"Error in xp reset-all command: {e}")
-            await self.cog._error_response(interaction, "Failed to reset all XP")
-    
-    async def _error_response(self, interaction: discord.Interaction, message: str):
-        """Send error response."""
-        embed = embed_helper.error_embed(
-            title="❌ Error",
-            description=message
-        )
-        
-        if interaction.response.is_done():
-            await interaction.followup.send(embed=embed, ephemeral=True)
-        else:
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-async def setup(bot: commands.Bot):
-    xp_cog = XP(bot)
-    await bot.add_cog(xp_cog)
+    @app_commands.command(name="add", description="Add XP to a user (Server Owner only)")
+    @app_commands.describe(user="User to add XP to", amount="Amount of XP to add")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def add(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+        """Add XP to a user."""
+        if not is_owner(interaction.user) and not interaction.user.guild_permissions.administrator:
+            embed = embed_helper.error_embed(
+                "Permission Denied",
+                "Only server owners and administrators can use this command."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        if amount <= 0:
+            embed = embed_helper.error_embed(
+                "Invalid Amount",
+                "XP amount must be positive."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        try:
+            await self.cog.bot.db_manager.add_user_xp(user.id, amount)
+            embed = create_embed(
+                title="✅ XP Added",
+                description=f"Added **{amount:,} XP** to {user.mention}",
+                color=COLORS['success']
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        except Exception as e:
+            self.cog.logger.error(f"Error in add command: {e}")
+            embed = embed_helper.error_embed(
+                "Error",
+                "Failed to add XP."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="add-all", description="Add XP to ALL users in the server (Server Owner only)")
+    @app_commands.describe(amount="Amount of XP to add to everyone", confirm="Type 'yes' to confirm")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def add_all(self, interaction: discord.Interaction, amount: int, confirm: str):
+        """Add XP to all users."""
+        if not is_owner(interaction.user):
+            embed = embed_helper.error_embed(
+                "Permission Denied",
+                "Only the server owner can use this command."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        if confirm.lower() != "yes":
+            embed = embed_helper.error_embed(
+                "Confirmation Required",
+                "You must type 'yes' in the confirm field to add XP to all users."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        if amount <= 0:
+            embed = embed_helper.error_embed(
+                "Invalid Amount",
+                "XP amount must be positive."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        try:
+            # Add XP to all users in the server
+            for member in interaction.guild.members:
+                if not member.bot:
+                    await self.cog.bot.db_manager.add_user_xp(member.id, amount)
+            
+            embed = create_embed(
+                title="✅ XP Added to All Users",
+                description=f"Added **{amount:,} XP** to all users in the server",
+                color=COLORS['success']
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        except Exception as e:
+            self.cog.logger.error(f"Error in add_all command: {e}")
+            embed = embed_helper.error_embed(
+                "Error",
+                "Failed to add XP to all users."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="remove", description="Remove XP from a user (Server Owner only)")
+    @app_commands.describe(user="User to remove XP from", amount="Amount of XP to remove")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def remove(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+        """Remove XP from a user."""
+        if not is_owner(interaction.user) and not interaction.user.guild_permissions.administrator:
+            embed = embed_helper.error_embed(
+                "Permission Denied",
+                "Only server owners and administrators can use this command."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        if amount <= 0:
+            embed = embed_helper.error_embed(
+                "Invalid Amount",
+                "XP amount must be positive."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        try:
+            await self.cog.bot.db_manager.remove_user_xp(user.id, amount)
+            embed = create_embed(
+                title="✅ XP Removed",
+                description=f"Removed **{amount:,} XP** from {user.mention}",
+                color=COLORS['success']
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        except Exception as e:
+            self.cog.logger.error(f"Error in remove command: {e}")
+            embed = embed_helper.error_embed(
+                "Error",
+                "Failed to remove XP."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="set", description="Set user XP to a specific amount (Server Owner only)")
+    @app_commands.describe(user="User to set XP for", amount="Amount of XP to set")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def set(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+        """Set user XP."""
+        if not is_owner(interaction.user) and not interaction.user.guild_permissions.administrator:
+            embed = embed_helper.error_embed(
+                "Permission Denied",
+                "Only server owners and administrators can use this command."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        if amount < 0:
+            embed = embed_helper.error_embed(
+                "Invalid Amount",
+                "XP amount cannot be negative."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        try:
+            await self.cog.bot.db_manager.set_user_xp(user.id, amount)
+            embed = create_embed(
+                title="✅ XP Set",
+                description=f"Set {user.mention}'s XP to **{amount:,}**",
+                color=COLORS['success']
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        except Exception as e:
+            self.cog.logger.error(f"Error in set command: {e}")
+            embed = embed_helper.error_embed(
+                "Error",
+                "Failed to set XP."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="reset", description="Reset a user's XP to 0 (Server Owner only)")
+    @app_commands.describe(user="User to reset XP for")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def reset(self, interaction: discord.Interaction, user: discord.Member):
+        """Reset user XP."""
+        if not is_owner(interaction.user) and not interaction.user.guild_permissions.administrator:
+            embed = embed_helper.error_embed(
+                "Permission Denied",
+                "Only server owners and administrators can use this command."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        try:
+            await self.cog.bot.db_manager.set_user_xp(user.id, 0)
+            embed = create_embed(
+                title="✅ XP Reset",
+                description=f"Reset {user.mention}'s XP to **0**",
+                color=COLORS['success']
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        except Exception as e:
+            self.cog.logger.error(f"Error in reset command: {e}")
+            embed = embed_helper.error_embed(
+                "Error",
+                "Failed to reset XP."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="reset-all", description="Reset ALL users' XP to 0 (Server Owner only)")
+    @app_commands.describe(confirm="Type 'yes' to confirm")
+    @app_commands.checks.has_permissions(administrator=True)
+    async def reset_all(self, interaction: discord.Interaction, confirm: str):
+        """Reset all users' XP."""
+        if not is_owner(interaction.user):
+            embed = embed_helper.error_embed(
+                "Permission Denied",
+                "Only the server owner can use this command."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        if confirm.lower() != "yes":
+            embed = embed_helper.error_embed(
+                "Confirmation Required",
+                "You must type 'yes' in the confirm field to reset all users' XP."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        
+        try:
+            # Reset all users' XP in the server
+            conn = await self.cog.bot.db_manager.get_connection()
+            await conn.execute(
+                "UPDATE users SET xp = 0, level = 1 WHERE guild_id = ?",
+                (interaction.guild.id,)
+            )
+            await conn.commit()
+            
+            embed = create_embed(
+                title="✅ All XP Reset",
+                description="Reset all users' XP to **0** in the server",
+                color=COLORS['success']
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        except Exception as e:
+            self.cog.logger.error(f"Error in reset_all command: {e}")
+            embed = embed_helper.error_embed(
+                "Error",
+                "Failed to reset all XP."
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 class XP(commands.Cog):
     """XP and leveling system."""
-    
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.logger = get_logger('xp')
         self.last_xp_time = {}  # Track last XP gain time per user
-        
-        # Create and add the xp group
-        self.xp_group = XPGroup(self)
-        self.bot.tree.add_command(self.xp_group)
-    
 
-    async def cog_unload(self):
-        """Remove the command group when cog is unloaded"""
-        self.bot.tree.remove_command(self.xp_group.name)
     @commands.Cog.listener()
     async def on_message(self, message):
         """Award XP for messages."""
@@ -470,168 +448,105 @@ class XP(commands.Cog):
             if message.author.bot or not message.guild:
                 return
             
-            guild_id = message.guild.id
+            # Check cooldown
             user_id = message.author.id
             current_time = datetime.datetime.now().timestamp()
             
-            # Get guild-specific XP settings
-            xp_per_message = await self.bot.db_manager.get_setting(f"xp_per_message_{guild_id}")
-            xp_cooldown = await self.bot.db_manager.get_setting(f"xp_cooldown_{guild_id}")
-            
-            # Use defaults if not configured
-            if not xp_per_message:
-                xp_per_message = str(XP_PER_MESSAGE)  # Default to 10
-            if not xp_cooldown:
-                xp_cooldown = str(XP_COOLDOWN_SECONDS)  # Default to 60
-            
-            xp_amount = int(xp_per_message)
-            cooldown = int(xp_cooldown)
-            
-            # Check cooldown
-            key = f"{guild_id}_{user_id}"
-            if key in self.last_xp_time:
-                time_since_last = current_time - self.last_xp_time[key]
-                if time_since_last < cooldown:
+            if user_id in self.last_xp_time:
+                time_diff = current_time - self.last_xp_time[user_id]
+                if time_diff < XP_COOLDOWN_SECONDS:
                     return
             
-            # Update last XP time
-            self.last_xp_time[key] = current_time
-            
             # Award XP
-            await self._award_xp(message.author, xp_amount, message.channel)
-            
-        except Exception as e:
-            self.logger.error(f"Error in on_message XP: {e}")
-    
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        """Award XP when user's message receives a reaction."""
-        try:
-            # Ignore bots and self-reactions
-            if user.bot or reaction.message.author.bot:
-                return
-            
-            # Don't award XP for reacting to your own message
-            if user.id == reaction.message.author.id:
-                return
-            
-            guild_id = reaction.message.guild.id
-            
-            # Get guild-specific reaction XP setting
-            xp_per_reaction = await self.bot.db_manager.get_setting(f"xp_per_reaction_{guild_id}")
-            
-            # Use default if not configured
-            if not xp_per_reaction:
-                xp_per_reaction = str(XP_PER_REACTION)  # Default to 2
-            
-            xp_amount = int(xp_per_reaction)
-            
-            # Award XP to the message author (not the reactor)
-            await self._award_xp(reaction.message.author, xp_amount, reaction.message.channel)
-            
-        except Exception as e:
-            self.logger.error(f"Error in on_reaction_add XP: {e}")
-    
-    @commands.Cog.listener()
-    async def on_voice_state_update(self, member, before, after):
-        """Award XP for voice chat participation."""
-        try:
-            # Ignore bots
-            if member.bot:
-                return
-            
-            guild_id = member.guild.id
-            
-            # Get guild-specific voice XP setting
-            xp_per_voice = await self.bot.db_manager.get_setting(f"xp_per_voice_{guild_id}")
-            
-            # Use default if not configured
-            if not xp_per_voice:
-                xp_per_voice = str(XP_PER_VOICE_MINUTE)  # Default to 5
-            
-            xp_amount = int(xp_per_voice)
-            
-            # Award XP when user leaves voice channel
-            if before.channel and not after.channel:
-                await self._award_xp(member, xp_amount, None)
-            
-        except Exception as e:
-            self.logger.error(f"Error in on_voice_state_update XP: {e}")
-    
-    async def _award_xp(self, user: discord.Member, amount: int, channel: Optional[discord.TextChannel] = None):
-        """Award XP to a user and check for level up."""
-        try:
-            old_level = await self.bot.db_manager.get_user_level(user.id)
-            await self.bot.db_manager.update_user_xp(user.id, amount)
-            new_level = await self.bot.db_manager.get_user_level(user.id)
+            await self.bot.db_manager.add_user_xp(user_id, XP_PER_MESSAGE)
+            self.last_xp_time[user_id] = current_time
             
             # Check for level up
-            if new_level > old_level and channel:
-                await self._handle_level_up(user, new_level, channel)
-                
-        except Exception as e:
-            self.logger.error(f"Error awarding XP: {e}")
-    
-    async def _handle_level_up(self, user: discord.Member, new_level: int, channel: discord.TextChannel):
-        """Handle level up event."""
-        try:
-            guild_id = user.guild.id
-            
-            # Get custom level-up message
-            level_up_message = await self.bot.db_manager.get_setting(f"level_up_message_{guild_id}")
-            level_up_channel_id = await self.bot.db_manager.get_setting(f"level_up_channel_{guild_id}")
-            
-            # Use custom channel if configured
-            if level_up_channel_id:
-                level_up_channel = user.guild.get_channel(int(level_up_channel_id))
-                if level_up_channel:
-                    channel = level_up_channel
-            
-            # Format message with variables
-            if level_up_message:
-                message = level_up_message.replace("{user}", user.mention)
-                message = message.replace("{level}", str(new_level))
-            else:
-                message = f"🎉 {user.mention} leveled up to **Level {new_level}**!"
-            
-            embed = embed_helper.success_embed(
-                title="🎉 Level Up!",
-                description=message
-            )
-            
-            await channel.send(embed=embed)
-            
-            # Check for level role rewards
-            await self._check_level_roles(user, new_level)
+            await self._check_level_up(message.author)
             
         except Exception as e:
-            self.logger.error(f"Error handling level up: {e}")
-    
-    async def _check_level_roles(self, user: discord.Member, level: int):
-        """Check and assign level role rewards."""
+            self.logger.error(f"Error awarding message XP: {e}")
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        """Award XP when a user's message receives a reaction."""
         try:
-            guild_id = user.guild.id
-            level_roles = await self.bot.db_manager.get_setting(f"level_roles_{guild_id}")
-            
-            if not level_roles:
+            # Ignore bot reactions
+            if payload.user_id == self.bot.user.id:
                 return
             
-            # Parse level roles (format: "level:role_id,level:role_id")
-            for role_entry in level_roles.split(","):
-                if ":" not in role_entry:
-                    continue
-                
-                role_level, role_id = role_entry.split(":")
-                role_level = int(role_level)
-                
+            # Get channel and message
+            channel = self.bot.get_channel(payload.channel_id)
+            if not channel:
+                return
+            
+            message = await channel.fetch_message(payload.message_id)
+            if not message or message.author.bot:
+                return
+            
+            # Award XP to message author
+            await self.bot.db_manager.add_user_xp(message.author.id, XP_PER_REACTION)
+            await self._check_level_up(message.author)
+            
+        except Exception as e:
+            self.logger.error(f"Error awarding reaction XP: {e}")
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        """Award XP for time spent in voice chat."""
+        try:
+            # Check if user joined a voice channel
+            if before.channel is None and after.channel is not None and not member.bot:
+                # Start tracking voice time
+                if not hasattr(self.bot, 'voice_time'):
+                    self.bot.voice_time = {}
+                self.bot.voice_time[member.id] = datetime.datetime.now()
+            
+            # Check if user left a voice channel
+            elif before.channel is not None and after.channel is None and not member.bot:
+                # Calculate time spent and award XP
+                if hasattr(self.bot, 'voice_time') and member.id in self.bot.voice_time:
+                    time_spent = datetime.datetime.now() - self.bot.voice_time[member.id]
+                    minutes = int(time_spent.total_seconds() / 60)
+                    
+                    if minutes > 0:
+                        xp_gained = minutes * XP_PER_VOICE_MINUTE
+                        await self.bot.db_manager.add_user_xp(member.id, xp_gained)
+                        await self._check_level_up(member)
+                    
+                    del self.bot.voice_time[member.id]
+            
+        except Exception as e:
+            self.logger.error(f"Error in voice XP tracking: {e}")
+
+    async def _check_level_up(self, user):
+        """Check if user leveled up and assign roles if needed."""
+        try:
+            # Get user's current level
+            current_level = await self.bot.db_manager.get_user_level(user.id)
+            
+            # Check for level roles
+            conn = await self.bot.db_manager.get_connection()
+            cursor = await conn.execute(
+                "SELECT role_level, role_id FROM level_roles WHERE guild_id = ?",
+                (user.guild.id,)
+            )
+            rows = await cursor.fetchall()
+            
+            for role_level, role_id in rows:
                 # If user reached this level, assign the role
-                if level >= role_level:
+                if current_level >= role_level:
                     role = user.guild.get_role(int(role_id))
                     if role and role not in user.roles:
                         await user.add_roles(role, reason=f"Reached level {role_level}")
                         self.logger.info(f"Assigned role {role.name} to {user.name} for reaching level {role_level}")
-                        
+            
         except Exception as e:
-            self.logger.error(f"Error checking level roles: {e}")
+            self.logger.error(f"Error checking level up: {e}")
 
 
+async def setup(bot: commands.Bot):
+    """Setup the XP cog."""
+    await bot.add_cog(XP(bot))
+    xp_group = XPGroup(bot.get_cog("XP"))
+    bot.tree.add_command(xp_group)
