@@ -29,10 +29,18 @@ class DatabaseManager:
         return self._connection
     
     async def close(self):
-        """Close database connection."""
+        """Close database connection and clean up."""
         if self._connection:
-            await self._connection.close()
-            self._connection = None
+            try:
+                # Commit any pending transactions
+                await self._connection.commit()
+                # Close the connection
+                await self._connection.close()
+                self._connection = None
+                print("[DatabaseManager] Database connection closed successfully")
+            except Exception as e:
+                print(f"[DatabaseManager] Error closing database connection: {e}")
+                self._connection = None
     
     async def _create_tables(self):
         """Create all necessary database tables."""

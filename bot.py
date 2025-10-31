@@ -80,7 +80,19 @@ class MalaBoT(commands.Bot):
         """Set up signal handlers for graceful shutdown."""
         def signal_handler(signum, frame):
             self.logger.info(f"Received signal {signum}, initiating graceful shutdown...")
-            asyncio.create_task(self.shutdown())
+            # Use the bot's loop if available, otherwise force exit
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(self.shutdown())
+                else:
+                    # No running loop, force synchronous shutdown
+                    self.logger.warning("No running event loop, forcing immediate shutdown")
+                    sys.exit(0)
+            except RuntimeError:
+                # No event loop at all
+                self.logger.warning("No event loop available, forcing immediate shutdown")
+                sys.exit(0)
         
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
@@ -673,24 +685,39 @@ The bot will start in safe mode to prevent further issues.
         self.logger.info("Initiating graceful shutdown...")
         
         try:
+            # Log shutdown event first (before closing database)
+            if self.db_manager:
+                try:
+                    await self.db_manager.log_event(
+                        category='SYSTEM',
+                        action='SHUTDOWN',
+                        details="Graceful shutdown initiated"
+                    )
+                except Exception as e:
+                    self.logger.warning(f"Could not log shutdown event: {e}")
+            
             # Shutdown scheduler
             if self.scheduler:
-                self.scheduler.shutdown()
-            
-            # Close database connection
-            if self.db_manager:
-                await self.db_manager.close()
-            
-            # Log shutdown event
-            if self.db_manager:
-                await self.db_manager.log_event(
-                    category='SYSTEM',
-                    action='SHUTDOWN',
-                    details="Graceful shutdown initiated"
-                )
+                try:
+                    self.scheduler.shutdown(wait=False)
+                    self.logger.info("Scheduler shutdown complete")
+                except Exception as e:
+                    self.logger.warning(f"Error shutting down scheduler: {e}")
             
             # Close Discord connection
-            await self.close()
+            try:
+                await self.close()
+                self.logger.info("Discord connection closed")
+            except Exception as e:
+                self.logger.warning(f"Error closing Discord connection: {e}")
+            
+            # Close database connection (do this last to ensure all operations complete)
+            if self.db_manager:
+                try:
+                    await self.db_manager.close()
+                    self.logger.info("Database connection closed")
+                except Exception as e:
+                    self.logger.warning(f"Error closing database: {e}")
             
             self.logger.info("Graceful shutdown completed")
             
