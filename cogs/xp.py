@@ -405,12 +405,8 @@ class XP(commands.Cog):
     
     @app_commands.command(name="xpreset", description="Reset user XP to 0 (Server Owner only)")
     @app_commands.describe(
-        user="User to reset XP for"
-               @app_commands.describe(
-           user="User to reset XP for (leave empty to reset ALL users)",
-           confirm="Type 'yes' to confirm resetting ALL users (only needed for all reset)"
-       )
-              async def xpreset(self, interaction: discord.Interaction, user: discord.Member = None, confirm: str = None):
+        user="User to reset XP for (leave empty to reset ALL users)",
+        confirm="Type 'yes' to confirm resetting ALL users (only needed for all reset)"
     )
     async def xpreset(self, interaction: discord.Interaction, user: discord.Member = None, confirm: str = None):
         """Reset user XP to 0."""
@@ -539,40 +535,46 @@ class XP(commands.Cog):
                 title="✅ XP Reset",
                 description=f"Reset {user.mention}'s XP and level to 0"
             )
-                   async def _xpadmin_reset_all(self, interaction: discord.Interaction, confirm: str = None):
-           """Reset ALL users' XP and levels."""
-           try:
-               if confirm != "yes":
-                   embed = embed_helper.warning_embed(
-                       title="⚠️ Confirmation Required",
-                       description="This will reset **ALL users'** XP!\n\n`/xpreset confirm:yes`"
-                   )
-                   await interaction.response.send_message(embed=embed, ephemeral=True)
-                   return
-               
-               await interaction.response.defer(ephemeral=True)
-               conn = await self.bot.db_manager.get_connection()
-               cursor = await conn.execute("SELECT user_id FROM users WHERE xp > 0")
-               users = await cursor.fetchall()
-               
-               reset_count = 0
-               for user_row in users:
-                   await self.bot.db_manager.reset_user_xp(user_row[0])
-                   reset_count += 1
-               
-               embed = embed_helper.success_embed(
-                   title="✅ All XP Reset",
-                   description=f"Reset {reset_count} users"
-               )
-               await interaction.followup.send(embed=embed, ephemeral=True)
-               
-           except Exception as e:
-               self.logger.error(f"Error resetting all XP: {e}")
-               await self._error_response(interaction, "Failed to reset all XP")
-            
             await interaction.response.send_message(embed=embed, ephemeral=True)
             
             self.logger.info(f"Admin {interaction.user.name} reset {user.name}'s XP")
+            
+        except Exception as e:
+            self.logger.error(f"Error resetting XP: {e}")
+            await self._error_response(interaction, "Failed to reset XP")
+    
+    async def _xpadmin_reset_all(self, interaction: discord.Interaction, confirm: str = None):
+        """Reset ALL users' XP and levels."""
+        try:
+            if confirm != "yes":
+                embed = embed_helper.warning_embed(
+                    title="⚠️ Confirmation Required",
+                    description="This will reset **ALL users'** XP!\n\n`/xpreset confirm:yes`"
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+            
+            await interaction.response.defer(ephemeral=True)
+            conn = await self.bot.db_manager.get_connection()
+            cursor = await conn.execute("SELECT user_id FROM users WHERE xp > 0")
+            users = await cursor.fetchall()
+            
+            reset_count = 0
+            for user_row in users:
+                await self.bot.db_manager.reset_user_xp(user_row[0])
+                reset_count += 1
+            
+            embed = embed_helper.success_embed(
+                title="✅ All XP Reset",
+                description=f"Reset {reset_count} users"
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            
+            self.logger.info(f"Admin {interaction.user.name} reset all users' XP")
+            
+        except Exception as e:
+            self.logger.error(f"Error resetting all XP: {e}")
+            await self._error_response(interaction, "Failed to reset all XP")
             
         except Exception as e:
             self.logger.error(f"Error resetting XP: {e}")
