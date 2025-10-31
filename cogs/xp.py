@@ -26,7 +26,15 @@ class XP(commands.Cog):
         self.bot = bot
         self.logger = get_logger('xp')
         self.last_xp_time = {}  # Track last XP gain time per user
+        
+        # Create and add the xp group
+        self.xp_group = XPGroup(self)
+        self.bot.tree.add_command(self.xp_group)
     
+
+    async def cog_unload(self):
+        """Remove the command group when cog is unloaded"""
+        self.bot.tree.remove_command(self.xp_group.name)
     @commands.Cog.listener()
     async def on_message(self, message):
         """Award XP for messages."""
@@ -623,6 +631,4 @@ class XPGroup(app_commands.Group):
 
 async def setup(bot: commands.Bot):
     xp_cog = XP(bot)
-    xp_group = XPGroup(xp_cog)
     await bot.add_cog(xp_cog)
-    bot.tree.add_command(xp_group)
