@@ -294,6 +294,11 @@ class Appeal(commands.Cog):
         self.bot = bot
         self.db = bot.db_manager
         
+    async def cog_unload(self):
+        """Remove the command group when cog is unloaded"""
+        if hasattr(self, '_appeal_group'):
+            self.bot.tree.remove_command(self._appeal_group.name)
+        
         
     
     @commands.Cog.listener()
@@ -318,4 +323,5 @@ async def setup(bot: commands.Bot):
     appeal_cog = Appeal(bot)
     await bot.add_cog(appeal_cog)
     appeal_group = AppealGroup(appeal_cog)
+    appeal_cog._appeal_group = appeal_group  # Store reference for cleanup
     bot.tree.add_command(appeal_group)

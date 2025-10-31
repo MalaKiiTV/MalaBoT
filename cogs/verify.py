@@ -360,6 +360,11 @@ class Verify(commands.Cog):
         # Store pending verifications temporarily
         if not hasattr(bot, 'pending_verifications'):
             bot.pending_verifications = {}
+            
+    async def cog_unload(self):
+        """Remove the command group when cog is unloaded"""
+        if hasattr(self, '_verify_group'):
+            self.bot.tree.remove_command(self._verify_group.name)
         
         
 
@@ -472,4 +477,5 @@ async def setup(bot: commands.Bot):
     verify_cog = Verify(bot)
     await bot.add_cog(verify_cog)
     verify_group = VerifyGroup(verify_cog)
+    verify_cog._verify_group = verify_group  # Store reference for cleanup
     bot.tree.add_command(verify_group)
