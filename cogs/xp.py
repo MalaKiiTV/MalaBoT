@@ -407,7 +407,7 @@ class XP(commands.Cog):
     @app_commands.describe(
         user="User to reset XP for"
     )
-    async def xpreset(self, interaction: discord.Interaction, user: discord.Member):
+    async def xpreset(self, interaction: discord.Interaction, user: discord.Member = None, confirm: str = None):
         """Reset user XP to 0."""
         try:
             # Check server owner permissions
