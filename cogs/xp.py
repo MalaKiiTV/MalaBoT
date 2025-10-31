@@ -19,193 +19,6 @@ from utils.helpers import (
 from config.constants import COLORS, XP_TABLE, XP_PER_MESSAGE, XP_PER_REACTION, XP_PER_VOICE_MINUTE, XP_COOLDOWN_SECONDS, DAILY_CHECKIN_XP, STREAK_BONUS_PERCENT
 from config.settings import settings
 
-class XP(commands.Cog):
-    """XP and leveling system."""
-    
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-        self.logger = get_logger('xp')
-        self.last_xp_time = {}  # Track last XP gain time per user
-        
-        # Create and add the xp group
-        self.xp_group = XPGroup(self)
-        self.bot.tree.add_command(self.xp_group)
-    
-
-    async def cog_unload(self):
-        """Remove the command group when cog is unloaded"""
-        self.bot.tree.remove_command(self.xp_group.name)
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        """Award XP for messages."""
-        try:
-            # Ignore bots and DMs
-            if message.author.bot or not message.guild:
-                return
-            
-            guild_id = message.guild.id
-            user_id = message.author.id
-            current_time = datetime.datetime.now().timestamp()
-            
-            # Get guild-specific XP settings
-            xp_per_message = await self.bot.db_manager.get_setting(f"xp_per_message_{guild_id}")
-            xp_cooldown = await self.bot.db_manager.get_setting(f"xp_cooldown_{guild_id}")
-            
-            # Use defaults if not configured
-            if not xp_per_message:
-                xp_per_message = str(XP_PER_MESSAGE)  # Default to 10
-            if not xp_cooldown:
-                xp_cooldown = str(XP_COOLDOWN_SECONDS)  # Default to 60
-            
-            xp_amount = int(xp_per_message)
-            cooldown = int(xp_cooldown)
-            
-            # Check cooldown
-            key = f"{guild_id}_{user_id}"
-            if key in self.last_xp_time:
-                time_since_last = current_time - self.last_xp_time[key]
-                if time_since_last < cooldown:
-                    return
-            
-            # Update last XP time
-            self.last_xp_time[key] = current_time
-            
-            # Award XP
-            await self._award_xp(message.author, xp_amount, message.channel)
-            
-        except Exception as e:
-            self.logger.error(f"Error in on_message XP: {e}")
-    
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        """Award XP when user's message receives a reaction."""
-        try:
-            # Ignore bots and self-reactions
-            if user.bot or reaction.message.author.bot:
-                return
-            
-            # Don't award XP for reacting to your own message
-            if user.id == reaction.message.author.id:
-                return
-            
-            guild_id = reaction.message.guild.id
-            
-            # Get guild-specific reaction XP setting
-            xp_per_reaction = await self.bot.db_manager.get_setting(f"xp_per_reaction_{guild_id}")
-            
-            # Use default if not configured
-            if not xp_per_reaction:
-                xp_per_reaction = str(XP_PER_REACTION)  # Default to 2
-            
-            xp_amount = int(xp_per_reaction)
-            
-            # Award XP to the message author (not the reactor)
-            await self._award_xp(reaction.message.author, xp_amount, reaction.message.channel)
-            
-        except Exception as e:
-            self.logger.error(f"Error in on_reaction_add XP: {e}")
-    
-    @commands.Cog.listener()
-    async def on_voice_state_update(self, member, before, after):
-        """Award XP for voice chat participation."""
-        try:
-            # Ignore bots
-            if member.bot:
-                return
-            
-            guild_id = member.guild.id
-            
-            # Get guild-specific voice XP setting
-            xp_per_voice = await self.bot.db_manager.get_setting(f"xp_per_voice_{guild_id}")
-            
-            # Use default if not configured
-            if not xp_per_voice:
-                xp_per_voice = str(XP_PER_VOICE_MINUTE)  # Default to 5
-            
-            xp_amount = int(xp_per_voice)
-            
-            # Award XP when user leaves voice channel
-            if before.channel and not after.channel:
-                await self._award_xp(member, xp_amount, None)
-            
-        except Exception as e:
-            self.logger.error(f"Error in on_voice_state_update XP: {e}")
-    
-    async def _award_xp(self, user: discord.Member, amount: int, channel: Optional[discord.TextChannel] = None):
-        """Award XP to a user and check for level up."""
-        try:
-            old_level = await self.bot.db_manager.get_user_level(user.id)
-            await self.bot.db_manager.update_user_xp(user.id, amount)
-            new_level = await self.bot.db_manager.get_user_level(user.id)
-            
-            # Check for level up
-            if new_level > old_level and channel:
-                await self._handle_level_up(user, new_level, channel)
-                
-        except Exception as e:
-            self.logger.error(f"Error awarding XP: {e}")
-    
-    async def _handle_level_up(self, user: discord.Member, new_level: int, channel: discord.TextChannel):
-        """Handle level up event."""
-        try:
-            guild_id = user.guild.id
-            
-            # Get custom level-up message
-            level_up_message = await self.bot.db_manager.get_setting(f"level_up_message_{guild_id}")
-            level_up_channel_id = await self.bot.db_manager.get_setting(f"level_up_channel_{guild_id}")
-            
-            # Use custom channel if configured
-            if level_up_channel_id:
-                level_up_channel = user.guild.get_channel(int(level_up_channel_id))
-                if level_up_channel:
-                    channel = level_up_channel
-            
-            # Format message with variables
-            if level_up_message:
-                message = level_up_message.replace("{user}", user.mention)
-                message = message.replace("{level}", str(new_level))
-            else:
-                message = f"🎉 {user.mention} leveled up to **Level {new_level}**!"
-            
-            embed = embed_helper.success_embed(
-                title="🎉 Level Up!",
-                description=message
-            )
-            
-            await channel.send(embed=embed)
-            
-            # Check for level role rewards
-            await self._check_level_roles(user, new_level)
-            
-        except Exception as e:
-            self.logger.error(f"Error handling level up: {e}")
-    
-    async def _check_level_roles(self, user: discord.Member, level: int):
-        """Check and assign level role rewards."""
-        try:
-            guild_id = user.guild.id
-            level_roles = await self.bot.db_manager.get_setting(f"level_roles_{guild_id}")
-            
-            if not level_roles:
-                return
-            
-            # Parse level roles (format: "level:role_id,level:role_id")
-            for role_entry in level_roles.split(","):
-                if ":" not in role_entry:
-                    continue
-                
-                role_level, role_id = role_entry.split(":")
-                role_level = int(role_level)
-                
-                # If user reached this level, assign the role
-                if level >= role_level:
-                    role = user.guild.get_role(int(role_id))
-                    if role and role not in user.roles:
-                        await user.add_roles(role, reason=f"Reached level {role_level}")
-                        self.logger.info(f"Assigned role {role.name} to {user.name} for reaching level {role_level}")
-                        
-        except Exception as e:
-            self.logger.error(f"Error checking level roles: {e}")
 
 
 class XPGroup(app_commands.Group):
@@ -632,3 +445,193 @@ class XPGroup(app_commands.Group):
 async def setup(bot: commands.Bot):
     xp_cog = XP(bot)
     await bot.add_cog(xp_cog)
+
+class XP(commands.Cog):
+    """XP and leveling system."""
+    
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self.logger = get_logger('xp')
+        self.last_xp_time = {}  # Track last XP gain time per user
+        
+        # Create and add the xp group
+        self.xp_group = XPGroup(self)
+        self.bot.tree.add_command(self.xp_group)
+    
+
+    async def cog_unload(self):
+        """Remove the command group when cog is unloaded"""
+        self.bot.tree.remove_command(self.xp_group.name)
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        """Award XP for messages."""
+        try:
+            # Ignore bots and DMs
+            if message.author.bot or not message.guild:
+                return
+            
+            guild_id = message.guild.id
+            user_id = message.author.id
+            current_time = datetime.datetime.now().timestamp()
+            
+            # Get guild-specific XP settings
+            xp_per_message = await self.bot.db_manager.get_setting(f"xp_per_message_{guild_id}")
+            xp_cooldown = await self.bot.db_manager.get_setting(f"xp_cooldown_{guild_id}")
+            
+            # Use defaults if not configured
+            if not xp_per_message:
+                xp_per_message = str(XP_PER_MESSAGE)  # Default to 10
+            if not xp_cooldown:
+                xp_cooldown = str(XP_COOLDOWN_SECONDS)  # Default to 60
+            
+            xp_amount = int(xp_per_message)
+            cooldown = int(xp_cooldown)
+            
+            # Check cooldown
+            key = f"{guild_id}_{user_id}"
+            if key in self.last_xp_time:
+                time_since_last = current_time - self.last_xp_time[key]
+                if time_since_last < cooldown:
+                    return
+            
+            # Update last XP time
+            self.last_xp_time[key] = current_time
+            
+            # Award XP
+            await self._award_xp(message.author, xp_amount, message.channel)
+            
+        except Exception as e:
+            self.logger.error(f"Error in on_message XP: {e}")
+    
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction, user):
+        """Award XP when user's message receives a reaction."""
+        try:
+            # Ignore bots and self-reactions
+            if user.bot or reaction.message.author.bot:
+                return
+            
+            # Don't award XP for reacting to your own message
+            if user.id == reaction.message.author.id:
+                return
+            
+            guild_id = reaction.message.guild.id
+            
+            # Get guild-specific reaction XP setting
+            xp_per_reaction = await self.bot.db_manager.get_setting(f"xp_per_reaction_{guild_id}")
+            
+            # Use default if not configured
+            if not xp_per_reaction:
+                xp_per_reaction = str(XP_PER_REACTION)  # Default to 2
+            
+            xp_amount = int(xp_per_reaction)
+            
+            # Award XP to the message author (not the reactor)
+            await self._award_xp(reaction.message.author, xp_amount, reaction.message.channel)
+            
+        except Exception as e:
+            self.logger.error(f"Error in on_reaction_add XP: {e}")
+    
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        """Award XP for voice chat participation."""
+        try:
+            # Ignore bots
+            if member.bot:
+                return
+            
+            guild_id = member.guild.id
+            
+            # Get guild-specific voice XP setting
+            xp_per_voice = await self.bot.db_manager.get_setting(f"xp_per_voice_{guild_id}")
+            
+            # Use default if not configured
+            if not xp_per_voice:
+                xp_per_voice = str(XP_PER_VOICE_MINUTE)  # Default to 5
+            
+            xp_amount = int(xp_per_voice)
+            
+            # Award XP when user leaves voice channel
+            if before.channel and not after.channel:
+                await self._award_xp(member, xp_amount, None)
+            
+        except Exception as e:
+            self.logger.error(f"Error in on_voice_state_update XP: {e}")
+    
+    async def _award_xp(self, user: discord.Member, amount: int, channel: Optional[discord.TextChannel] = None):
+        """Award XP to a user and check for level up."""
+        try:
+            old_level = await self.bot.db_manager.get_user_level(user.id)
+            await self.bot.db_manager.update_user_xp(user.id, amount)
+            new_level = await self.bot.db_manager.get_user_level(user.id)
+            
+            # Check for level up
+            if new_level > old_level and channel:
+                await self._handle_level_up(user, new_level, channel)
+                
+        except Exception as e:
+            self.logger.error(f"Error awarding XP: {e}")
+    
+    async def _handle_level_up(self, user: discord.Member, new_level: int, channel: discord.TextChannel):
+        """Handle level up event."""
+        try:
+            guild_id = user.guild.id
+            
+            # Get custom level-up message
+            level_up_message = await self.bot.db_manager.get_setting(f"level_up_message_{guild_id}")
+            level_up_channel_id = await self.bot.db_manager.get_setting(f"level_up_channel_{guild_id}")
+            
+            # Use custom channel if configured
+            if level_up_channel_id:
+                level_up_channel = user.guild.get_channel(int(level_up_channel_id))
+                if level_up_channel:
+                    channel = level_up_channel
+            
+            # Format message with variables
+            if level_up_message:
+                message = level_up_message.replace("{user}", user.mention)
+                message = message.replace("{level}", str(new_level))
+            else:
+                message = f"🎉 {user.mention} leveled up to **Level {new_level}**!"
+            
+            embed = embed_helper.success_embed(
+                title="🎉 Level Up!",
+                description=message
+            )
+            
+            await channel.send(embed=embed)
+            
+            # Check for level role rewards
+            await self._check_level_roles(user, new_level)
+            
+        except Exception as e:
+            self.logger.error(f"Error handling level up: {e}")
+    
+    async def _check_level_roles(self, user: discord.Member, level: int):
+        """Check and assign level role rewards."""
+        try:
+            guild_id = user.guild.id
+            level_roles = await self.bot.db_manager.get_setting(f"level_roles_{guild_id}")
+            
+            if not level_roles:
+                return
+            
+            # Parse level roles (format: "level:role_id,level:role_id")
+            for role_entry in level_roles.split(","):
+                if ":" not in role_entry:
+                    continue
+                
+                role_level, role_id = role_entry.split(":")
+                role_level = int(role_level)
+                
+                # If user reached this level, assign the role
+                if level >= role_level:
+                    role = user.guild.get_role(int(role_id))
+                    if role and role not in user.roles:
+                        await user.add_roles(role, reason=f"Reached level {role_level}")
+                        self.logger.info(f"Assigned role {role.name} to {user.name} for reaching level {role_level}")
+                        
+        except Exception as e:
+            self.logger.error(f"Error checking level roles: {e}")
+
+

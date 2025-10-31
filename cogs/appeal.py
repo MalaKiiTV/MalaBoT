@@ -14,99 +14,6 @@ from utils.logger import log_system
 from config.constants import COLORS
 
 
-class AppealModal(Modal, title="Submit Appeal"):
-    """Modal for submitting an appeal"""
-    appeal_text = TextInput(
-        label="Your Appeal",
-        placeholder="Explain why you believe you were wrongly marked as a cheater...",
-        required=True,
-        max_length=1000,
-        style=discord.TextStyle.paragraph
-    )
-
-    def __init__(self, db_manager, guild_id: int):
-        super().__init__()
-        self.db = db_manager
-        self.guild_id = guild_id
-
-    async def on_submit(self, interaction: discord.Interaction):
-        try:
-            user_id = interaction.user.id
-            
-            # Check if user already submitted a PENDING appeal for this jail session
-            conn = await self.db.get_connection()
-            cursor = await conn.execute(
-                "SELECT COUNT(*) FROM appeals WHERE user_id = ? AND guild_id = ? AND status = 'pending'",
-                (user_id, self.guild_id)
-            )
-            count = (await cursor.fetchone())[0]
-            
-            if count > 0:
-                await interaction.response.send_message(
-                    embed=create_embed(
-                        "Appeal Already Submitted",
-                        "❌ You have already submitted an appeal. You can only appeal once per jail session.\n\n"
-                        "Please wait for staff to review your appeal.",
-                        COLORS["error"],
-                    ),
-                    ephemeral=True,
-                )
-                return
-            
-            # Store appeal in database
-            await conn.execute(
-                "INSERT INTO appeals (user_id, guild_id, appeal_text, status, submitted_at) VALUES (?, ?, ?, 'pending', CURRENT_TIMESTAMP)",
-                (user_id, self.guild_id, self.appeal_text.value)
-            )
-            await conn.commit()
-            
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Appeal Submitted ✅",
-                    "Your appeal has been submitted to staff for review.\n\n"
-                    "You will be notified once a decision is made.",
-                    COLORS["success"],
-                ),
-                ephemeral=True,
-            )
-            
-            # Notify staff in review channel
-            review_channel_id = await self.db.get_setting(f"verify_channel_{self.guild_id}")
-            if review_channel_id:
-                review_channel = interaction.guild.get_channel(int(review_channel_id))
-                if review_channel:
-                    embed = discord.Embed(
-                        title="📝 New Appeal Submitted",
-                        description=(
-                            f"**User:** {interaction.user.mention}\n"
-                            f"**User ID:** `{user_id}`\n"
-                            f"**Submitted:** {discord.utils.format_dt(discord.utils.utcnow(), 'F')}\n\n"
-                            f"**Appeal:**\n{self.appeal_text.value}"
-                        ),
-                        color=COLORS["info"],
-                    )
-                    embed.set_footer(text=f"Use /appeal review @{interaction.user.name} <approve/deny> [reason]")
-                    await review_channel.send(embed=embed)
-            
-            log_system(f"[APPEAL] User {user_id} submitted appeal in guild {self.guild_id}")
-            await self.db.log_event(
-                category="APPEAL",
-                action="SUBMIT",
-                user_id=user_id,
-                guild_id=self.guild_id,
-                details="Appeal submitted"
-            )
-            
-        except Exception as e:
-            log_system(f"Error submitting appeal: {e}", level="error")
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "Failed to submit appeal. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
 
 
 class AppealGroup(app_commands.Group):
@@ -283,6 +190,103 @@ class AppealGroup(app_commands.Group):
         except Exception as e:
             log_system(f"Appeal review error: {e}", level="error")
             await safe_send_message(interaction, content="An error occurred while processing the appeal review.", ephemeral=True)
+
+
+
+class AppealModal(Modal, title="Submit Appeal"):
+    """Modal for submitting an appeal"""
+    appeal_text = TextInput(
+        label="Your Appeal",
+        placeholder="Explain why you believe you were wrongly marked as a cheater...",
+        required=True,
+        max_length=1000,
+        style=discord.TextStyle.paragraph
+    )
+
+    def __init__(self, db_manager, guild_id: int):
+        super().__init__()
+        self.db = db_manager
+        self.guild_id = guild_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            user_id = interaction.user.id
+            
+            # Check if user already submitted a PENDING appeal for this jail session
+            conn = await self.db.get_connection()
+            cursor = await conn.execute(
+                "SELECT COUNT(*) FROM appeals WHERE user_id = ? AND guild_id = ? AND status = 'pending'",
+                (user_id, self.guild_id)
+            )
+            count = (await cursor.fetchone())[0]
+            
+            if count > 0:
+                await interaction.response.send_message(
+                    embed=create_embed(
+                        "Appeal Already Submitted",
+                        "❌ You have already submitted an appeal. You can only appeal once per jail session.\n\n"
+                        "Please wait for staff to review your appeal.",
+                        COLORS["error"],
+                    ),
+                    ephemeral=True,
+                )
+                return
+            
+            # Store appeal in database
+            await conn.execute(
+                "INSERT INTO appeals (user_id, guild_id, appeal_text, status, submitted_at) VALUES (?, ?, ?, 'pending', CURRENT_TIMESTAMP)",
+                (user_id, self.guild_id, self.appeal_text.value)
+            )
+            await conn.commit()
+            
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Appeal Submitted ✅",
+                    "Your appeal has been submitted to staff for review.\n\n"
+                    "You will be notified once a decision is made.",
+                    COLORS["success"],
+                ),
+                ephemeral=True,
+            )
+            
+            # Notify staff in review channel
+            review_channel_id = await self.db.get_setting(f"verify_channel_{self.guild_id}")
+            if review_channel_id:
+                review_channel = interaction.guild.get_channel(int(review_channel_id))
+                if review_channel:
+                    embed = discord.Embed(
+                        title="📝 New Appeal Submitted",
+                        description=(
+                            f"**User:** {interaction.user.mention}\n"
+                            f"**User ID:** `{user_id}`\n"
+                            f"**Submitted:** {discord.utils.format_dt(discord.utils.utcnow(), 'F')}\n\n"
+                            f"**Appeal:**\n{self.appeal_text.value}"
+                        ),
+                        color=COLORS["info"],
+                    )
+                    embed.set_footer(text=f"Use /appeal review @{interaction.user.name} <approve/deny> [reason]")
+                    await review_channel.send(embed=embed)
+            
+            log_system(f"[APPEAL] User {user_id} submitted appeal in guild {self.guild_id}")
+            await self.db.log_event(
+                category="APPEAL",
+                action="SUBMIT",
+                user_id=user_id,
+                guild_id=self.guild_id,
+                details="Appeal submitted"
+            )
+            
+        except Exception as e:
+            log_system(f"Error submitting appeal: {e}", level="error")
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "Error",
+                    "Failed to submit appeal. Please try again.",
+                    COLORS["error"],
+                ),
+                ephemeral=True,
+            )
+
 
 
 class Appeal(commands.Cog):
