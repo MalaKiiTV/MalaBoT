@@ -407,6 +407,15 @@ class Owner(commands.Cog):
             await self.bot.tree.sync(guild=guild)
             self.logger.info("Cleared all commands from Discord")
             
+            # Reload cogs to re-register command groups
+            cogs_to_reload = ['cogs.xp', 'cogs.verify', 'cogs.appeal']
+            for cog_name in cogs_to_reload:
+                try:
+                    await self.bot.reload_extension(cog_name)
+                    self.logger.info(f"Reloaded {cog_name}")
+                except Exception as e:
+                    self.logger.error(f"Failed to reload {cog_name}: {e}")
+            
             # Now copy commands from cogs to tree
             self.bot.tree.copy_global_to(guild=guild)
             self.logger.info("Copied commands from cogs to tree")
