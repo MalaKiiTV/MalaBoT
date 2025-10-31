@@ -201,9 +201,9 @@ class XP(commands.Cog):
     
     # ==================== XP COMMAND GROUP ====================
     
-    xp_group = app_commands.Group(name="xp", description="XP and leveling system commands")
+    xp = app_commands.Group(name="xp", description="XP and leveling system commands")
     
-    @xp_group.command(name="rank", description="Check your or another user's rank and XP")
+    @xp.command(name="rank", description="Check your or another user's rank and XP")
     @app_commands.describe(user="User to check (leave empty for yourself)")
     async def xp_rank(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
         """Check XP rank."""
@@ -246,7 +246,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xp rank command: {e}")
             await self._error_response(interaction, "Failed to get rank")
     
-    @xp_group.command(name="leaderboard", description="Show server XP leaderboard")
+    @xp.command(name="leaderboard", description="Show server XP leaderboard")
     async def xp_leaderboard(self, interaction: discord.Interaction):
         """Show XP leaderboard."""
         try:
@@ -288,7 +288,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xp leaderboard command: {e}")
             await self._error_response(interaction, "Failed to get leaderboard")
     
-    @xp_group.command(name="checkin", description="Claim your daily XP bonus")
+    @xp.command(name="checkin", description="Claim your daily XP bonus")
     async def xp_checkin(self, interaction: discord.Interaction):
         """Daily XP check-in."""
         try:
@@ -360,7 +360,7 @@ class XP(commands.Cog):
     
     # ==================== ADMIN COMMANDS ====================
     
-    @xp_group.command(name="add", description="Add XP to a user (Server Owner only)")
+    @xp.command(name="add", description="Add XP to a user (Server Owner only)")
     @app_commands.describe(
         user="User to add XP to",
         amount="Amount of XP to add"
@@ -399,7 +399,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xp add command: {e}")
             await self._error_response(interaction, "Failed to add XP")
     
-    @xp_group.command(name="add-all", description="Add XP to ALL users in the server (Server Owner only)")
+    @xp.command(name="add-all", description="Add XP to ALL users in the server (Server Owner only)")
     @app_commands.describe(
         amount="Amount of XP to add to each user",
         confirm="Type 'yes' to confirm adding XP to ALL users"
@@ -453,7 +453,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xp add-all command: {e}")
             await self._error_response(interaction, "Failed to add XP to all users")
     
-    @xp_group.command(name="remove", description="Remove XP from a user (Server Owner only)")
+    @xp.command(name="remove", description="Remove XP from a user (Server Owner only)")
     @app_commands.describe(
         user="User to remove XP from",
         amount="Amount of XP to remove"
@@ -495,7 +495,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xp remove command: {e}")
             await self._error_response(interaction, "Failed to remove XP")
     
-    @xp_group.command(name="set", description="Set user XP to a specific amount (Server Owner only)")
+    @xp.command(name="set", description="Set user XP to a specific amount (Server Owner only)")
     @app_commands.describe(
         user="User to set XP for",
         amount="Amount of XP to set"
@@ -534,7 +534,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xp set command: {e}")
             await self._error_response(interaction, "Failed to set XP")
     
-    @xp_group.command(name="reset", description="Reset a user's XP to 0 (Server Owner only)")
+    @xp.command(name="reset", description="Reset a user's XP to 0 (Server Owner only)")
     @app_commands.describe(user="User to reset XP for")
     async def xp_reset(self, interaction: discord.Interaction, user: discord.Member):
         """Reset user XP."""
@@ -562,7 +562,7 @@ class XP(commands.Cog):
             self.logger.error(f"Error in xp reset command: {e}")
             await self._error_response(interaction, "Failed to reset XP")
     
-    @xp_group.command(name="reset-all", description="Reset ALL users' XP to 0 (Server Owner only)")
+    @xp.command(name="reset-all", description="Reset ALL users' XP to 0 (Server Owner only)")
     @app_commands.describe(confirm="Type 'yes' to confirm resetting ALL users")
     async def xp_reset_all(self, interaction: discord.Interaction, confirm: str):
         """Reset all users' XP."""
