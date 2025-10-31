@@ -609,7 +609,8 @@ The bot will start in safe mode to prevent further issues.
                 for guild_id in settings.DEBUG_GUILDS:
                     try:
                         guild = discord.Object(id=guild_id)
-                        self.tree.copy_global_to(guild=guild)
+                        # Don't use copy_global_to() as it flattens command groups
+                        # Just sync directly to preserve group structure
                         synced = await self.tree.sync(guild=guild)
                         self.logger.info(f"✅ Synced {len(synced)} commands to debug guild: {guild_id}")
                     except Exception as e:
