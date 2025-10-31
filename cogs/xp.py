@@ -198,24 +198,27 @@ class XP(commands.Cog):
                         
         except Exception as e:
             self.logger.error(f"Error checking level roles: {e}")
+
+
+class XPGroup(app_commands.Group):
+    """XP command group"""
+    def __init__(self, cog):
+        super().__init__(name="xp", description="XP and leveling system commands")
+        self.cog = cog
     
-    # ==================== XP COMMAND GROUP ====================
-    
-    xp = app_commands.Group(name="xp", description="XP and leveling system commands")
-    
-    @xp.command(name="rank", description="Check your or another user's rank and XP")
+    @app_commands.command(name="rank", description="Check your or another user's rank and XP")
     @app_commands.describe(user="User to check (leave empty for yourself)")
-    async def xp_rank(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
+    async def rank(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
         """Check XP rank."""
         try:
             target = user or interaction.user
             
             # Get user stats
-            xp = await self.bot.db_manager.get_user_xp(target.id)
-            level = await self.bot.db_manager.get_user_level(target.id)
+            xp = await self.cog.bot.db_manager.get_user_xp(target.id)
+            level = await self.cog.bot.db_manager.get_user_level(target.id)
             
             # Get rank
-            conn = await self.bot.db_manager.get_connection()
+            conn = await self.cog.bot.db_manager.get_connection()
             cursor = await conn.execute(
                 "SELECT COUNT(*) + 1 FROM users WHERE xp > ?",
                 (xp,)
@@ -243,17 +246,17 @@ class XP(commands.Cog):
             await interaction.response.send_message(embed=embed)
             
         except Exception as e:
-            self.logger.error(f"Error in xp rank command: {e}")
-            await self._error_response(interaction, "Failed to get rank")
+            self.cog.logger.error(f"Error in xp rank command: {e}")
+            await self.cog._error_response(interaction, "Failed to get rank")
     
-    @xp.command(name="leaderboard", description="Show server XP leaderboard")
-    async def xp_leaderboard(self, interaction: discord.Interaction):
+    @app_commands.command(name="leaderboard", description="Show server XP leaderboard")
+    async def leaderboard(self, interaction: discord.Interaction):
         """Show XP leaderboard."""
         try:
             await interaction.response.defer()
             
             # Get top 10 users
-            conn = await self.bot.db_manager.get_connection()
+            conn = await self.cog.bot.db_manager.get_connection()
             cursor = await conn.execute(
                 "SELECT user_id, xp FROM users WHERE xp > 0 ORDER BY xp DESC LIMIT 10"
             )
@@ -272,7 +275,7 @@ class XP(commands.Cog):
             for i, (user_id, xp) in enumerate(top_users, 1):
                 user = interaction.guild.get_member(user_id)
                 if user:
-                    level = await self.bot.db_manager.get_user_level(user_id)
+                    level = await self.cog.bot.db_manager.get_user_level(user_id)
                     medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"**{i}.**"
                     description += f"{medal} {user.mention} - Level {level} ({xp:,} XP)\n"
             
@@ -285,17 +288,17 @@ class XP(commands.Cog):
             await interaction.followup.send(embed=embed)
             
         except Exception as e:
-            self.logger.error(f"Error in xp leaderboard command: {e}")
-            await self._error_response(interaction, "Failed to get leaderboard")
+            self.cog.logger.error(f"Error in xp leaderboard command: {e}")
+            await self.cog._error_response(interaction, "Failed to get leaderboard")
     
-    @xp.command(name="checkin", description="Claim your daily XP bonus")
-    async def xp_checkin(self, interaction: discord.Interaction):
+    @app_commands.command(name="checkin", description="Claim your daily XP bonus")
+    async def checkin(self, interaction: discord.Interaction):
         """Daily XP check-in."""
         try:
             user_id = interaction.user.id
             
             # Check if user already claimed today
-            last_daily = await self.bot.db_manager.get_user_last_daily(user_id)
+            last_daily = await self.cog.bot.db_manager.get_user_last_daily(user_id)
             now = datetime.datetime.now()
             
             if last_daily:
@@ -316,30 +319,30 @@ class XP(commands.Cog):
             
             # Award daily XP
             xp_amount = DAILY_CHECKIN_XP
-            await self.bot.db_manager.update_user_xp(user_id, xp_amount)
-            await self.bot.db_manager.update_user_last_daily(user_id, now.isoformat())
+            await self.cog.bot.db_manager.update_user_xp(user_id, xp_amount)
+            await self.cog.bot.db_manager.update_user_last_daily(user_id, now.isoformat())
             
             # Check for streak bonus
-            streak = await self.bot.db_manager.get_user_streak(user_id)
+            streak = await self.cog.bot.db_manager.get_user_streak(user_id)
             if last_daily:
                 last_daily_date = datetime.datetime.fromisoformat(last_daily)
                 if (now.date() - last_daily_date.date()).days == 1:
                     # Consecutive day, increase streak
                     streak += 1
-                    await self.bot.db_manager.update_user_streak(user_id, streak)
+                    await self.cog.bot.db_manager.update_user_streak(user_id, streak)
                 else:
                     # Streak broken
                     streak = 1
-                    await self.bot.db_manager.update_user_streak(user_id, 1)
+                    await self.cog.bot.db_manager.update_user_streak(user_id, 1)
             else:
                 # First daily
                 streak = 1
-                await self.bot.db_manager.update_user_streak(user_id, 1)
+                await self.cog.bot.db_manager.update_user_streak(user_id, 1)
             
             # Calculate streak bonus
             if streak > 1:
                 bonus_xp = int(xp_amount * (STREAK_BONUS_PERCENT / 100) * min(streak, 7))
-                await self.bot.db_manager.update_user_xp(user_id, bonus_xp)
+                await self.cog.bot.db_manager.update_user_xp(user_id, bonus_xp)
                 total_xp = xp_amount + bonus_xp
                 
                 embed = embed_helper.success_embed(
@@ -355,17 +358,17 @@ class XP(commands.Cog):
             await interaction.response.send_message(embed=embed)
             
         except Exception as e:
-            self.logger.error(f"Error in xp checkin command: {e}")
-            await self._error_response(interaction, "Failed to claim daily XP")
+            self.cog.logger.error(f"Error in xp checkin command: {e}")
+            await self.cog._error_response(interaction, "Failed to claim daily XP")
     
     # ==================== ADMIN COMMANDS ====================
     
-    @xp.command(name="add", description="Add XP to a user (Server Owner only)")
+    @app_commands.command(name="add", description="Add XP to a user (Server Owner only)")
     @app_commands.describe(
         user="User to add XP to",
         amount="Amount of XP to add"
     )
-    async def xp_add(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+    async def add(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Add XP to a user."""
         try:
             # Check server owner permissions
@@ -385,7 +388,7 @@ class XP(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            await self.bot.db_manager.update_user_xp(user.id, amount)
+            await self.cog.bot.db_manager.update_user_xp(user.id, amount)
             
             embed = embed_helper.success_embed(
                 title="✅ XP Added",
@@ -393,18 +396,18 @@ class XP(commands.Cog):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             
-            self.logger.info(f"Admin {interaction.user.name} added {amount} XP to {user.name}")
+            self.cog.logger.info(f"Admin {interaction.user.name} added {amount} XP to {user.name}")
             
         except Exception as e:
-            self.logger.error(f"Error in xp add command: {e}")
-            await self._error_response(interaction, "Failed to add XP")
+            self.cog.logger.error(f"Error in xp add command: {e}")
+            await self.cog._error_response(interaction, "Failed to add XP")
     
-    @xp.command(name="add-all", description="Add XP to ALL users in the server (Server Owner only)")
+    @app_commands.command(name="add-all", description="Add XP to ALL users in the server (Server Owner only)")
     @app_commands.describe(
         amount="Amount of XP to add to each user",
         confirm="Type 'yes' to confirm adding XP to ALL users"
     )
-    async def xp_add_all(self, interaction: discord.Interaction, amount: int, confirm: str):
+    async def add_all(self, interaction: discord.Interaction, amount: int, confirm: str):
         """Add XP to all users."""
         try:
             # Check server owner permissions
@@ -438,7 +441,7 @@ class XP(commands.Cog):
             added_count = 0
             for member in interaction.guild.members:
                 if not member.bot:
-                    await self.bot.db_manager.update_user_xp(member.id, amount)
+                    await self.cog.bot.db_manager.update_user_xp(member.id, amount)
                     added_count += 1
             
             embed = embed_helper.success_embed(
@@ -447,18 +450,18 @@ class XP(commands.Cog):
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
             
-            self.logger.info(f"Admin {interaction.user.name} added {amount} XP to all users ({added_count} users)")
+            self.cog.logger.info(f"Admin {interaction.user.name} added {amount} XP to all users ({added_count} users)")
             
         except Exception as e:
-            self.logger.error(f"Error in xp add-all command: {e}")
-            await self._error_response(interaction, "Failed to add XP to all users")
+            self.cog.logger.error(f"Error in xp add-all command: {e}")
+            await self.cog._error_response(interaction, "Failed to add XP to all users")
     
-    @xp.command(name="remove", description="Remove XP from a user (Server Owner only)")
+    @app_commands.command(name="remove", description="Remove XP from a user (Server Owner only)")
     @app_commands.describe(
         user="User to remove XP from",
         amount="Amount of XP to remove"
     )
-    async def xp_remove(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+    async def remove(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Remove XP from a user."""
         try:
             # Check server owner permissions
@@ -478,10 +481,10 @@ class XP(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            current_xp = await self.bot.db_manager.get_user_xp(user.id)
+            current_xp = await self.cog.bot.db_manager.get_user_xp(user.id)
             new_xp = max(0, current_xp - amount)
             
-            await self.bot.db_manager.set_user_xp(user.id, new_xp)
+            await self.cog.bot.db_manager.set_user_xp(user.id, new_xp)
             
             embed = embed_helper.success_embed(
                 title="✅ XP Removed",
@@ -489,18 +492,18 @@ class XP(commands.Cog):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             
-            self.logger.info(f"Admin {interaction.user.name} removed {amount} XP from {user.name}")
+            self.cog.logger.info(f"Admin {interaction.user.name} removed {amount} XP from {user.name}")
             
         except Exception as e:
-            self.logger.error(f"Error in xp remove command: {e}")
-            await self._error_response(interaction, "Failed to remove XP")
+            self.cog.logger.error(f"Error in xp remove command: {e}")
+            await self.cog._error_response(interaction, "Failed to remove XP")
     
-    @xp.command(name="set", description="Set user XP to a specific amount (Server Owner only)")
+    @app_commands.command(name="set", description="Set user XP to a specific amount (Server Owner only)")
     @app_commands.describe(
         user="User to set XP for",
         amount="Amount of XP to set"
     )
-    async def xp_set(self, interaction: discord.Interaction, user: discord.Member, amount: int):
+    async def set(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Set user XP."""
         try:
             # Check server owner permissions
@@ -520,7 +523,7 @@ class XP(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            await self.bot.db_manager.set_user_xp(user.id, amount)
+            await self.cog.bot.db_manager.set_user_xp(user.id, amount)
             
             embed = embed_helper.success_embed(
                 title="✅ XP Set",
@@ -528,15 +531,15 @@ class XP(commands.Cog):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             
-            self.logger.info(f"Admin {interaction.user.name} set {user.name}'s XP to {amount}")
+            self.cog.logger.info(f"Admin {interaction.user.name} set {user.name}'s XP to {amount}")
             
         except Exception as e:
-            self.logger.error(f"Error in xp set command: {e}")
-            await self._error_response(interaction, "Failed to set XP")
+            self.cog.logger.error(f"Error in xp set command: {e}")
+            await self.cog._error_response(interaction, "Failed to set XP")
     
-    @xp.command(name="reset", description="Reset a user's XP to 0 (Server Owner only)")
+    @app_commands.command(name="reset", description="Reset a user's XP to 0 (Server Owner only)")
     @app_commands.describe(user="User to reset XP for")
-    async def xp_reset(self, interaction: discord.Interaction, user: discord.Member):
+    async def reset(self, interaction: discord.Interaction, user: discord.Member):
         """Reset user XP."""
         try:
             # Check server owner permissions
@@ -548,7 +551,7 @@ class XP(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            await self.bot.db_manager.reset_user_xp(user.id)
+            await self.cog.bot.db_manager.reset_user_xp(user.id)
             
             embed = embed_helper.success_embed(
                 title="✅ XP Reset",
@@ -556,15 +559,15 @@ class XP(commands.Cog):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             
-            self.logger.info(f"Admin {interaction.user.name} reset {user.name}'s XP")
+            self.cog.logger.info(f"Admin {interaction.user.name} reset {user.name}'s XP")
             
         except Exception as e:
-            self.logger.error(f"Error in xp reset command: {e}")
-            await self._error_response(interaction, "Failed to reset XP")
+            self.cog.logger.error(f"Error in xp reset command: {e}")
+            await self.cog._error_response(interaction, "Failed to reset XP")
     
-    @xp.command(name="reset-all", description="Reset ALL users' XP to 0 (Server Owner only)")
+    @app_commands.command(name="reset-all", description="Reset ALL users' XP to 0 (Server Owner only)")
     @app_commands.describe(confirm="Type 'yes' to confirm resetting ALL users")
-    async def xp_reset_all(self, interaction: discord.Interaction, confirm: str):
+    async def reset_all(self, interaction: discord.Interaction, confirm: str):
         """Reset all users' XP."""
         try:
             # Check server owner permissions
@@ -585,13 +588,13 @@ class XP(commands.Cog):
                 return
             
             await interaction.response.defer(ephemeral=True)
-            conn = await self.bot.db_manager.get_connection()
+            conn = await self.cog.bot.db_manager.get_connection()
             cursor = await conn.execute("SELECT user_id FROM users WHERE xp > 0")
             users = await cursor.fetchall()
             
             reset_count = 0
             for user_row in users:
-                await self.bot.db_manager.reset_user_xp(user_row[0])
+                await self.cog.bot.db_manager.reset_user_xp(user_row[0])
                 reset_count += 1
             
             embed = embed_helper.success_embed(
@@ -600,11 +603,11 @@ class XP(commands.Cog):
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
             
-            self.logger.info(f"Admin {interaction.user.name} reset all users' XP")
+            self.cog.logger.info(f"Admin {interaction.user.name} reset all users' XP")
             
         except Exception as e:
-            self.logger.error(f"Error in xp reset-all command: {e}")
-            await self._error_response(interaction, "Failed to reset all XP")
+            self.cog.logger.error(f"Error in xp reset-all command: {e}")
+            await self.cog._error_response(interaction, "Failed to reset all XP")
     
     async def _error_response(self, interaction: discord.Interaction, message: str):
         """Send error response."""
@@ -619,4 +622,7 @@ class XP(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(XP(bot))
+    xp_cog = XP(bot)
+    xp_group = XPGroup(xp_cog)
+    await bot.add_cog(xp_cog)
+    bot.tree.add_command(xp_group)
