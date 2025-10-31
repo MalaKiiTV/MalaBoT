@@ -35,19 +35,26 @@ class XPGroup(app_commands.Group):
             
             # Get user stats
             xp = await self.cog.bot.db_manager.get_user_xp(target.id)
-            level = await self.cog.bot.db_manager.get_user_level(target.id)
+            level = 1
+            # Calculate level from XP
+            total_xp = xp
+            for lvl, req_xp in enumerate(XP_TABLE):
+                if total_xp >= req_xp:
+                    level = lvl + 1
+                else:
+                    break
             
             # Get rank
-            conn = await self.cog.bot.db_manager.get_connection()
-            cursor = await conn.execute(
-                "SELECT COUNT(*) + 1 FROM users WHERE xp > ?",
-                (xp,)
-            )
-            rank = (await cursor.fetchone())[0]
+            rank = await self.cog.bot.db_manager.get_user_rank(target.id, interaction.guild.id)
             
-            # Calculate XP for next level
-            next_level_xp = xp_helper.xp_for_level(level + 1)
-            current_level_xp = xp_helper.xp_for_level(level)
+            # Calculate XP for next level using XP_TABLE
+            if level < len(XP_TABLE):
+                next_level_xp = XP_TABLE[min(level + 1, len(XP_TABLE) - 1)]
+                current_level_xp = XP_TABLE[level]
+            else:
+                # For very high levels, use a formula
+                next_level_xp = 1000 * (level + 1) * level
+                current_level_xp = 1000 * level * (level - 1)
             xp_needed = next_level_xp - xp
             xp_progress = xp - current_level_xp
             xp_total_needed = next_level_xp - current_level_xp
@@ -84,14 +91,14 @@ class XPGroup(app_commands.Group):
     async def leaderboard(self, interaction: discord.Interaction):
         """Show XP leaderboard."""
         try:
+            # Get top users by XP (simplified - doesn't filter by guild)
             conn = await self.cog.bot.db_manager.get_connection()
             cursor = await conn.execute(
-                """SELECT user_id, xp, level 
+                """SELECT user_id, xp 
                    FROM users 
-                   WHERE guild_id = ? AND xp > 0 
+                   WHERE xp > 0 
                    ORDER BY xp DESC 
-                   LIMIT 10""",
-                (interaction.guild.id,)
+                   LIMIT 10"""
             )
             rows = await cursor.fetchall()
             
@@ -105,7 +112,15 @@ class XPGroup(app_commands.Group):
                 return
             
             description = ""
-            for i, (user_id, xp, level) in enumerate(rows, 1):
+            for i, (user_id, xp) in enumerate(rows, 1):
+                # Calculate level from XP
+                level = 1
+                total_xp = xp
+                for lvl, req_xp in enumerate(XP_TABLE):
+                    if total_xp >= req_xp:
+                        level = lvl + 1
+                    else:
+                        break
                 user = interaction.guild.get_member(user_id)
                 if user:
                     medal = ""
@@ -547,6 +562,7 @@ class XP(commands.Cog):
 
 async def setup(bot: commands.Bot):
     """Setup the XP cog."""
-    await bot.add_cog(XP(bot))
-    xp_group = XPGroup(bot.get_cog("XP"))
+    xp_cog = XP(bot)
+    await bot.add_cog(xp_cog)
+    xp_group = XPGroup(xp_cog)
     bot.tree.add_command(xp_group)
