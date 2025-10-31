@@ -1579,6 +1579,186 @@ class BirthdaySetupView(View):
         await interaction.response.send_modal(modal)
 
 
+class LevelRolesView(View):
+    def __init__(self, guild_id: int, db_manager):
+        super().__init__(timeout=300)
+        self.guild_id = guild_id
+        self.db_manager = db_manager
+    
+    @discord.ui.button(label="Add Level Role", style=ButtonStyle.success, emoji="➕")
+    async def add_level_role(self, interaction: discord.Interaction, button: Button):
+        """Add a level role reward"""
+        modal = Modal(title="Add Level Role")
+        
+        level_input = discord.ui.TextInput(
+            label="Level",
+            placeholder="10",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=3
+        )
+        modal.add_item(level_input)
+        
+        role_input = discord.ui.TextInput(
+            label="Role ID or Name",
+            placeholder="Role ID or exact role name",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=100
+        )
+        modal.add_item(role_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            try:
+                level = int(level_input.value)
+                
+                if level < 1:
+                    raise ValueError("Level must be 1 or higher")
+                
+                # Try to find role by ID first, then by name
+                role = None
+                try:
+                    role_id = int(role_input.value)
+                    role = interaction.guild.get_role(role_id)
+                except ValueError:
+                    # Not an ID, search by name
+                    role = discord.utils.get(interaction.guild.roles, name=role_input.value)
+                
+                if not role:
+                    embed = discord.Embed(
+                        title="❌ Role Not Found",
+                        description=f"Could not find role: {role_input.value}",
+                        color=COLORS["error"]
+                    )
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    return
+                
+                # Get current level roles
+                level_roles = await self.db_manager.get_setting(f"level_roles_{self.guild_id}")
+                
+                # Parse and update
+                roles_dict = {}
+                if level_roles:
+                    for entry in level_roles.split(","):
+                        if ":" in entry:
+                            lvl, rid = entry.split(":")
+                            roles_dict[int(lvl)] = rid
+                
+                # Add new role
+                roles_dict[level] = str(role.id)
+                
+                # Save back
+                new_level_roles = ",".join([f"{lvl}:{rid}" for lvl, rid in sorted(roles_dict.items())])
+                await self.db_manager.set_setting(f"level_roles_{self.guild_id}", new_level_roles)
+                
+                embed = discord.Embed(
+                    title="✅ Level Role Added",
+                    description=f"Users will receive {role.mention} when they reach **Level {level}**",
+                    color=COLORS["success"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                
+            except ValueError as e:
+                embed = discord.Embed(
+                    title="❌ Invalid Input",
+                    description=str(e),
+                    color=COLORS["error"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Remove Level Role", style=ButtonStyle.danger, emoji="➖")
+    async def remove_level_role(self, interaction: discord.Interaction, button: Button):
+        """Remove a level role reward"""
+        modal = Modal(title="Remove Level Role")
+        
+        level_input = discord.ui.TextInput(
+            label="Level",
+            placeholder="10",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=3
+        )
+        modal.add_item(level_input)
+        
+        async def modal_callback(interaction: discord.Interaction):
+            try:
+                level = int(level_input.value)
+                
+                # Get current level roles
+                level_roles = await self.db_manager.get_setting(f"level_roles_{self.guild_id}")
+                
+                if not level_roles:
+                    embed = discord.Embed(
+                        title="❌ No Level Roles",
+                        description="There are no level roles configured.",
+                        color=COLORS["error"]
+                    )
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    return
+                
+                # Parse and remove
+                roles_dict = {}
+                for entry in level_roles.split(","):
+                    if ":" in entry:
+                        lvl, rid = entry.split(":")
+                        roles_dict[int(lvl)] = rid
+                
+                if level not in roles_dict:
+                    embed = discord.Embed(
+                        title="❌ Level Not Found",
+                        description=f"No role configured for Level {level}",
+                        color=COLORS["error"]
+                    )
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    return
+                
+                # Remove the level
+                del roles_dict[level]
+                
+                # Save back
+                if roles_dict:
+                    new_level_roles = ",".join([f"{lvl}:{rid}" for lvl, rid in sorted(roles_dict.items())])
+                    await self.db_manager.set_setting(f"level_roles_{self.guild_id}", new_level_roles)
+                else:
+                    # No roles left, delete the setting
+                    await self.db_manager.set_setting(f"level_roles_{self.guild_id}", "")
+                
+                embed = discord.Embed(
+                    title="✅ Level Role Removed",
+                    description=f"Removed role reward for Level {level}",
+                    color=COLORS["success"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                
+            except ValueError:
+                embed = discord.Embed(
+                    title="❌ Invalid Level",
+                    description="Please enter a valid level number.",
+                    color=COLORS["error"]
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Back to XP Setup", style=ButtonStyle.secondary, emoji="◀️")
+    async def back_button(self, interaction: discord.Interaction, button: Button):
+        """Go back to XP setup"""
+        await interaction.response.defer(ephemeral=True)
+        
+        embed = discord.Embed(
+            title="🏆 XP System Setup",
+            description="Configure the XP and leveling system for your server.",
+            color=COLORS["primary"]
+        )
+        
+        view = XPSetupView(self.guild_id, self.db_manager)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+
+
 class XPSetupView(View):
     def __init__(self, guild_id: int, db_manager):
         super().__init__(timeout=300)
@@ -1775,7 +1955,7 @@ class XPSetupView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
     
-    @discord.ui.button(label="Set Level-up Message", style=ButtonStyle.primary, emoji="💬")
+    @discord.ui.button(label="Set Level-up Message", style=ButtonStyle.primary, emoji="💬", row=1)
     async def set_message(self, interaction: discord.Interaction, button: Button):
         """Set level-up message"""
         modal = Modal(title="Set Level-up Message")
@@ -1799,6 +1979,37 @@ class XPSetupView(View):
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Manage Level Roles", style=ButtonStyle.secondary, emoji="🎭", row=2)
+    async def manage_level_roles(self, interaction: discord.Interaction, button: Button):
+        """Manage level role rewards"""
+        await interaction.response.defer(ephemeral=True)
+        
+        # Get current level roles
+        level_roles = await self.db_manager.get_setting(f"level_roles_{self.guild_id}")
+        
+        # Build description
+        if level_roles:
+            description = "**Current Level Roles:**\n\n"
+            for role_entry in level_roles.split(","):
+                if ":" in role_entry:
+                    level, role_id = role_entry.split(":")
+                    role = interaction.guild.get_role(int(role_id))
+                    if role:
+                        description += f"Level {level}: {role.mention}\n"
+        else:
+            description = "No level roles configured yet.\n\n"
+        
+        description += "\n**Actions:**\n• Add Level Role - Assign a role at a specific level\n• Remove Level Role - Remove a level role reward\n• Back - Return to XP setup"
+        
+        embed = discord.Embed(
+            title="🎭 Manage Level Roles",
+            description=description,
+            color=COLORS["primary"]
+        )
+        
+        view = LevelRolesView(self.guild_id, self.db_manager)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
 
 class Setup(commands.Cog):
