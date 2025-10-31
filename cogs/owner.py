@@ -375,9 +375,22 @@ class Owner(commands.Cog):
         try:
             await interaction.response.defer(ephemeral=True)
             
-            # Get debug guild
+            # Get debug guild from environment or use first available guild
             import os
-            debug_guild_id = int(os.getenv("DEBUG_GUILDS", "542004156513255445"))
+            debug_guild_env = os.getenv("DEBUG_GUILDS", "")
+            
+            if debug_guild_env:
+                debug_guild_id = int(debug_guild_env)
+            elif self.bot.guilds:
+                debug_guild_id = self.bot.guilds[0].id
+                self.logger.info(f"No DEBUG_GUILDS set, using first guild: {debug_guild_id}")
+            else:
+                await interaction.followup.send(
+                    "❌ No guilds available for syncing. Bot must be in at least one server.",
+                    ephemeral=True
+                )
+                return
+            
             guild = discord.Object(id=debug_guild_id)
             
             # First, get all current commands
