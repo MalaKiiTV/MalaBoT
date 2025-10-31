@@ -17,8 +17,9 @@ COLORS = {
 }
 
 # XP System Configuration
-XP_PER_MESSAGE_MIN = 5
-XP_PER_MESSAGE_MAX = 15
+XP_PER_MESSAGE = 10  # Fixed XP per message (no range)
+XP_PER_REACTION = 2  # Fixed XP per reaction received
+XP_PER_VOICE_MINUTE = 5  # Fixed XP per minute in voice
 XP_COOLDOWN_SECONDS = 60
 DAILY_CHECKIN_XP = 50
 STREAK_BONUS_PERCENT = 10

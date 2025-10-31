@@ -16,7 +16,7 @@ from utils.helpers import (
     embed_helper, xp_helper, time_helper, cooldown_helper,
     create_embed, is_owner, permission_helper
 )
-from config.constants import COLORS, XP_TABLE, XP_PER_MESSAGE_MIN, XP_PER_MESSAGE_MAX, XP_COOLDOWN_SECONDS, DAILY_CHECKIN_XP, STREAK_BONUS_PERCENT
+from config.constants import COLORS, XP_TABLE, XP_PER_MESSAGE, XP_PER_REACTION, XP_PER_VOICE_MINUTE, XP_COOLDOWN_SECONDS, DAILY_CHECKIN_XP, STREAK_BONUS_PERCENT
 from config.settings import settings
 
 class XP(commands.Cog):
@@ -45,7 +45,7 @@ class XP(commands.Cog):
             
             # Use defaults if not configured
             if not xp_per_message:
-                xp_per_message = str(XP_PER_MESSAGE_MIN)  # Default to 10 or use old min
+                xp_per_message = str(XP_PER_MESSAGE)  # Default to 10
             if not xp_cooldown:
                 xp_cooldown = str(XP_COOLDOWN_SECONDS)  # Default to 60
             
