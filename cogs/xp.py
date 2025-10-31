@@ -619,6 +619,4 @@ class XP(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot: commands.Bot):
-    xp_cog = XP(bot)
-    await bot.add_cog(xp_cog)
-    bot.tree.add_command(xp_cog.xp)
+    await bot.add_cog(XP(bot))
