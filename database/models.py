@@ -258,6 +258,11 @@ class DatabaseManager:
         
         return await self.get_user(user_id)
     
+    async def add_user_xp(self, user_id: int, xp_gained: int) -> int:
+        """Add XP to a user and return their new total."""
+        await self.update_user_xp(user_id, xp_gained)
+        return await self.get_user_xp(user_id)
+
     async def reset_user_xp(self, user_id: int):
         """Reset user's XP and level."""
         conn = await self.get_connection()
