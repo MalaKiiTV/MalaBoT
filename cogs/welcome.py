@@ -373,5 +373,4 @@ async def setup(bot: commands.Bot):
     """Setup function for the cog."""
     welcome_cog = Welcome(bot)
     await bot.add_cog(welcome_cog)
-    # Register slash commands with the tree
-    bot.tree.add_command(welcome_cog)
+    # Commands are automatically registered when cog is loaded

@@ -2054,5 +2054,4 @@ class Setup(commands.Cog):
 async def setup(bot: commands.Bot):
     setup_cog = Setup(bot)
     await bot.add_cog(setup_cog)
-    # Register slash commands with the tree
-    bot.tree.add_command(setup_cog)
+    # Commands are automatically registered when cog is loaded
