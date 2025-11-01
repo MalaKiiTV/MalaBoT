@@ -178,6 +178,15 @@ class DatabaseManager:
                 reviewed_at TIMESTAMP DEFAULT NULL,
                 review_notes TEXT DEFAULT NULL
             )
+            
+            CREATE TABLE IF NOT EXISTS level_roles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id INTEGER NOT NULL,
+                level INTEGER NOT NULL,
+                role_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(guild_id, level)
+            )
         """)
         
         await conn.commit()
