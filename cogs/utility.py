@@ -635,4 +635,7 @@ class Utility(commands.Cog):
 
 async def setup(bot: commands.Bot):
     """Setup function for the cog."""
-    await bot.add_cog(Utility(bot))
+    utility_cog = Utility(bot)
+    await bot.add_cog(utility_cog)
+    # Register slash commands with the tree
+    bot.tree.add_command(utility_cog)

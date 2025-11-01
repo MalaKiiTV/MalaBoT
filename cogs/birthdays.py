@@ -354,7 +354,7 @@ class Birthdays(commands.Cog):
 
 async def setup(bot: commands.Bot):
     """Setup function for the cog."""
-    cog = Birthdays(bot)
-    await bot.add_cog(cog)
+    birthdays_cog = Birthdays(bot)
+    await bot.add_cog(birthdays_cog)
     # Register slash commands with the tree
-    bot.tree.add_command(cog.bday, override=True)
+    bot.tree.add_command(birthdays_cog)

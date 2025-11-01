@@ -452,4 +452,7 @@ class Owner(commands.Cog):
 
 async def setup(bot: commands.Bot):
     """Setup function for the cog."""
-    await bot.add_cog(Owner(bot))
+    owner_cog = Owner(bot)
+    await bot.add_cog(owner_cog)
+    # Register slash commands with the tree
+    bot.tree.add_command(owner_cog)

@@ -2052,4 +2052,7 @@ class Setup(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(Setup(bot))
+    setup_cog = Setup(bot)
+    await bot.add_cog(setup_cog)
+    # Register slash commands with the tree
+    bot.tree.add_command(setup_cog)

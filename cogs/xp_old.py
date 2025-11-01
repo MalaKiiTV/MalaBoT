@@ -445,6 +445,8 @@ class XPGroup(app_commands.Group):
 async def setup(bot: commands.Bot):
     xp_cog = XP(bot)
     await bot.add_cog(xp_cog)
+    # Register slash commands with the tree
+    bot.tree.add_command(xp_cog)
 
 class XP(commands.Cog):
     """XP and leveling system."""
