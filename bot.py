@@ -278,6 +278,13 @@ The bot will start in safe mode to prevent further issues.
             self.logger.info("Loading essential cogs in safe mode...")
             for cog in essential_cogs:
                 await self._load_cog(cog)
+                # Register commands from the loaded cog
+                cog_obj = self.get_cog(cog.split('.')[1])
+                if cog_obj:
+                    for cmd in cog_obj.__class__.__dict__.values():
+                        if hasattr(cmd, 'app_command'):
+                            self.tree.add_command(cmd.app_command)
+                
         else:
             # Normal mode: load all enabled cogs
             cogs_to_load = [
@@ -611,6 +618,9 @@ The bot will start in safe mode to prevent further issues.
                         guild = discord.Object(id=guild_id)
                         # Don't use copy_global_to() as it flattens command groups
                         # Just sync directly to preserve group structure
+                        # Debug: Check what commands are registered
+                        self.logger.info(f"Commands in tree: {[cmd.name for cmd in self.tree.get_commands(guild=guild)]}")
+                        self.logger.info(f"Global commands: {[cmd.name for cmd in self.tree.get_commands()]}")
                         synced = await self.tree.sync(guild=guild)
                         self.logger.info(f"✅ Synced {len(synced)} commands to debug guild: {guild_id}")
                     except Exception as e:
@@ -618,6 +628,8 @@ The bot will start in safe mode to prevent further issues.
             else:
                 # No DEBUG_GUILDS set = Production mode = Global sync only
                 self.logger.info("🌐 PRODUCTION MODE: Syncing globally")
+                # Debug: Check what commands are registered
+                self.logger.info(f"Global commands: {[cmd.name for cmd in self.tree.get_commands()]}")
                 synced = await self.tree.sync()
                 self.logger.info(f"✅ Synced {len(synced)} global commands")
 
