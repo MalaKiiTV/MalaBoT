@@ -16,6 +16,12 @@ class DatabaseManager:
         self.db_path = db_path
         self._connection = None
     
+    async def get_connection(self):
+        """Get database connection."""
+        if self._connection is None:
+            self._connection = await aiosqlite.connect(self.db_path)
+        return self._connection
+    
     async def initialize(self):
         """Initialize database and create all tables."""
         conn = await self.get_connection()
@@ -194,10 +200,17 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS level_roles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 guild_id INTEGER NOT NULL,
-           \n           # Level roles table\n           await conn.execute("""\n               CREATE TABLE IF NOT EXISTS level_roles (\n                   id INTEGER PRIMARY KEY AUTOINCREMENT,\n                   guild_id INTEGER NOT NULL,\n                   level INTEGER NOT NULL,\n                   role_id INTEGER NOT NULL,\n                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n                   UNIQUE(guild_id, level)\n               )\n           """)
+                level INTEGER NOT NULL,
+                role_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(guild_id, level)
+            )
+        """)
+        
+        await conn.commit()
+        
+        # Initialize roast_xp if not exists
         await self._initialize_roast_xp()
-    
-    # [Rest of the methods would continue here...]
     
     async def _initialize_roast_xp(self):
         """Initialize roast XP table with default values."""
@@ -216,10 +229,37 @@ class DatabaseManager:
             """)
             await conn.commit()
     
-    # Add the missing add_user_xp method
+    # Add missing methods that the bot needs
+    
     async def add_user_xp(self, user_id: int, xp_gained: int) -> int:
         """Add XP to a user and return their new total."""
         await self.update_user_xp(user_id, xp_gained)
         return await self.get_user_xp(user_id)
     
-    # [Other existing methods...]
+    async def get_user_xp(self, user_id: int) -> int:
+        """Get user's current XP."""
+        conn = await self.get_connection()
+        cursor = await conn.execute("SELECT xp FROM users WHERE user_id = ?", (user_id,))
+        result = await cursor.fetchone()
+        return result[0] if result else 0
+    
+    async def update_user_xp(self, user_id: int, xp_change: int):
+        """Update user's XP."""
+        conn = await self.get_connection()
+        await conn.execute(
+            "UPDATE users SET xp = xp + ?, last_xp_gain = CURRENT_TIMESTAMP WHERE user_id = ?",
+            (xp_change, user_id)
+        )
+        await conn.commit()
+    
+    async def get_user(self, user_id: int):
+        """Get user data."""
+        conn = await self.get_connection()
+        cursor = await conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+        return await cursor.fetchone()
+    
+    async def close(self):
+        """Close database connection."""
+        if self._connection:
+            await self._connection.close()
+            self._connection = None
