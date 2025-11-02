@@ -610,9 +610,8 @@ The bot will start in safe mode to prevent further issues.
                 for guild_id in settings.DEBUG_GUILDS:
                     try:
                         guild = discord.Object(id=guild_id)
-                           # Copy global commands to guild first
-                           self.tree.copy_global_to(guild=guild)
-                           
+                        # Copy global commands to guild first
+                        self.tree.copy_global_to(guild=guild)
                         # Debug: Check what commands are registered
                         self.logger.info(f"Commands in tree: {[cmd.name for cmd in self.tree.get_commands(guild=guild)]}")
                         self.logger.info(f"Global commands: {[cmd.name for cmd in self.tree.get_commands()]}")
