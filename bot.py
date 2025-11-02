@@ -281,9 +281,9 @@ The bot will start in safe mode to prevent further issues.
                 # Register commands from the loaded cog
                 cog_obj = self.get_cog(cog.split('.')[1])
                 if cog_obj:
-                    for cmd in cog_obj.__class__.__dict__.values():
-                        if hasattr(cmd, 'app_command'):
-                            self.tree.add_command(cmd.app_command)
+                       for cmd in cog_obj.__class__.__dict__.values():
+                           if isinstance(cmd, discord.app_commands.commands.Command):
+                               self.tree.add_command(cmd)
                 
         else:
             # Normal mode: load all enabled cogs
@@ -304,13 +304,14 @@ The bot will start in safe mode to prevent further issues.
             
             self.logger.info("Loading all cogs...")
             for cog in cogs_to_load:
+               for cog in cogs_to_load:
                    await self._load_cog(cog)
                    # Register commands from the loaded cog
                    cog_obj = self.get_cog(cog.split(".")[1])
                    if cog_obj:
                        for cmd in cog_obj.__class__.__dict__.values():
-                           if hasattr(cmd, "app_command"):
-                               self.tree.add_command(cmd.app_command)
+                           if isinstance(cmd, discord.app_commands.commands.Command):
+                               self.tree.add_command(cmd)
         
         # Log loading results
         self.logger.info(f"Cogs loaded: {', '.join(self.cogs_loaded)}")
