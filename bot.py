@@ -278,12 +278,6 @@ The bot will start in safe mode to prevent further issues.
             self.logger.info("Loading essential cogs in safe mode...")
             for cog in essential_cogs:
                 await self._load_cog(cog)
-                # Register commands from the loaded cog
-                cog_obj = self.get_cog(cog.split('.')[1])
-                if cog_obj:
-                       for cmd in cog_obj.__class__.__dict__.values():
-                           if isinstance(cmd, discord.app_commands.commands.Command):
-                               self.tree.add_command(cmd)
                 
         else:
             # Normal mode: load all enabled cogs
@@ -305,12 +299,6 @@ The bot will start in safe mode to prevent further issues.
             self.logger.info("Loading all cogs...")
             for cog in cogs_to_load:
                    await self._load_cog(cog)
-                   # Register commands from the loaded cog
-                   cog_obj = self.get_cog(cog.split(".")[1])
-                   if cog_obj:
-                       for cmd in cog_obj.__class__.__dict__.values():
-                           if isinstance(cmd, discord.app_commands.commands.Command):
-                               self.tree.add_command(cmd)
         
         # Log loading results
         self.logger.info(f"Cogs loaded: {', '.join(self.cogs_loaded)}")
@@ -622,9 +610,9 @@ The bot will start in safe mode to prevent further issues.
                 for guild_id in settings.DEBUG_GUILDS:
                     try:
                         guild = discord.Object(id=guild_id)
-                        # Don't use copy_global_to() as it flattens command groups
+                           # Copy global commands to guild first
+                           self.tree.copy_global_to(guild=guild)
                            
-                        # Just sync directly to preserve group structure
                         # Debug: Check what commands are registered
                         self.logger.info(f"Commands in tree: {[cmd.name for cmd in self.tree.get_commands(guild=guild)]}")
                         self.logger.info(f"Global commands: {[cmd.name for cmd in self.tree.get_commands()]}")

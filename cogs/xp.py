@@ -548,18 +548,18 @@ class XP(commands.Cog):
             # Check for level roles
             conn = await self.bot.db_manager.get_connection()
             cursor = await conn.execute(
-                "SELECT role_level, role_id FROM level_roles WHERE guild_id = ?",
+                "SELECT level, role_id FROM level_roles WHERE guild_id = ?",
                 (user.guild.id,)
             )
             rows = await cursor.fetchall()
             
-            for role_level, role_id in rows:
+            for level, role_id in rows:
                 # If user reached this level, assign the role
-                if current_level >= role_level:
+                if current_level >= level:
                     role = user.guild.get_role(int(role_id))
                     if role and role not in user.roles:
-                        await user.add_roles(role, reason=f"Reached level {role_level}")
-                        self.logger.info(f"Assigned role {role.name} to {user.name} for reaching level {role_level}")
+                        await user.add_roles(role, reason=f"Reached level {level}")
+                        self.logger.info(f"Assigned role {role.name} to {user.name} for reaching level {level}")
             
         except Exception as e:
             self.logger.error(f"Error checking level up: {e}")
