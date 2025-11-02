@@ -304,7 +304,7 @@ The bot will start in safe mode to prevent further issues.
             
             self.logger.info("Loading all cogs...")
             for cog in cogs_to_load:
-                await self._load_cog(cog)
+                   await self._load_cog(cog)
                    # Register commands from the loaded cog
                    cog_obj = self.get_cog(cog.split(".")[1])
                    if cog_obj:
