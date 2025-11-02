@@ -81,7 +81,7 @@ class DatabaseManager:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 guild_id INTEGER NOT NULL,
                 setting_key TEXT NOT NULL,
-                setting_value TEXT,
+                value TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(guild_id, setting_key)
@@ -315,9 +315,9 @@ class DatabaseManager:
         """Get setting value."""
         conn = await self.get_connection()
         if guild_id:
-            cursor = await conn.execute("SELECT setting_value FROM settings WHERE setting_key = ? AND guild_id = ?", (key, guild_id))
+            cursor = await conn.execute("SELECT value FROM settings WHERE setting_key = ? AND guild_id = ?", (key, guild_id))
         else:
-            cursor = await conn.execute("SELECT setting_value FROM settings WHERE setting_key = ?", (key,))
+            cursor = await conn.execute("SELECT value FROM settings WHERE setting_key = ?", (key,))
         result = await cursor.fetchone()
         return result[0] if result else None
     
