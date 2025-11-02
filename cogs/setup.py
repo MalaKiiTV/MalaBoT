@@ -609,11 +609,11 @@ class GeneralSettingsView(View):
     @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
     async def view_config(self, interaction: discord.Interaction, button: Button):
         """View current general settings"""
-        timezone = await self.db.get_setting(f"timezone_{self.guild_id}", self.guild_id, "UTC-6")
-        online_message = await self.db.get_setting(f"online_message_{self.guild_id}", self.guild_id, "Not set")
-        online_channel_id = await self.db.get_setting(f"online_message_channel_{self.guild_id}", self.guild_id, self.guild_id)
-        mod_role_id = await self.db.get_setting(f"mod_role_{self.guild_id}", self.guild_id, self.guild_id)
-        join_role_id = await self.db.get_setting(f"join_role_{self.guild_id}", self.guild_id, self.guild_id)
+        timezone = await self.db.get_setting(f"timezone_{self.guild_id}", self.guild_id)
+        online_message = await self.db.get_setting(f"online_message_{self.guild_id}", self.guild_id)
+        online_channel_id = await self.db.get_setting(f"online_message_channel_{self.guild_id}", self.guild_id)
+        mod_role_id = await self.db.get_setting(f"mod_role_{self.guild_id}", self.guild_id)
+        join_role_id = await self.db.get_setting(f"join_role_{self.guild_id}", self.guild_id)
         
         mod_role_text = "Not set"
         if mod_role_id:
@@ -1007,27 +1007,27 @@ class SetupSelect(Select):
         guild_id = interaction.guild.id
 
         # Fetch all settings
-        verify_channel_id = await db.get_setting(f"verify_channel_{guild_id}", guild_id, guild_id)
-        verify_role_id = await db.get_setting(f"verify_role_{guild_id}", guild_id, guild_id)
-        cheater_role_id = await db.get_setting(f"cheater_role_{guild_id}", guild_id, guild_id)
-        cheater_jail_id = await db.get_setting(f"cheater_jail_channel_{guild_id}", guild_id, guild_id)
-        mod_role_id = await db.get_setting(f"mod_role_{guild_id}", guild_id, guild_id)
-        welcome_channel_id = await db.get_setting(f"welcome_channel_{guild_id}", guild_id, guild_id)
-        welcome_message = await db.get_setting(f"welcome_message_{guild_id}", guild_id, guild_id)
-        welcome_title = await db.get_setting(f"welcome_title_{guild_id}", guild_id, guild_id)
-        goodbye_channel_id = await db.get_setting(f"goodbye_channel_{guild_id}", guild_id, guild_id)
-        goodbye_message = await db.get_setting(f"goodbye_message_{guild_id}", guild_id, guild_id)
-        goodbye_title = await db.get_setting(f"goodbye_title_{guild_id}", guild_id, guild_id)
-        birthday_channel_id = await db.get_setting(f"birthday_channel_{guild_id}", guild_id, guild_id)
-        birthday_time = await db.get_setting(f"birthday_time_{guild_id}", guild_id, guild_id)
-        birthday_message = await db.get_setting(f"birthday_message_{guild_id}", guild_id, guild_id)
-        xp_channel_id = await db.get_setting(f"xp_channel_{guild_id}", guild_id, guild_id)
-        xp_per_message = await db.get_setting(f"xp_per_message_{guild_id}", guild_id, guild_id)
-        xp_per_reaction = await db.get_setting(f"xp_per_reaction_{guild_id}", guild_id, guild_id)
-        xp_per_voice = await db.get_setting(f"xp_per_voice_minute_{guild_id}", guild_id, guild_id)
-        xp_cooldown = await db.get_setting(f"xp_cooldown_{guild_id}", guild_id, guild_id)
-        timezone = await db.get_setting(f"timezone_{guild_id}", guild_id, "UTC-6")
-        online_message = await db.get_setting(f"online_message_{guild_id}", guild_id, "Not set")
+        verify_channel_id = await db.get_setting(f"verify_channel_{guild_id}", guild_id)
+        verify_role_id = await db.get_setting(f"verify_role_{guild_id}", guild_id)
+        cheater_role_id = await db.get_setting(f"cheater_role_{guild_id}", guild_id)
+        cheater_jail_id = await db.get_setting(f"cheater_jail_channel_{guild_id}", guild_id)
+        mod_role_id = await db.get_setting(f"mod_role_{guild_id}", guild_id)
+        welcome_channel_id = await db.get_setting(f"welcome_channel_{guild_id}", guild_id)
+        welcome_message = await db.get_setting(f"welcome_message_{guild_id}", guild_id)
+        welcome_title = await db.get_setting(f"welcome_title_{guild_id}", guild_id)
+        goodbye_channel_id = await db.get_setting(f"goodbye_channel_{guild_id}", guild_id)
+        goodbye_message = await db.get_setting(f"goodbye_message_{guild_id}", guild_id)
+        goodbye_title = await db.get_setting(f"goodbye_title_{guild_id}", guild_id)
+        birthday_channel_id = await db.get_setting(f"birthday_channel_{guild_id}", guild_id)
+        birthday_time = await db.get_setting(f"birthday_time_{guild_id}", guild_id)
+        birthday_message = await db.get_setting(f"birthday_message_{guild_id}", guild_id)
+        xp_channel_id = await db.get_setting(f"xp_channel_{guild_id}", guild_id)
+        xp_per_message = await db.get_setting(f"xp_per_message_{guild_id}", guild_id)
+        xp_per_reaction = await db.get_setting(f"xp_per_reaction_{guild_id}", guild_id)
+        xp_per_voice = await db.get_setting(f"xp_per_voice_minute_{guild_id}", guild_id)
+        xp_cooldown = await db.get_setting(f"xp_cooldown_{guild_id}", guild_id)
+        timezone = await db.get_setting(f"timezone_{guild_id}", guild_id)
+        online_message = await db.get_setting(f"online_message_{guild_id}", guild_id)
 
         embed = discord.Embed(
             title="📋 Current Bot Configuration",
@@ -1102,8 +1102,8 @@ class SetupSelect(Select):
         embed.add_field(name="🏆 XP System", value=xp_text, inline=False)
 
         # General settings
-        online_channel_id = await db.get_setting(f"online_message_channel_{guild_id}", guild_id, guild_id)
-        join_role_id = await db.get_setting(f"join_role_{guild_id}", guild_id, guild_id)
+        online_channel_id = await db.get_setting(f"online_message_channel_{guild_id}", guild_id)
+        join_role_id = await db.get_setting(f"join_role_{guild_id}", guild_id)
         general_text = f"Timezone: {timezone}\nOnline Message: {online_message}"
         if online_channel_id:
             general_text += f"\nOnline Channel: <#{online_channel_id}>"
