@@ -132,12 +132,14 @@ class DatabaseManager:
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS audit_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                guild_id INTEGER NOT NULL,
-                user_id INTEGER NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                category TEXT NOT NULL,
                 action TEXT NOT NULL,
+                user_id INTEGER DEFAULT NULL,
+                target_id INTEGER DEFAULT NULL,
+                channel_id INTEGER DEFAULT NULL,
                 details TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(user_id)
+                guild_id INTEGER DEFAULT NULL
             )
         """)
         
@@ -264,9 +266,9 @@ class DatabaseManager:
         """Log an event to the audit log."""
         conn = await self.get_connection()
         await conn.execute("""
-            INSERT INTO audit_log (guild_id, user_id, action, details)
-            VALUES (?, ?, ?, ?)
-        """, (guild_id, user_id, action, details))
+            INSERT INTO audit_log (category, action, user_id, target_id, channel_id, details, guild_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (category, action, user_id, target_id, channel_id, details, guild_id))
         await conn.commit()
     
     async def get_flag(self, flag_name: str):
