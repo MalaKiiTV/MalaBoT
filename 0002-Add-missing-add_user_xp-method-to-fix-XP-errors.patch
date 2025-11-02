@@ -1,0 +1,28 @@
+From df3420f37261d07f95f5e845c426c962128093bd Mon Sep 17 00:00:00 2001
+From: MalaKiiTV <malakiitv@gmail.com>
+Date: Sat, 1 Nov 2025 22:17:33 +0000
+Subject: [PATCH 2/3] Add missing add_user_xp method to fix XP errors
+
+---
+ database/models.py | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/database/models.py b/database/models.py
+index e128930..551c700 100644
+--- a/database/models.py
++++ b/database/models.py
+@@ -258,6 +258,11 @@ class DatabaseManager:
+         
+         return await self.get_user(user_id)
+     
++    async def add_user_xp(self, user_id: int, xp_gained: int) -> int:
++        """Add XP to a user and return their new total."""
++        await self.update_user_xp(user_id, xp_gained)
++        return await self.get_user_xp(user_id)
++
+     async def reset_user_xp(self, user_id: int):
+         """Reset user's XP and level."""
+         conn = await self.get_connection()
+-- 
+2.39.5
+

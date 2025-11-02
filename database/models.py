@@ -249,7 +249,7 @@ class DatabaseManager:
         """Update user's XP."""
         conn = await self.get_connection()
         await conn.execute(
-            "UPDATE users SET xp = xp + WHERE user_id = ?",
+            "UPDATE users SET xp = xp + ? WHERE user_id = ?",
             (xp_change, user_id)
         )
         await conn.commit()
