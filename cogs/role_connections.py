@@ -66,7 +66,7 @@ class RoleConnectionManager:
 
     async def load_connections(self, guild_id: int):
         """Load all connections for a guild from database"""
-        connections_data = await self.db.get_setting(f"role_connections_{guild_id}")
+        connections_data = await self.db.get_setting(f"role_connections_{guild_id}", guild_id)
         if connections_data:
             try:
                 # Handle both string (JSON) and list (already parsed) formats
@@ -99,7 +99,7 @@ class RoleConnectionManager:
 
     async def load_protected_roles(self, guild_id: int):
         """Load protected roles for a guild"""
-        protected_data = await self.db.get_setting(f"protected_roles_{guild_id}")
+        protected_data = await self.db.get_setting(f"protected_roles_{guild_id}", guild_id)
         if protected_data:
             try:
                 self.protected_roles_cache[guild_id] = json.loads(protected_data)

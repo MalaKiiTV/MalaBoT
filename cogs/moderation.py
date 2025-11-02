@@ -131,7 +131,7 @@ class Moderation(commands.Cog):
             log_moderation(f"🗑 {interaction.user.name} deleted {len(deleted)} messages in #{channel.name}")
             
             if self.bot.db_manager:
-                mod_log_channel_id = await self.bot.db_manager.get_setting('moderation_log_channel_id')
+                mod_log_channel_id = await self.bot.db_manager.get_setting('moderation_log_channel_id', interaction.guild.id)
                 if mod_log_channel_id:
                     mod_log_channel = self.bot.get_channel(mod_log_channel_id)
                     if mod_log_channel:
@@ -191,7 +191,7 @@ class Moderation(commands.Cog):
             log_moderation(f"🗑 {interaction.user.name} deleted {len(deleted)} messages in #{channel.name}")
             
             if self.bot.db_manager:
-                mod_log_channel_id = await self.bot.db_manager.get_setting('moderation_log_channel_id')
+                mod_log_channel_id = await self.bot.db_manager.get_setting('moderation_log_channel_id', interaction.guild.id)
                 if mod_log_channel_id:
                     mod_log_channel = self.bot.get_channel(mod_log_channel_id)
                     if mod_log_channel:
@@ -254,7 +254,7 @@ class Moderation(commands.Cog):
             log_moderation(f"🗑 {interaction.user.name} purged channel #{new_channel.name}")
             
             if self.bot.db_manager:
-                mod_log_channel_id = await self.bot.db_manager.get_setting('moderation_log_channel_id')
+                mod_log_channel_id = await self.bot.db_manager.get_setting('moderation_log_channel_id', interaction.guild.id)
                 if mod_log_channel_id:
                     mod_log_channel = self.bot.get_channel(mod_log_channel_id)
                     if mod_log_channel:
