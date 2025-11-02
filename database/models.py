@@ -365,3 +365,11 @@ class DatabaseManager:
         cursor = await conn.execute("SELECT level FROM users WHERE user_id = ?", (user_id,))
         result = await cursor.fetchone()
         return result[0] if result else 1
+async def set_setting(self, key: str, value: str, guild_id: int):
+           """Set setting value."""
+           conn = await self.get_connection()
+           await conn.execute(
+               "INSERT OR REPLACE INTO settings (setting_key, value, guild_id, updated_at) VALUES (?, ?, ?, datetime('now'))",
+               (key, value, guild_id)
+           )
+           await conn.commit()
