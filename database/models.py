@@ -182,16 +182,7 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS level_roles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 guild_id INTEGER NOT NULL,
-                level INTEGER NOT NULL,
-                role_id INTEGER NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(guild_id, level)
-            )
-        """)
-        
-        await conn.commit()
-        
-        # Initialize roast_xp if not exists
+           \n           # Level roles table\n           await conn.execute("""\n               CREATE TABLE IF NOT EXISTS level_roles (\n                   id INTEGER PRIMARY KEY AUTOINCREMENT,\n                   guild_id INTEGER NOT NULL,\n                   level INTEGER NOT NULL,\n                   role_id INTEGER NOT NULL,\n                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n                   UNIQUE(guild_id, level)\n               )\n           """)
         await self._initialize_roast_xp()
     
     async def _initialize_roast_xp(self):
