@@ -358,3 +358,10 @@ class DatabaseManager:
         if self._connection:
             await self._connection.close()
             self._connection = None
+
+    async def get_user_level(self, user_id: int) -> int:
+        """Get user's current level."""
+        conn = await self.get_connection()
+        cursor = await conn.execute("SELECT level FROM users WHERE user_id = ?", (user_id,))
+        result = await cursor.fetchone()
+        return result[0] if result else 1
