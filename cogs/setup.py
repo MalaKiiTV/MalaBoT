@@ -37,7 +37,7 @@ class VerifyChannelSelect(discord.ui.ChannelSelect):
     async def callback(self, interaction: discord.Interaction):
         channel = self.values[0]
         try:
-            await self.db.set_setting(f"verify_channel_{self.guild_id}", channel.id)
+            await self.db.set_setting("verify_channel", str(channel.id), self.guild_id)
             await self.db.log_event(
                 category="VERIFY",
                 action="SETUP_CHANNEL",
@@ -45,7 +45,7 @@ class VerifyChannelSelect(discord.ui.ChannelSelect):
                 details=f"Set review channel to #{channel.name}",
                 guild_id=self.guild_id,
             )
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Review Channel Set",
                     f"✅ Verification submissions will be posted to {channel.mention}",
@@ -55,7 +55,7 @@ class VerifyChannelSelect(discord.ui.ChannelSelect):
             )
         except Exception as e:
             log_system(f"Error setting review channel: {e}", level="error")
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Error",
                     "Failed to set review channel. Please try again.",
@@ -79,7 +79,7 @@ class RoleSelect(discord.ui.RoleSelect):
     async def callback(self, interaction: discord.Interaction):
         role = self.values[0]
         try:
-            await self.db.set_setting(f"verify_role_{self.guild_id}", role.id)
+            await self.db.set_setting("verify_role", str(role.id), self.guild_id)
             await self.db.log_event(
                 category="VERIFY",
                 action="CONFIG_ROLE",
@@ -87,7 +87,7 @@ class RoleSelect(discord.ui.RoleSelect):
                 details=f"Set verified role to {role.name}",
                 guild_id=self.guild_id,
             )
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Verified Role Set",
                     f"✅ Users will receive {role.mention} when verified",
@@ -97,7 +97,7 @@ class RoleSelect(discord.ui.RoleSelect):
             )
         except Exception as e:
             log_system(f"Error setting verified role: {e}", level="error")
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Error",
                     "Failed to set verified role. Please try again.",
@@ -121,7 +121,7 @@ class CheaterRoleSelect(discord.ui.RoleSelect):
     async def callback(self, interaction: discord.Interaction):
         role = self.values[0]
         try:
-            await self.db.set_setting(f"cheater_role_{self.guild_id}", role.id)
+            await self.db.set_setting("cheater_role", str(role.id), self.guild_id)
             await self.db.log_event(
                 category="VERIFY",
                 action="CONFIG_CHEATER_ROLE",
@@ -129,7 +129,7 @@ class CheaterRoleSelect(discord.ui.RoleSelect):
                 details=f"Set cheater role to {role.name}",
                 guild_id=self.guild_id,
             )
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Cheater Role Set",
                     f"✅ Cheaters will receive {role.mention} and have all other roles removed",
@@ -139,7 +139,7 @@ class CheaterRoleSelect(discord.ui.RoleSelect):
             )
         except Exception as e:
             log_system(f"Error setting cheater role: {e}", level="error")
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Error",
                     "Failed to set cheater role. Please try again.",
@@ -164,8 +164,8 @@ class CheaterJailChannelSelect(discord.ui.ChannelSelect):
     async def callback(self, interaction: discord.Interaction):
         if not self.values:
             # Clear the channel if none selected
-            await self.db.set_setting(f"cheater_jail_channel_{self.guild_id}", None)
-            await interaction.response.send_message(
+            await self.db.set_setting("cheater_jail_channel", None, self.guild_id)
+            await interaction.followup.send(
                 embed=create_embed(
                     "Cheater Jail Channel Cleared",
                     "✅ Cheater jail channel has been cleared.",
@@ -177,7 +177,7 @@ class CheaterJailChannelSelect(discord.ui.ChannelSelect):
             
         channel = self.values[0]
         try:
-            await self.db.set_setting(f"cheater_jail_channel_{self.guild_id}", channel.id)
+            await self.db.set_setting("cheater_jail_channel", str(channel.id), self.guild_id)
             await self.db.log_event(
                 category="VERIFY",
                 action="CONFIG_CHEATER_JAIL",
@@ -185,7 +185,7 @@ class CheaterJailChannelSelect(discord.ui.ChannelSelect):
                 details=f"Set cheater jail channel to {channel.name}",
                 guild_id=self.guild_id,
             )
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Cheater Jail Channel Set",
                     f"✅ Cheater jail channel set to {channel.mention}\n\n"
@@ -196,7 +196,7 @@ class CheaterJailChannelSelect(discord.ui.ChannelSelect):
             )
         except Exception as e:
             log_system(f"Error setting cheater jail channel: {e}", level="error")
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Error",
                     "Failed to set cheater jail channel. Please try again.",
@@ -222,10 +222,10 @@ class VerificationSetupView(View):
     @discord.ui.button(label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️")
     async def view_config(self, interaction: discord.Interaction, button: Button):
         """View current verification configuration"""
-        verify_channel_id = await self.db.get_setting(f"verify_channel_{self.guild.id}", self.guild.id)
-        verify_role_id = await self.db.get_setting(f"verify_role_{self.guild.id}", self.guild.id)
-        cheater_role_id = await self.db.get_setting(f"cheater_role_{self.guild.id}", self.guild.id)
-        cheater_jail_id = await self.db.get_setting(f"cheater_jail_channel_{self.guild.id}", self.guild.id)
+        verify_channel_id = await self.db.get_setting("verify_channel", self.guild.id)
+        verify_role_id = await self.db.get_setting("verify_role", self.guild.id)
+        cheater_role_id = await self.db.get_setting("cheater_role", self.guild.id)
+        cheater_jail_id = await self.db.get_setting("cheater_jail_channel", self.guild.id)
 
         config_text = ""
         if verify_channel_id:
@@ -253,7 +253,7 @@ class VerificationSetupView(View):
             description=config_text,
             color=COLORS["info"],
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 # ============================================================
@@ -278,7 +278,7 @@ class TimezoneSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         try:
-            await self.db.set_setting(f"timezone_{self.guild_id}", self.values[0])
+            await self.db.set_setting("timezone", self.values[0], self.guild_id)
             await self.db.log_event(
                 category="SETTINGS",
                 action="SET_TIMEZONE",
@@ -352,8 +352,8 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            await self.db.set_setting(f"online_message_{self.guild_id}", self.message.value)
-            await self.db.set_setting(f"online_message_channel_{self.guild_id}", str(self.channel_id))
+            await self.db.set_setting("online_message", self.message.value, self.guild_id)
+            await self.db.set_setting("online_message_channel", str(self.channel_id, self.guild_id))
             await self.db.log_event(
                 category="SETTINGS",
                 action="SET_ONLINE_MESSAGE",
@@ -365,7 +365,7 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
             channel_name = channel.name if channel else "Unknown"
             
             # Show brief confirmation
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "✅ Online Message Set",
                     f"Message set in **#{channel_name}**",
@@ -387,7 +387,7 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
             await interaction.edit_original_response(embed=embed, view=general_view)
         except Exception as e:
             log_system(f"Error setting online message: {e}", level="error")
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Error",
                     "Failed to set online message. Please try again.",
@@ -469,7 +469,7 @@ class JoinRoleSelectView(View):
             return
         
         # Save the role
-        await self.db.set_setting(f"join_role_{self.guild_id}", str(role.id))
+        await self.db.set_setting("join_role", str(role.id, self.guild_id))
         
         # Show confirmation
         embed = discord.Embed(
@@ -558,7 +558,7 @@ class GeneralSettingsView(View):
         
         async def role_callback(interaction: discord.Interaction):
             role = select.values[0]
-            await self.db.set_setting(f"mod_role_{self.guild_id}", str(role.id))
+            await self.db.set_setting("mod_role", str(role.id, self.guild_id))
             
             # Show brief confirmation
             embed = discord.Embed(
@@ -648,7 +648,7 @@ class GeneralSettingsView(View):
             description=config_text,
             color=COLORS["info"],
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 # ============================================================
@@ -740,7 +740,7 @@ class RoleConnectionMainSelect(Select):
         connections = self.manager.connections_cache.get(self.guild.id, [])
         
         if not connections:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "No Connections",
                     "No role connections have been configured yet.\nUse 'Add Connection' to create one.",
@@ -827,7 +827,8 @@ class RoleConnectionMainSelect(Select):
 # ============================================================
 
 class SetupSelect(Select):
-    def __init__(self):
+    def __init__(self, setup_cog):
+        self.setup_cog = setup_cog
         options = [
             discord.SelectOption(
                 label="Verification System",
@@ -883,19 +884,19 @@ class SetupSelect(Select):
         selection = self.values[0]
         
         if selection == "verification":
-            await self.setup_verification(interaction)
+            await self.setup_cog.setup_verification(interaction)
         elif selection == "welcome":
-            await self.setup_welcome(interaction)
+            await self.setup_cog.setup_welcome(interaction)
         elif selection == "birthday":
-            await self.setup_birthday(interaction)
+            await self.setup_cog.setup_birthday(interaction)
         elif selection == "xp":
-            await self.setup_xp(interaction)
+            await self.setup_cog.setup_xp(interaction)
         elif selection == "general":
-            await self.setup_general(interaction)
+            await self.setup_cog.setup_general(interaction)
         elif selection == "role_connections":
-            await self.setup_role_connections(interaction)
+            await self.setup_cog.setup_role_connections(interaction)
         elif selection == "view":
-            await self.view_config(interaction)
+            await self.setup_cog.view_config(interaction)
 
     async def setup_verification(self, interaction: discord.Interaction):
         """Setup verification system with interactive configuration"""
@@ -921,7 +922,7 @@ class SetupSelect(Select):
             ),
             color=COLORS["info"],
         )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def setup_welcome(self, interaction: discord.Interaction):
         """Setup welcome system"""
@@ -1007,7 +1008,7 @@ class SetupSelect(Select):
         guild_id = interaction.guild.id
 
         # Fetch all settings
-        verify_channel_id = await db.get_setting(f"verify_channel_{guild_id}", guild_id)
+        verify_channel_id = await db.get_setting("verify_channel", guild_id)
         verify_role_id = await db.get_setting(f"verify_role_{guild_id}", guild_id)
         cheater_role_id = await db.get_setting(f"cheater_role_{guild_id}", guild_id)
         cheater_jail_id = await db.get_setting(f"cheater_jail_channel_{guild_id}", guild_id)
@@ -1139,7 +1140,7 @@ class SetupSelect(Select):
         # Get the role connections manager from the bot
         role_conn_cog = interaction.client.get_cog("RoleConnections")
         if not role_conn_cog:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Error",
                     "Role Connections system is not loaded. Please contact an administrator.",
@@ -1193,9 +1194,9 @@ class SetupSelect(Select):
 
 
 class SetupView(View):
-    def __init__(self):
+    def __init__(self, setup_cog):
         super().__init__(timeout=300)
-        self.add_item(SetupSelect())
+        self.add_item(SetupSelect(setup_cog))
 
 
 class WelcomeSetupView(View):
@@ -1208,7 +1209,6 @@ class WelcomeSetupView(View):
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set welcome channel"""
         # Defer immediately to prevent timeout
-        await interaction.response.defer(ephemeral=True)
         
         view = View()
         select = discord.ui.ChannelSelect(
@@ -1226,7 +1226,7 @@ class WelcomeSetupView(View):
                 description=f"Welcome messages will be sent to {channel.mention}",
                 color=COLORS["success"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         
         select.callback = channel_callback
         view.add_item(select)
@@ -1258,7 +1258,7 @@ class WelcomeSetupView(View):
                 description=f"Message: {message_input.value}",
                 color=COLORS["success"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1283,7 +1283,7 @@ class WelcomeSetupView(View):
                 description=f"Title: {title_input.value}",
                 color=COLORS["success"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1308,7 +1308,7 @@ class WelcomeSetupView(View):
                 description=f"Image URL: {image_input.value or 'None (removed)'}\n\n**Tip:** Upload your image to Discord, right-click it, and select 'Copy Link' to get a URL!",
                 color=COLORS["success"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1346,7 +1346,6 @@ class GoodbyeSetupView(View):
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set goodbye channel"""
         # Defer immediately to prevent timeout
-        await interaction.response.defer(ephemeral=True)
         
         view = View()
         select = discord.ui.ChannelSelect(
@@ -1364,7 +1363,7 @@ class GoodbyeSetupView(View):
                 description=f"Goodbye messages will be sent to {channel.mention}",
                 color=COLORS["success"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         
         select.callback = channel_callback
         view.add_item(select)
@@ -1396,7 +1395,7 @@ class GoodbyeSetupView(View):
                 description=f"Message: {message_input.value}",
                 color=COLORS["success"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1421,7 +1420,7 @@ class GoodbyeSetupView(View):
                 description=f"Title: {title_input.value}",
                 color=COLORS["success"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1446,7 +1445,7 @@ class GoodbyeSetupView(View):
                 description=f"Image URL: {image_input.value or 'None (removed)'}\n\n**Tip:** Upload your image to Discord, right-click it, and select 'Copy Link' to get a URL!",
                 color=COLORS["success"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1483,7 +1482,6 @@ class BirthdaySetupView(View):
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set birthday announcement channel"""
         # Defer immediately to prevent timeout
-        await interaction.response.defer(ephemeral=True)
         
         view = View()
         select = discord.ui.ChannelSelect(
@@ -1501,7 +1499,7 @@ class BirthdaySetupView(View):
                 description=f"Birthday announcements will be sent to {channel.mention}",
                 color=COLORS["success"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         
         select.callback = channel_callback
         view.add_item(select)
@@ -1541,14 +1539,14 @@ class BirthdaySetupView(View):
                     description=f"Announcements will be posted at {time_input.value} (server timezone)",
                     color=COLORS["success"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
             except:
                 embed = discord.Embed(
                     title="❌ Invalid Time Format",
                     description="Please use 24-hour format (HH:MM), e.g., 08:00 or 14:30",
                     color=COLORS["error"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1573,7 +1571,7 @@ class BirthdaySetupView(View):
                 description=f"Message: {message_input.value}",
                 color=COLORS["success"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1630,7 +1628,7 @@ class LevelRolesView(View):
                         description=f"Could not find role: {role_input.value}",
                         color=COLORS["error"]
                     )
-                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    await interaction.followup.send(embed=embed, ephemeral=True)
                     return
                 
                 # Get current level roles
@@ -1656,7 +1654,7 @@ class LevelRolesView(View):
                     description=f"Users will receive {role.mention} when they reach **Level {level}**",
                     color=COLORS["success"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
                 
             except ValueError as e:
                 embed = discord.Embed(
@@ -1664,7 +1662,7 @@ class LevelRolesView(View):
                     description=str(e),
                     color=COLORS["error"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1696,7 +1694,7 @@ class LevelRolesView(View):
                         description="There are no level roles configured.",
                         color=COLORS["error"]
                     )
-                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    await interaction.followup.send(embed=embed, ephemeral=True)
                     return
                 
                 # Parse and remove
@@ -1712,7 +1710,7 @@ class LevelRolesView(View):
                         description=f"No role configured for Level {level}",
                         color=COLORS["error"]
                     )
-                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    await interaction.followup.send(embed=embed, ephemeral=True)
                     return
                 
                 # Remove the level
@@ -1731,7 +1729,7 @@ class LevelRolesView(View):
                     description=f"Removed role reward for Level {level}",
                     color=COLORS["success"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
                 
             except ValueError:
                 embed = discord.Embed(
@@ -1739,7 +1737,7 @@ class LevelRolesView(View):
                     description="Please enter a valid level number.",
                     color=COLORS["error"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1747,7 +1745,6 @@ class LevelRolesView(View):
     @discord.ui.button(label="Back to XP Setup", style=ButtonStyle.secondary, emoji="◀️")
     async def back_button(self, interaction: discord.Interaction, button: Button):
         """Go back to XP setup"""
-        await interaction.response.defer(ephemeral=True)
         
         embed = discord.Embed(
             title="🏆 XP System Setup",
@@ -1769,7 +1766,6 @@ class XPSetupView(View):
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set level-up announcement channel"""
         # Defer immediately to prevent timeout
-        await interaction.response.defer(ephemeral=True)
         
         view = View()
         select = discord.ui.ChannelSelect(
@@ -1787,7 +1783,7 @@ class XPSetupView(View):
                 description=f"Level-up announcements will be sent to {channel.mention}",
                 color=COLORS["success"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         
         select.callback = channel_callback
         view.add_item(select)
@@ -1826,14 +1822,14 @@ class XPSetupView(View):
                     description=f"Users will gain {xp_val} XP per message",
                     color=COLORS["success"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
             except:
                 embed = discord.Embed(
                     title="❌ Invalid Value",
                     description="Please enter a valid number (minimum 1).",
                     color=COLORS["error"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1865,14 +1861,14 @@ class XPSetupView(View):
                     description=f"Users will gain {xp_val} XP per reaction received (0 to disable)",
                     color=COLORS["success"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
             except:
                 embed = discord.Embed(
                     title="❌ Invalid Value",
                     description="Please enter a valid number (0 or higher).",
                     color=COLORS["error"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1904,14 +1900,14 @@ class XPSetupView(View):
                     description=f"Users will gain {xp_val} XP per minute in voice (0 to disable)",
                     color=COLORS["success"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
             except:
                 embed = discord.Embed(
                     title="❌ Invalid Value",
                     description="Please enter a valid number (0 or higher).",
                     color=COLORS["error"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1943,14 +1939,14 @@ class XPSetupView(View):
                     description=f"Users must wait {cooldown_val} seconds between XP gains",
                     color=COLORS["success"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
             except:
                 embed = discord.Embed(
                     title="❌ Invalid Value",
                     description="Please enter a valid number (0 or higher).",
                     color=COLORS["error"]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1975,7 +1971,7 @@ class XPSetupView(View):
                 description=f"Message: {message_input.value}\n\nAvailable variables: `{{member}}`, `{{level}}`",
                 color=COLORS["success"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
@@ -1983,7 +1979,6 @@ class XPSetupView(View):
     @discord.ui.button(label="Manage Level Roles", style=ButtonStyle.secondary, emoji="🎭", row=2)
     async def manage_level_roles(self, interaction: discord.Interaction, button: Button):
         """Manage level role rewards"""
-        await interaction.response.defer(ephemeral=True)
         
         # Get current level roles
         level_roles = await self.db_manager.get_setting(f"level_roles_{self.guild_id}", self.guild_id)
@@ -2027,7 +2022,7 @@ class Setup(commands.Cog):
                 description="This command is only available to the server owner.",
                 color=COLORS["error"],
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
             return
         
         embed = discord.Embed(
@@ -2048,7 +2043,7 @@ class Setup(commands.Cog):
         embed.set_footer(text="Select an option from the dropdown below")
 
         view = SetupView()
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
