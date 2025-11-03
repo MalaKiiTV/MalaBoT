@@ -64,7 +64,7 @@ class AppealGroup(app_commands.Group):
         modal = AppealModal(self.cog.db, guild_id)
         await interaction.response.send_modal(modal)
 
-    @app_commands.command(name="review", description="Review a user's appeal (mod only)")
+    @app_commands.command(name="appeal-review", description="Review a user's appeal (mod only)")
     @app_commands.describe(
         user="The user whose appeal to review",
         decision="approve or deny",
