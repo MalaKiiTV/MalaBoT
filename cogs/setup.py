@@ -2042,7 +2042,7 @@ class Setup(commands.Cog):
         )
         embed.set_footer(text="Select an option from the dropdown below")
 
-        view = SetupView()
+        view = SetupView(self)
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
 
