@@ -7,6 +7,10 @@ data/bot.db
 data/bot.db-journal
 data/bot.db-shm
 data/bot.db-wal
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
 
 # Logs and backups
 data/logs/

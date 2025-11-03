@@ -12,7 +12,7 @@ from utils.logger import get_logger
 from utils.helpers import (
     embed_helper, safe_send_message, create_embed
 )
-from config.constants import COLORS, DEFAULT_WELCOME_TITLE, DEFAULT_WELCOME_MESSAGE, DEFAULT_GOODBYE_TITLE, DEFAULT_GOODBYE_MESSAGE, DEFAULT_GOODBYE_TITLE, DEFAULT_GOODBYE_MESSAGE, DEFAULT_GOODBYE_TITLE, DEFAULT_GOODBYE_MESSAGE, DEFAULT_GOODBYE_TITLE, DEFAULT_GOODBYE_MESSAGE
+from config.constants import COLORS, DEFAULT_WELCOME_TITLE, DEFAULT_WELCOME_MESSAGE, DEFAULT_GOODBYE_TITLE, DEFAULT_GOODBYE_MESSAGE
 from config.settings import settings
 
 class Welcome(commands.Cog):

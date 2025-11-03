@@ -11,7 +11,8 @@ from typing import Optional, List
 import asyncio
 
 from utils.logger import get_logger
-from utils.helpers import embed_helper, create_embed, log_birthday
+from utils.helpers import embed_helper, create_embed
+from utils.logger import get_logger, log_birthday
 from config.constants import COLORS
 from config.settings import settings
 

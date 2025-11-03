@@ -302,3 +302,11 @@ def log_watchdog(event_type: str, details: str):
 def log_health_check(check_type: str, status: str, value: float = None, details: str = None):
     """Log health check."""
     logger_manager.log_health_check(check_type, status, value, details)
+
+def log_xp(message: str):
+    """Log XP-related actions."""
+    logger.info(f"[XP] {message}")
+
+def log_birthday(message: str):
+    """Log birthday-related actions."""
+    logger.info(f"[BIRTHDAY] {message}")

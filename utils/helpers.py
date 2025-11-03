@@ -16,17 +16,7 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-def log_moderation(message: str):
-    """Log moderation actions."""
-    logger.info(message)
 
-def log_xp(message: str):
-    """Log XP-related actions."""
-    logger.info(message)
-
-def log_birthday(message: str):
-    """Log birthday-related actions."""
-    logger.info(message)
 
 class EmbedHelper:
     """Helper class for creating consistent embeds."""
