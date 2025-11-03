@@ -271,6 +271,17 @@ class DatabaseManager:
         """, (category, action, user_id, target_id, channel_id, details, guild_id))
         await conn.commit()
     
+    async def log_moderation_action(self, moderator_id: int, target_id: int, action: str, reason: str = None, guild_id: int = None):
+        """Log moderation action (wrapper for log_event)."""
+        await self.log_event(
+            category="MODERATION",
+            action=action,
+            user_id=moderator_id,
+            target_id=target_id,
+            details=reason,
+            guild_id=guild_id
+        )
+
     async def get_flag(self, flag_name: str):
         """Get system flag value."""
         conn = await self.get_connection()
