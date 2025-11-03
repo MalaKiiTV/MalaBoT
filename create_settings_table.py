@@ -1,9 +1,15 @@
 import sqlite3
+import os
 
 def create_settings_table():
     """Create the settings table directly using sqlite3."""
+    db_path = 'data/bot.db'
+    
+    # Ensure data directory exists
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    
     try:
-        conn = sqlite3.connect('bot.db')
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
         # Create settings table
@@ -22,7 +28,8 @@ def create_settings_table():
         conn.commit()
         conn.close()
         
-        print("✅ Settings table created successfully!")
+        print(f"✅ Settings table created successfully in {db_path}!")
+        print(f"Database location: {os.path.abspath(db_path)}")
         
         # Verify it was created
         conn = sqlite3.connect('bot.db')
