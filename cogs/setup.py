@@ -2012,6 +2012,234 @@ class Setup(commands.Cog):
         self.bot = bot
         self.db = bot.db_manager
 
+    async def setup_verification(self, interaction: discord.Interaction):
+        """Setup verification system with interactive configuration"""
+        await interaction.response.defer(ephemeral=True)
+        view = VerificationSetupView(interaction.client.db_manager, interaction.guild)
+
+        embed = discord.Embed(
+            title="✅ Verification System Setup",
+            description=(
+                "Configure your verification system using the dropdowns below:\n\n"
+                "**Required Settings:**\n"
+                "• Review Channel - Where staff sees verification submissions\n"
+                "• Verified Role - Role assigned when user is verified\n\n"
+                "**User Workflow:**\n"
+                "1. User runs `/verify submit`\n"
+                "2. Enters Activision ID in modal\n"
+                "3. Uploads screenshot\n"
+                "4. Selects platform from dropdown\n"
+                "5. Staff reviews with `/verify review @user verified/cheater/unverified`\n\n"
+                "**Review Decisions:**\n"
+                "• Verified - Assigns verified role\n"
+                "• Cheater - Bans user from server\n"
+                "• Unverified - Leaves user unverified"
+            ),
+            color=COLORS["info"],
+        )
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+
+    async def setup_welcome(self, interaction: discord.Interaction):
+        """Setup welcome system"""
+        await interaction.response.defer(ephemeral=True)
+        embed = discord.Embed(
+            title="👋 Welcome System Setup",
+            description=(
+                "Configure your welcome and goodbye systems:\n\n"
+                "**Available Variables:**\n"
+                "`{member}` - Mentions the new member\n"
+                "`{member.name}` - Member's username\n"
+                "`{server}` - Server name\n"
+                "`{member.count}` - Total member count\n\n"
+                "Click the buttons below to configure welcome settings.\n"
+                "Use the **Goodbye System** button to configure goodbye messages."
+            ),
+            color=COLORS["info"],
+        )
+        view = WelcomeSetupView(interaction.guild.id, interaction.client.db_manager)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+
+    async def setup_birthday(self, interaction: discord.Interaction):
+        """Setup birthday system"""
+        await interaction.response.defer(ephemeral=True)
+        embed = discord.Embed(
+            title="🎂 Birthday System Setup",
+            description="Configure birthday announcements for your server.",
+            color=COLORS["info"],
+        )
+        view = BirthdaySetupView(interaction.guild.id, interaction.client.db_manager)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+
+    async def setup_xp(self, interaction: discord.Interaction):
+        """Setup XP system"""
+        await interaction.response.defer(ephemeral=True)
+        embed = discord.Embed(
+            title="🏆 XP System Setup",
+            description="Configure the experience and leveling system.",
+            color=COLORS["info"],
+        )
+        view = XPSetupView(interaction.guild.id, interaction.client.db_manager)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+
+    async def setup_general(self, interaction: discord.Interaction):
+        """Setup general settings"""
+        await interaction.response.defer(ephemeral=True)
+        embed = discord.Embed(
+            title="⚙️ General Settings Setup",
+            description="Configure general server settings like timezone and online messages.",
+            color=COLORS["info"],
+        )
+        view = GeneralSetupView(interaction.guild.id, interaction.client.db_manager)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+
+    async def setup_role_connections(self, interaction: discord.Interaction):
+        """Setup role connections system"""
+        await interaction.response.defer(ephemeral=True)
+        # Get the role connections manager from the bot
+        role_conn_cog = interaction.client.get_cog("RoleConnections")
+        if not role_conn_cog:
+            await interaction.followup.send(
+                embed=create_embed(
+                    "Error",
+                    "Role Connections system is not loaded. Please contact an administrator.",
+                    COLORS["error"]
+                ),
+                ephemeral=True
+            )
+            return
+
+        embed = discord.Embed(
+            title="🔗 Role Connections Setup",
+            description="Configure automatic role assignment based on user connections.",
+            color=COLORS["info"],
+        )
+        view = RoleConnectionsSetupView(role_conn_cog, interaction.guild)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+
+    async def view_config(self, interaction: discord.Interaction):
+        """View current configuration"""
+        await interaction.response.defer(ephemeral=True)
+        guild_id = interaction.guild.id
+        
+        # Get all settings
+        settings = {}
+        
+        # Verification settings
+        verify_channel = await self.db.get_setting("verify_channel", guild_id)
+        verify_role = await self.db.get_setting("verify_role", guild_id)
+        cheater_role = await self.db.get_setting("cheater_role", guild_id)
+        cheater_jail = await self.db.get_setting("cheater_jail_channel", guild_id)
+        
+        # Welcome settings
+        welcome_channel = await self.db.get_setting("welcome_channel", guild_id)
+        welcome_title = await self.db.get_setting("welcome_title", guild_id)
+        welcome_message = await self.db.get_setting("welcome_message", guild_id)
+        goodbye_channel = await self.db.get_setting("goodbye_channel", guild_id)
+        goodbye_title = await self.db.get_setting("goodbye_title", guild_id)
+        goodbye_message = await self.db.get_setting("goodbye_message", guild_id)
+        
+        # Birthday settings
+        birthday_channel = await self.db.get_setting("birthday_channel", guild_id)
+        birthday_time = await self.db.get_setting("birthday_time", guild_id)
+        birthday_message = await self.db.get_setting("birthday_message", guild_id)
+        
+        # XP settings
+        xp_channel = await self.db.get_setting("xp_channel", guild_id)
+        xp_per_message = await self.db.get_setting("xp_per_message", guild_id)
+        xp_cooldown = await self.db.get_setting("xp_cooldown", guild_id)
+        
+        # General settings
+        timezone = await self.db.get_setting("timezone", guild_id)
+        online_message = await self.db.get_setting("online_message", guild_id)
+        online_channel = await self.db.get_setting("online_message_channel", guild_id)
+        mod_role = await self.db.get_setting("mod_role", guild_id)
+        join_role = await self.db.get_setting("join_role", guild_id)
+        
+        # Create embed
+        embed = discord.Embed(
+            title="📋 Current Configuration",
+            color=COLORS["info"]
+        )
+        
+        # Add verification field
+        verify_text = []
+        if verify_channel:
+            verify_text.append(f"Channel: <#{verify_channel}>")
+        if verify_role:
+            verify_text.append(f"Verified Role: <@&{verify_role}>")
+        if cheater_role:
+            verify_text.append(f"Cheater Role: <@&{cheater_role}>")
+        if cheater_jail:
+            verify_text.append(f"Cheater Jail: <#{cheater_jail}>")
+        
+        embed.add_field(
+            name="✅ Verification System",
+            value="\n".join(verify_text) if verify_text else "Not configured",
+            inline=False
+        )
+        
+        # Add welcome field
+        welcome_text = []
+        if welcome_channel:
+            welcome_text.append(f"Channel: <#{welcome_channel}>")
+        if welcome_title:
+            welcome_text.append(f"Title: {welcome_title}")
+        if goodbye_channel:
+            welcome_text.append(f"Goodbye Channel: <#{goodbye_channel}>")
+        
+        embed.add_field(
+            name="👋 Welcome System",
+            value="\n".join(welcome_text) if welcome_text else "Not configured",
+            inline=False
+        )
+        
+        # Add birthday field
+        birthday_text = []
+        if birthday_channel:
+            birthday_text.append(f"Channel: <#{birthday_channel}>")
+        if birthday_time:
+            birthday_text.append(f"Time: {birthday_time}")
+        
+        embed.add_field(
+            name="🎂 Birthday System",
+            value="\n".join(birthday_text) if birthday_text else "Not configured",
+            inline=False
+        )
+        
+        # Add XP field
+        xp_text = []
+        if xp_channel:
+            xp_text.append(f"Channel: <#{xp_channel}>")
+        if xp_per_message:
+            xp_text.append(f"XP per message: {xp_per_message}")
+        if xp_cooldown:
+            xp_text.append(f"Cooldown: {xp_cooldown}s")
+        
+        embed.add_field(
+            name="🏆 XP System",
+            value="\n".join(xp_text) if xp_text else "Not configured",
+            inline=False
+        )
+        
+        # Add general field
+        general_text = []
+        if timezone:
+            general_text.append(f"Timezone: {timezone}")
+        if online_channel:
+            general_text.append(f"Online Channel: <#{online_channel}>")
+        if mod_role:
+            general_text.append(f"Mod Role: <@&{mod_role}>")
+        if join_role:
+            general_text.append(f"Join Role: <@&{join_role}>")
+        
+        embed.add_field(
+            name="⚙️ General Settings",
+            value="\n".join(general_text) if general_text else "Not configured",
+            inline=False
+        )
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
     @app_commands.command(name="setup", description="Configure bot settings (Server Owner only)")
     async def setup(self, interaction: discord.Interaction):
         """Main setup command with interactive menu"""
