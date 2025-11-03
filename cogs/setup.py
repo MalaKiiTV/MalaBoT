@@ -353,7 +353,7 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
     async def on_submit(self, interaction: discord.Interaction):
         try:
             await self.db.set_setting("online_message", self.message.value, self.guild_id)
-            await self.db.set_setting("online_message_channel", str(self.channel_id, self.guild_id))
+            await self.db.set_setting("online_message_channel", str(self.channel_id), self.guild_id)
             await self.db.log_event(
                 category="SETTINGS",
                 action="SET_ONLINE_MESSAGE",
@@ -900,7 +900,7 @@ class SetupSelect(Select):
 
     async def setup_verification(self, interaction: discord.Interaction):
         """Setup verification system with interactive configuration"""
-        view = VerificationSetupView(interaction.client.db_manager, interaction.guild)
+        view = VerificationSetupView(self.db, interaction.guild)
         
         embed = discord.Embed(
             title="✅ Verification System Setup",
@@ -941,7 +941,7 @@ class SetupSelect(Select):
             color=COLORS["welcome"],
         )
         
-        view = WelcomeSetupView(interaction.guild.id, interaction.client.db_manager)
+        view = WelcomeSetupView(interaction.guild.id, self.db)
         await interaction.response.edit_message(embed=embed, view=view)
 
     async def setup_birthday(self, interaction: discord.Interaction):
@@ -964,7 +964,7 @@ class SetupSelect(Select):
             color=COLORS["birthday"],
         )
         
-        view = BirthdaySetupView(interaction.guild.id, interaction.client.db_manager)
+        view = BirthdaySetupView(interaction.guild.id, self.db)
         await interaction.response.edit_message(embed=embed, view=view)
 
     async def setup_xp(self, interaction: discord.Interaction):
@@ -987,12 +987,12 @@ class SetupSelect(Select):
             color=COLORS["xp"],
         )
         
-        view = XPSetupView(interaction.guild.id, interaction.client.db_manager)
+        view = XPSetupView(interaction.guild.id, self.db)
         await interaction.response.edit_message(embed=embed, view=view)
 
     async def setup_general(self, interaction: discord.Interaction):
         """Setup general settings with interactive configuration"""
-        view = GeneralSettingsView(interaction.client.db_manager, interaction.guild.id)
+        view = GeneralSettingsView(self.db, interaction.guild.id)
         
         embed = discord.Embed(
             title="⚙️ General Settings",
@@ -2015,7 +2015,7 @@ class Setup(commands.Cog):
     async def setup_verification(self, interaction: discord.Interaction):
         """Setup verification system with interactive configuration"""
         await interaction.response.defer(ephemeral=True)
-        view = VerificationSetupView(interaction.client.db_manager, interaction.guild)
+        view = VerificationSetupView(self.db, interaction.guild)
 
         embed = discord.Embed(
             title="✅ Verification System Setup",
@@ -2056,7 +2056,7 @@ class Setup(commands.Cog):
             ),
             color=COLORS["info"],
         )
-        view = WelcomeSetupView(interaction.guild.id, interaction.client.db_manager)
+        view = WelcomeSetupView(interaction.guild.id, self.db)
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def setup_birthday(self, interaction: discord.Interaction):
@@ -2067,7 +2067,7 @@ class Setup(commands.Cog):
             description="Configure birthday announcements for your server.",
             color=COLORS["info"],
         )
-        view = BirthdaySetupView(interaction.guild.id, interaction.client.db_manager)
+        view = BirthdaySetupView(interaction.guild.id, self.db)
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def setup_xp(self, interaction: discord.Interaction):
@@ -2078,7 +2078,7 @@ class Setup(commands.Cog):
             description="Configure the experience and leveling system.",
             color=COLORS["info"],
         )
-        view = XPSetupView(interaction.guild.id, interaction.client.db_manager)
+        view = XPSetupView(interaction.guild.id, self.db)
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def setup_general(self, interaction: discord.Interaction):
@@ -2089,7 +2089,7 @@ class Setup(commands.Cog):
             description="Configure general server settings like timezone and online messages.",
             color=COLORS["info"],
         )
-        view = GeneralSetupView(interaction.guild.id, interaction.client.db_manager)
+        view = GeneralSetupView(interaction.guild.id, self.db)
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def setup_role_connections(self, interaction: discord.Interaction):
