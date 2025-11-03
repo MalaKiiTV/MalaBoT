@@ -2037,7 +2037,7 @@ class Setup(commands.Cog):
             ),
             color=COLORS["info"],
         )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def setup_welcome(self, interaction: discord.Interaction):
         """Setup welcome system"""
@@ -2057,7 +2057,7 @@ class Setup(commands.Cog):
             color=COLORS["info"],
         )
         view = WelcomeSetupView(interaction.guild.id, self.db)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def setup_birthday(self, interaction: discord.Interaction):
         """Setup birthday system"""
@@ -2068,7 +2068,7 @@ class Setup(commands.Cog):
             color=COLORS["info"],
         )
         view = BirthdaySetupView(interaction.guild.id, self.db)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def setup_xp(self, interaction: discord.Interaction):
         """Setup XP system"""
@@ -2079,7 +2079,7 @@ class Setup(commands.Cog):
             color=COLORS["info"],
         )
         view = XPSetupView(interaction.guild.id, self.db)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def setup_general(self, interaction: discord.Interaction):
         """Setup general settings"""
@@ -2090,7 +2090,7 @@ class Setup(commands.Cog):
             color=COLORS["info"],
         )
         view = GeneralSetupView(interaction.guild.id, self.db)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def setup_role_connections(self, interaction: discord.Interaction):
         """Setup role connections system"""
@@ -2114,7 +2114,7 @@ class Setup(commands.Cog):
             color=COLORS["info"],
         )
         view = RoleConnectionsSetupView(role_conn_cog, interaction.guild)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def view_config(self, interaction: discord.Interaction):
         """View current configuration"""
@@ -2271,7 +2271,7 @@ class Setup(commands.Cog):
         embed.set_footer(text="Select an option from the dropdown below")
 
         view = SetupView(self)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
