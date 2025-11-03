@@ -2113,7 +2113,7 @@ class Setup(commands.Cog):
             description="Configure automatic role assignment based on user connections.",
             color=COLORS["info"],
         )
-        view = RoleConnectionSetupView(role_conn_cog, interaction.guild)
+        view = RoleConnectionSetupView(role_conn_cog.manager, interaction.guild)
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def view_config(self, interaction: discord.Interaction):
