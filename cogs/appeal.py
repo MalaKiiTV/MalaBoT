@@ -30,8 +30,8 @@ class AppealGroup(app_commands.Group):
         # Get settings in parallel to reduce latency
         import asyncio
         cheater_role_id, cheater_channel_id = await asyncio.gather(
-            self.cog.db.get_setting(f"cheater_role_{guild_id}"),
-            self.cog.db.get_setting(f"cheater_channel_{guild_id}")
+            self.cog.db.get_setting("cheater_role", guild_id),
+            self.cog.db.get_setting("cheater_channel", guild_id)
         )
         
         # Check if user is in cheater jail
@@ -124,7 +124,7 @@ class AppealGroup(app_commands.Group):
             
             if decision_value == "approve" and member:
                 # Remove cheater role
-                cheater_role_id = await self.cog.db.get_setting(f"cheater_role_{guild_id}")
+                cheater_role_id = await self.cog.db.get_setting("cheater_role", guild_id)
                 if cheater_role_id:
                     cheater_role = interaction.guild.get_role(int(cheater_role_id))
                     if cheater_role and cheater_role in member.roles:
@@ -250,7 +250,7 @@ class AppealModal(Modal, title="Submit Appeal"):
             )
             
             # Notify staff in review channel
-            review_channel_id = await self.db.get_setting(f"verify_channel_{self.guild_id}")
+            review_channel_id = await self.db.get_setting("verify_channel", self.guild_id)
             if review_channel_id:
                 review_channel = interaction.guild.get_channel(int(review_channel_id))
                 if review_channel:

@@ -66,7 +66,7 @@ class RoleConnectionManager:
 
     async def load_connections(self, guild_id: int):
         """Load all connections for a guild from database"""
-        connections_data = await self.db.get_setting(f"role_connections_{guild_id}", guild_id)
+        connections_data = await self.db.get_setting("role_connections", guild_id)
         if connections_data:
             try:
                 # Handle both string (JSON) and list (already parsed) formats
@@ -99,7 +99,7 @@ class RoleConnectionManager:
 
     async def load_protected_roles(self, guild_id: int):
         """Load protected roles for a guild"""
-        protected_data = await self.db.get_setting(f"protected_roles_{guild_id}", guild_id)
+        protected_data = await self.db.get_setting("protected_roles", guild_id)
         if protected_data:
             try:
                 self.protected_roles_cache[guild_id] = json.loads(protected_data)
@@ -112,12 +112,12 @@ class RoleConnectionManager:
         """Save connections to database"""
         connections = self.connections_cache.get(guild_id, [])
         data = [conn.to_dict() for conn in connections]
-        await self.db.set_setting(f"role_connections_{guild_id}", json.dumps(data))
+        await self.db.set_setting("role_connections", json.dumps(data), guild_id)
 
     async def save_protected_roles(self, guild_id: int):
         """Save protected roles to database"""
         protected = self.protected_roles_cache.get(guild_id, [])
-        await self.db.set_setting(f"protected_roles_{guild_id}", json.dumps(protected))
+        await self.db.set_setting("protected_roles", json.dumps(protected), guild_id)
 
     async def add_connection(self, guild_id: int, target_role_id: int, action: str, 
                            conditions: List[Dict], logic: str = "AND") -> int:

@@ -32,7 +32,7 @@ class Welcome(commands.Cog):
             guild_id = member.guild.id
             
             # Assign join role if configured
-            join_role_id = await self.bot.db_manager.get_setting(f'join_role_{guild_id}')
+            join_role_id = await self.bot.db_manager.get_setting("join_role", guild_id)
             if join_role_id:
                 try:
                     join_role = member.guild.get_role(int(join_role_id))
@@ -48,10 +48,10 @@ class Welcome(commands.Cog):
             
             # Get welcome settings
             guild_id = member.guild.id
-            welcome_channel_id = await self.bot.db_manager.get_setting(f'welcome_channel_{guild_id}')
-            welcome_title = await self.bot.db_manager.get_setting(f'welcome_title_{guild_id}', DEFAULT_WELCOME_TITLE)
-            welcome_message = await self.bot.db_manager.get_setting(f'welcome_message_{guild_id}', DEFAULT_WELCOME_MESSAGE)
-            welcome_image = await self.bot.db_manager.get_setting(f'welcome_image_{guild_id}')
+            welcome_channel_id = await self.bot.db_manager.get_setting("welcome_channel", guild_id)
+            welcome_title = await self.bot.db_manager.get_setting("welcome_title", DEFAULT_WELCOME_TITLE, guild_id)
+            welcome_message = await self.bot.db_manager.get_setting("welcome_message", guild_id) or DEFAULT_WELCOME_MESSAGE
+            welcome_image = await self.bot.db_manager.get_setting("welcome_image", guild_id)
             
             if not welcome_channel_id:
                 return
@@ -98,10 +98,10 @@ class Welcome(commands.Cog):
             guild_id = member.guild.id
             
             # Get goodbye settings
-            goodbye_channel_id = await self.bot.db_manager.get_setting(f'goodbye_channel_{guild_id}')
-            goodbye_title = await self.bot.db_manager.get_setting(f'goodbye_title_{guild_id}', DEFAULT_GOODBYE_TITLE)
-            goodbye_message = await self.bot.db_manager.get_setting(f'goodbye_message_{guild_id}', DEFAULT_GOODBYE_MESSAGE)
-            goodbye_image = await self.bot.db_manager.get_setting(f'goodbye_image_{guild_id}')
+            goodbye_channel_id = await self.bot.db_manager.get_setting("goodbye_channel", guild_id)
+            goodbye_title = await self.bot.db_manager.get_setting("goodbye_title", guild_id) or DEFAULT_GOODBYE_TITLE
+            goodbye_message = await self.bot.db_manager.get_setting("goodbye_message", guild_id) or DEFAULT_GOODBYE_MESSAGE
+            goodbye_image = await self.bot.db_manager.get_setting("goodbye_image", guild_id)
             
             if not goodbye_channel_id:
                 return

@@ -120,7 +120,7 @@ class PlatformSelect(Select):
             log_system(f"[VERIFY] User {self.user_id} submitted verification for {self.activision_id} on {platform}")
 
             guild_id = interaction.guild.id if interaction.guild else None
-            review_channel_id = await db.get_setting(f"verify_channel_{guild_id}")
+            review_channel_id = await db.get_setting("verify_channel", guild_id)
             review_channel = bot.get_channel(int(review_channel_id)) if review_channel_id else None
 
             if review_channel:
@@ -241,7 +241,7 @@ class VerifyGroup(app_commands.Group):
 
             if decision_value == "verified" and member:
                 # Get verified role from settings
-                verified_role_id = await self.cog.db.get_setting(f"verify_role_{guild_id}")
+                verified_role_id = await self.cog.db.get_setting("verify_role", guild_id)
                 
                 if verified_role_id:
                     verified_role = guild.get_role(int(verified_role_id))
@@ -259,9 +259,9 @@ class VerifyGroup(app_commands.Group):
             elif decision_value == "cheater" and member:
                 print(f"DEBUG: Processing cheater for {member.name}")
                 # Get cheater role and channel from settings
-                cheater_role_id = await self.cog.db.get_setting(f"cheater_role_{guild_id}")
+                cheater_role_id = await self.cog.db.get_setting("cheater_role", guild_id)
                 print(f"DEBUG: Cheater role ID: {cheater_role_id}")
-                cheater_channel_id = await self.cog.db.get_setting(f"cheater_jail_channel_{guild_id}")
+                cheater_channel_id = await self.cog.db.get_setting("cheater_jail_channel", guild_id)
                 
                 if cheater_role_id and cheater_channel_id:
                     cheater_role = guild.get_role(int(cheater_role_id))
@@ -386,7 +386,7 @@ class Verify(commands.Cog):
             return
         
         guild_id = after.guild.id
-        cheater_role_id = await self.db.get_setting(f"cheater_role_{guild_id}")
+        cheater_role_id = await self.db.get_setting("cheater_role", guild_id)
         
         if not cheater_role_id:
             return

@@ -322,8 +322,8 @@ class Owner(commands.Cog):
             # Try to get guild-specific settings first
             for guild in self.bot.guilds:
                 guild_id = guild.id
-                online_channel_id = await self.bot.db_manager.get_setting(f'online_message_channel_{guild_id}')
-                online_message = await self.bot.db_manager.get_setting(f'online_message_{guild_id}')
+                online_channel_id = await self.bot.db_manager.get_setting("online_message_channel", guild_id)
+                online_message = await self.bot.db_manager.get_setting("online_message", guild_id)
                 
                 if online_channel_id and online_message:
                     channel = self.bot.get_channel(int(online_channel_id))
