@@ -56,7 +56,7 @@ class AddConnectionRoleSelect(Select):
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "none":
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed("Error", "No roles available.", COLORS["error"]),
                 ephemeral=True
             )
@@ -66,7 +66,7 @@ class AddConnectionRoleSelect(Select):
         self.parent_view.target_role = interaction.guild.get_role(role_id)
         
         if not self.parent_view.target_role:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed("Error", "Role not found.", COLORS["error"]),
                 ephemeral=True
             )
@@ -240,7 +240,7 @@ class ConditionRoleSelect(Select):
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "none":
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed("Error", "No roles available.", COLORS["error"]),
                 ephemeral=True
             )
@@ -250,7 +250,7 @@ class ConditionRoleSelect(Select):
         condition_role = interaction.guild.get_role(role_id)
         
         if not condition_role:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed("Error", "Role not found.", COLORS["error"]),
                 ephemeral=True
             )
@@ -383,47 +383,10 @@ class FinalizeConnectionView(View):
             
             await interaction.response.edit_message(embed=embed, view=None)
             
-            # Auto-return to role connections menu after 2 seconds
-            await asyncio.sleep(2)
-            
-            # Reload connections from database to update cache
-            await self.manager.load_connections(self.guild.id)
-            
-            # Return to role connections menu
-            from cogs.setup import RoleConnectionSetupView
-            view = RoleConnectionSetupView(self.manager, self.guild)
-            
-            # Build updated embed with current connections
-            connections = self.manager.connections_cache.get(self.guild.id, [])
-            
-            embed = discord.Embed(
-                title="🔗 Role Connection System",
-                description=(
-                    "Automatically assign or remove roles based on conditions.\n\n"
-                    "**How it works:**\n"
-                    "• Create rules that give/remove roles when conditions are met\n"
-                    "• Conditions: User HAS or DOESN'T HAVE specific roles\n"
-                    "• Logic: Combine conditions with AND/OR\n"
-                    "• Protected Roles: Users with these roles are exempt from all rules"
-                ),
-                color=COLORS["primary"]
-            )
-            
-            # Show current connections
-            if connections:
-                conn_text = ""
-                for i, conn in enumerate(connections[:10], 1):
-                    target_role = self.guild.get_role(conn.target_role_id)
-                    if target_role:
-                        status = "✅" if conn.enabled else "❌"
-                        conn_text += f"{status} {i}. {conn.action.title()} **{target_role.name}**\n"
-                embed.add_field(name="Active Connections", value=conn_text or "None", inline=False)
-            
-            await interaction.message.edit(embed=embed, view=view)
             
         except Exception as e:
             log_system(f"[ROLE_CONNECTION] Error saving connection: {e}", level="error")
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Error",
                     f"Failed to save connection: {str(e)}",
@@ -477,7 +440,7 @@ class ManageConnectionSelect(Select):
         connection = next((c for c in self.connections if c.id == conn_id), None)
         
         if not connection:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed("Error", "Connection not found.", COLORS["error"]),
                 ephemeral=True
             )
@@ -523,7 +486,7 @@ class ConnectionActionsView(View):
         
         status = "enabled" if self.connection.enabled else "disabled"
         
-        await interaction.response.send_message(
+        await interaction.followup.send(
             embed=create_embed(
                 "Connection Updated",
                 f"Connection #{self.connection.id} has been {status}.",
@@ -563,7 +526,7 @@ class ConnectionActionsView(View):
     async def delete(self, interaction: discord.Interaction, button: Button):
         await self.manager.remove_connection(self.guild.id, self.connection.id)
         
-        await interaction.response.send_message(
+        await interaction.followup.send(
             embed=create_embed(
                 "Connection Deleted",
                 f"Connection #{self.connection.id} has been removed.",
@@ -674,7 +637,7 @@ class ProtectedRolesView(View):
         protected = self.manager.protected_roles_cache.get(self.guild.id, [])
         
         if not protected:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "No Protected Roles",
                     "There are no protected roles to remove.",
@@ -737,7 +700,7 @@ class AddProtectedRoleSelect(Select):
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "none":
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed("Error", "No roles available.", COLORS["error"]),
                 ephemeral=True
             )
@@ -747,7 +710,7 @@ class AddProtectedRoleSelect(Select):
         role = interaction.guild.get_role(role_id)
         
         if not role:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed("Error", "Role not found.", COLORS["error"]),
                 ephemeral=True
             )
@@ -755,7 +718,7 @@ class AddProtectedRoleSelect(Select):
         
         await self.manager.add_protected_role(self.guild.id, role.id)
         
-        await interaction.response.send_message(
+        await interaction.followup.send(
             embed=create_embed(
                 "Protected Role Added",
                 f"{role.mention} is now protected from role connections.",
@@ -807,7 +770,7 @@ class RemoveProtectedRoleSelect(Select):
         role = self.guild.get_role(role_id)
         role_name = role.mention if role else f"Role ID {role_id}"
         
-        await interaction.response.send_message(
+        await interaction.followup.send(
             embed=create_embed(
                 "Protected Role Removed",
                 f"{role_name} is no longer protected.",
