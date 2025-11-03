@@ -8,7 +8,7 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ui import Modal, TextInput
 
-from utils.helpers import create_embed, is_owner
+from utils.helpers import create_embed
 from utils.logger import log_system
 from config.constants import COLORS
 

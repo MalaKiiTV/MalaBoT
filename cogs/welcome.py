@@ -4,9 +4,7 @@ Handles welcome messages for new members with customizable embeds.
 """
 
 import discord
-from discord import app_commands
 from discord.ext import commands
-from typing import Optional
 
 from utils.logger import get_logger
 from utils.helpers import (

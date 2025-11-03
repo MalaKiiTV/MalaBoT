@@ -6,7 +6,6 @@ Contains help, ping, userinfo, serverinfo, about, and serverstats commands.
 import discord
 from discord import app_commands
 from discord.ext import commands
-import psutil
 import time
 from datetime import datetime
 from typing import Optional
