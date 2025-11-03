@@ -613,8 +613,8 @@ The bot will start in safe mode to prevent further issues.
                         # Copy global commands to guild first
                         self.tree.copy_global_to(guild=guild)
                         # Debug: Check what commands are registered
-                        self.logger.info(f"Commands in tree: {[cmd.name for cmd in self.tree.get_commands(guild=guild)]}")
-                        self.logger.info(f"Global commands: {[cmd.name for cmd in self.tree.get_commands()]}")
+                        guild_commands = self.tree.get_commands(guild=guild)
+                        self.logger.info(f"Commands in tree: {[cmd.name for cmd in guild_commands]}")
                         synced = await self.tree.sync(guild=guild)
                         self.logger.info(f"✅ Synced {len(synced)} commands to debug guild: {guild_id}")
                     except Exception as e:
@@ -622,8 +622,6 @@ The bot will start in safe mode to prevent further issues.
             else:
                 # No DEBUG_GUILDS set = Production mode = Global sync only
                 self.logger.info("🌐 PRODUCTION MODE: Syncing globally")
-                # Debug: Check what commands are registered
-                self.logger.info(f"Global commands: {[cmd.name for cmd in self.tree.get_commands()]}")
                 synced = await self.tree.sync()
                 self.logger.info(f"✅ Synced {len(synced)} global commands")
 
