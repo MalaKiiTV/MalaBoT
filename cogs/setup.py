@@ -37,7 +37,7 @@ class VerifyChannelSelect(discord.ui.ChannelSelect):
     async def callback(self, interaction: discord.Interaction):
         channel = self.values[0]
         try:
-            await self.db.set_setting(f"verify_channel_{self.guild_id}", channel.id, self.guild_id)
+            await self.db.set_setting("verify_channel", channel.id, self.guild_id)
             await self.db.log_event(
                 category="VERIFY",
                 action="SETUP_CHANNEL",
@@ -79,7 +79,7 @@ class RoleSelect(discord.ui.RoleSelect):
     async def callback(self, interaction: discord.Interaction):
         role = self.values[0]
         try:
-            await self.db.set_setting(f"verify_role_{self.guild_id}", role.id, self.guild_id)
+            await self.db.set_setting("verify_role", role.id, self.guild_id)
             await self.db.log_event(
                 category="VERIFY",
                 action="CONFIG_ROLE",
@@ -121,7 +121,7 @@ class CheaterRoleSelect(discord.ui.RoleSelect):
     async def callback(self, interaction: discord.Interaction):
         role = self.values[0]
         try:
-            await self.db.set_setting(f"cheater_role_{self.guild_id}", role.id, self.guild_id)
+            await self.db.set_setting("cheater_role", role.id, self.guild_id)
             await self.db.log_event(
                 category="VERIFY",
                 action="CONFIG_CHEATER_ROLE",
@@ -164,7 +164,7 @@ class CheaterJailChannelSelect(discord.ui.ChannelSelect):
     async def callback(self, interaction: discord.Interaction):
         if not self.values:
             # Clear the channel if none selected
-            await self.db.set_setting(f"cheater_jail_channel_{self.guild_id}", None, self.guild_id)
+            await self.db.set_setting("cheater_jail_channel", None, self.guild_id)
             await interaction.response.send_message(
                 embed=create_embed(
                     "Cheater Jail Channel Cleared",
@@ -177,7 +177,7 @@ class CheaterJailChannelSelect(discord.ui.ChannelSelect):
             
         channel = self.values[0]
         try:
-            await self.db.set_setting(f"cheater_jail_channel_{self.guild_id}", channel.id, self.guild_id)
+            await self.db.set_setting("cheater_jail_channel", channel.id, self.guild_id)
             await self.db.log_event(
                 category="VERIFY",
                 action="CONFIG_CHEATER_JAIL",
@@ -469,7 +469,7 @@ class JoinRoleSelectView(View):
             return
         
         # Save the role
-        await self.db.set_setting(f"join_role_{self.guild_id}", str(role.id), self.guild_id)
+        await self.db.set_setting("join_role", str(role.id), self.guild_id)
         
         # Show confirmation
         embed = discord.Embed(
@@ -558,7 +558,7 @@ class GeneralSettingsView(View):
         
         async def role_callback(interaction: discord.Interaction):
             role = select.values[0]
-            await self.db.set_setting(f"mod_role_{self.guild_id}", str(role.id), self.guild_id)
+            await self.db.set_setting("mod_role", str(role.id), self.guild_id)
             
             # Show brief confirmation
             embed = discord.Embed(
@@ -1220,7 +1220,7 @@ class WelcomeSetupView(View):
         
         async def channel_callback(interaction: discord.Interaction):
             channel = select.values[0]
-            await self.db_manager.set_setting(f"welcome_channel_{self.guild_id}", str(channel.id), self.guild_id)
+            await self.db_manager.set_setting("welcome_channel", str(channel.id), self.guild_id)
             embed = discord.Embed(
                 title="✅ Welcome Channel Set",
                 description=f"Welcome messages will be sent to {channel.mention}",
@@ -1252,7 +1252,7 @@ class WelcomeSetupView(View):
         modal.add_item(message_input)
         
         async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting(f"welcome_message_{self.guild_id}", message_input.value, self.guild_id)
+            await self.db_manager.set_setting("welcome_message", message_input.value, self.guild_id)
             embed = discord.Embed(
                 title="✅ Welcome Message Set",
                 description=f"Message: {message_input.value}",
@@ -1277,7 +1277,7 @@ class WelcomeSetupView(View):
         modal.add_item(title_input)
         
         async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting(f"welcome_title_{self.guild_id}", title_input.value, self.guild_id)
+            await self.db_manager.set_setting("welcome_title", title_input.value, self.guild_id)
             embed = discord.Embed(
                 title="✅ Welcome Title Set",
                 description=f"Title: {title_input.value}",
@@ -1302,7 +1302,7 @@ class WelcomeSetupView(View):
         modal.add_item(image_input)
         
         async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting(f"welcome_image_{self.guild_id}", image_input.value or "", self.guild_id)
+            await self.db_manager.set_setting("welcome_image", image_input.value or "", self.guild_id)
             embed = discord.Embed(
                 title="✅ Welcome Image Set",
                 description=f"Image URL: {image_input.value or 'None (removed)'}\n\n**Tip:** Upload your image to Discord, right-click it, and select 'Copy Link' to get a URL!",
@@ -1358,7 +1358,7 @@ class GoodbyeSetupView(View):
         
         async def channel_callback(interaction: discord.Interaction):
             channel = select.values[0]
-            await self.db_manager.set_setting(f"goodbye_channel_{self.guild_id}", str(channel.id), self.guild_id)
+            await self.db_manager.set_setting("goodbye_channel", str(channel.id), self.guild_id)
             embed = discord.Embed(
                 title="✅ Goodbye Channel Set",
                 description=f"Goodbye messages will be sent to {channel.mention}",
@@ -1390,7 +1390,7 @@ class GoodbyeSetupView(View):
         modal.add_item(message_input)
         
         async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting(f"goodbye_message_{self.guild_id}", message_input.value, self.guild_id)
+            await self.db_manager.set_setting("goodbye_message", message_input.value, self.guild_id)
             embed = discord.Embed(
                 title="✅ Goodbye Message Set",
                 description=f"Message: {message_input.value}",
@@ -1415,7 +1415,7 @@ class GoodbyeSetupView(View):
         modal.add_item(title_input)
         
         async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting(f"goodbye_title_{self.guild_id}", title_input.value, self.guild_id)
+            await self.db_manager.set_setting("goodbye_title", title_input.value, self.guild_id)
             embed = discord.Embed(
                 title="✅ Goodbye Title Set",
                 description=f"Title: {title_input.value}",
@@ -1440,7 +1440,7 @@ class GoodbyeSetupView(View):
         modal.add_item(image_input)
         
         async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting(f"goodbye_image_{self.guild_id}", image_input.value or "", self.guild_id)
+            await self.db_manager.set_setting("goodbye_image", image_input.value or "", self.guild_id)
             embed = discord.Embed(
                 title="✅ Goodbye Image Set",
                 description=f"Image URL: {image_input.value or 'None (removed)'}\n\n**Tip:** Upload your image to Discord, right-click it, and select 'Copy Link' to get a URL!",
@@ -1495,7 +1495,7 @@ class BirthdaySetupView(View):
         
         async def channel_callback(interaction: discord.Interaction):
             channel = select.values[0]
-            await self.db_manager.set_setting(f"birthday_channel_{self.guild_id}", str(channel.id), self.guild_id)
+            await self.db_manager.set_setting("birthday_channel", str(channel.id), self.guild_id)
             embed = discord.Embed(
                 title="✅ Birthday Channel Set",
                 description=f"Birthday announcements will be sent to {channel.mention}",
@@ -1535,7 +1535,7 @@ class BirthdaySetupView(View):
                 if not (0 <= hour <= 23 and 0 <= minute <= 59):
                     raise ValueError
                 
-                await self.db_manager.set_setting(f"birthday_time_{self.guild_id}", time_input.value, self.guild_id)
+                await self.db_manager.set_setting("birthday_time", time_input.value, self.guild_id)
                 embed = discord.Embed(
                     title="✅ Birthday Time Set",
                     description=f"Announcements will be posted at {time_input.value} (server timezone)",
@@ -1567,7 +1567,7 @@ class BirthdaySetupView(View):
         modal.add_item(message_input)
         
         async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting(f"birthday_message_{self.guild_id}", message_input.value, self.guild_id)
+            await self.db_manager.set_setting("birthday_message", message_input.value, self.guild_id)
             embed = discord.Embed(
                 title="✅ Birthday Message Set",
                 description=f"Message: {message_input.value}",
@@ -1781,7 +1781,7 @@ class XPSetupView(View):
         
         async def channel_callback(interaction: discord.Interaction):
             channel = select.values[0]
-            await self.db_manager.set_setting(f"xp_channel_{self.guild_id}", str(channel.id), self.guild_id)
+            await self.db_manager.set_setting("xp_channel", str(channel.id), self.guild_id)
             embed = discord.Embed(
                 title="✅ Level-up Channel Set",
                 description=f"Level-up announcements will be sent to {channel.mention}",
@@ -1819,7 +1819,7 @@ class XPSetupView(View):
                 if xp_val < 1:
                     raise ValueError
                 
-                await self.db_manager.set_setting(f"xp_per_message_{self.guild_id}", str(xp_val), self.guild_id)
+                await self.db_manager.set_setting("xp_per_message", str(xp_val), self.guild_id)
                 
                 embed = discord.Embed(
                     title="✅ Message XP Set",
@@ -1858,7 +1858,7 @@ class XPSetupView(View):
                 if xp_val < 0:
                     raise ValueError
                 
-                await self.db_manager.set_setting(f"xp_per_reaction_{self.guild_id}", str(xp_val), self.guild_id)
+                await self.db_manager.set_setting("xp_per_reaction", str(xp_val), self.guild_id)
                 
                 embed = discord.Embed(
                     title="✅ Reaction XP Set",
@@ -1897,7 +1897,7 @@ class XPSetupView(View):
                 if xp_val < 0:
                     raise ValueError
                 
-                await self.db_manager.set_setting(f"xp_per_voice_minute_{self.guild_id}", str(xp_val), self.guild_id)
+                await self.db_manager.set_setting("xp_per_voice_minute", str(xp_val), self.guild_id)
                 
                 embed = discord.Embed(
                     title="✅ Voice XP Set",
@@ -1936,7 +1936,7 @@ class XPSetupView(View):
                 if cooldown_val < 0:
                     raise ValueError
                 
-                await self.db_manager.set_setting(f"xp_cooldown_{self.guild_id}", str(cooldown_val), self.guild_id)
+                await self.db_manager.set_setting("xp_cooldown", str(cooldown_val), self.guild_id)
                 
                 embed = discord.Embed(
                     title="✅ XP Cooldown Set",
@@ -1969,7 +1969,7 @@ class XPSetupView(View):
         modal.add_item(message_input)
         
         async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting(f"xp_levelup_message_{self.guild_id}", message_input.value, self.guild_id)
+            await self.db_manager.set_setting("xp_levelup_message", message_input.value, self.guild_id)
             embed = discord.Embed(
                 title="✅ Level-up Message Set",
                 description=f"Message: {message_input.value}\n\nAvailable variables: `{{member}}`, `{{level}}`",
