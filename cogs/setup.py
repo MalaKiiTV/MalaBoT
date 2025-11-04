@@ -612,8 +612,8 @@ class GeneralSettingsView(View):
         timezone = await self.db.get_setting("timezone", self.guild_id)
         online_message = await self.db.get_setting("online_message", self.guild_id)
         online_channel_id = await self.db.get_setting("online_message_channel", self.guild_id)
-        mod_role_id = await self.db.get_setting(f"mod_role_{self.guild_id}", self.guild_id)
-        join_role_id = await self.db.get_setting(f"join_role_{self.guild_id}", self.guild_id)
+        mod_role_id = await self.db.get_setting("mod_role", self.guild_id)
+        join_role_id = await self.db.get_setting("join_role", self.guild_id)
         
         mod_role_text = "Not set"
         if mod_role_id:
