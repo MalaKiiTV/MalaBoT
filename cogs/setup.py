@@ -37,7 +37,7 @@ class VerifyChannelSelect(discord.ui.ChannelSelect):
     async def callback(self, interaction: discord.Interaction):
         channel = self.values[0]
         try:
-            await self.db.set_setting(f"verify_channel_{self.guild_id}", channel.id)
+            await self.db.set_setting(f"verify_channel_{self.guild_id}", channel.id, self.guild_id)
             await self.db.log_event(
                 category="VERIFY",
                 action="SETUP_CHANNEL",
@@ -79,7 +79,7 @@ class RoleSelect(discord.ui.RoleSelect):
     async def callback(self, interaction: discord.Interaction):
         role = self.values[0]
         try:
-            await self.db.set_setting(f"verify_role_{self.guild_id}", role.id)
+            await self.db.set_setting(f"verify_role_{self.guild_id}", role.id, self.guild_id)
             await self.db.log_event(
                 category="VERIFY",
                 action="CONFIG_ROLE",
@@ -121,7 +121,7 @@ class CheaterRoleSelect(discord.ui.RoleSelect):
     async def callback(self, interaction: discord.Interaction):
         role = self.values[0]
         try:
-            await self.db.set_setting(f"cheater_role_{self.guild_id}", role.id)
+            await self.db.set_setting(f"cheater_role_{self.guild_id}", role.id, self.guild_id)
             await self.db.log_event(
                 category="VERIFY",
                 action="CONFIG_CHEATER_ROLE",
@@ -164,7 +164,7 @@ class CheaterJailChannelSelect(discord.ui.ChannelSelect):
     async def callback(self, interaction: discord.Interaction):
         if not self.values:
             # Clear the channel if none selected
-            await self.db.set_setting(f"cheater_jail_channel_{self.guild_id}", None)
+            await self.db.set_setting(f"cheater_jail_channel_{self.guild_id}", None, self.guild_id)
             await interaction.response.send_message(
                 embed=create_embed(
                     "Cheater Jail Channel Cleared",
@@ -177,7 +177,7 @@ class CheaterJailChannelSelect(discord.ui.ChannelSelect):
             
         channel = self.values[0]
         try:
-            await self.db.set_setting(f"cheater_jail_channel_{self.guild_id}", channel.id)
+            await self.db.set_setting(f"cheater_jail_channel_{self.guild_id}", channel.id, self.guild_id)
             await self.db.log_event(
                 category="VERIFY",
                 action="CONFIG_CHEATER_JAIL",
@@ -278,7 +278,7 @@ class TimezoneSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         try:
-            await self.db.set_setting(f"timezone_{self.guild_id}", self.values[0])
+            await self.db.set_setting(f"timezone_{self.guild_id}", self.values[0], self.guild_id)
             await self.db.log_event(
                 category="SETTINGS",
                 action="SET_TIMEZONE",
@@ -352,8 +352,8 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            await self.db.set_setting(f"online_message_{self.guild_id}", self.message.value)
-            await self.db.set_setting(f"online_message_channel_{self.guild_id}", str(self.channel_id))
+            await self.db.set_setting(f"online_message_{self.guild_id}", self.message.value, self.guild_id)
+            await self.db.set_setting(f"online_message_channel_{self.guild_id}", str(self.channel_id), self.guild_id)
             await self.db.log_event(
                 category="SETTINGS",
                 action="SET_ONLINE_MESSAGE",
@@ -469,7 +469,7 @@ class JoinRoleSelectView(View):
             return
         
         # Save the role
-        await self.db.set_setting(f"join_role_{self.guild_id}", str(role.id))
+        await self.db.set_setting(f"join_role_{self.guild_id}", str(role.id), self.guild_id)
         
         # Show confirmation
         embed = discord.Embed(
@@ -558,7 +558,7 @@ class GeneralSettingsView(View):
         
         async def role_callback(interaction: discord.Interaction):
             role = select.values[0]
-            await self.db.set_setting(f"mod_role_{self.guild_id}", str(role.id))
+            await self.db.set_setting(f"mod_role_{self.guild_id}", str(role.id), self.guild_id)
             
             # Show brief confirmation
             embed = discord.Embed(
