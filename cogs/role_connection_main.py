@@ -8,12 +8,7 @@ from utils.helpers import create_embed
 from config.constants import COLORS
 from cogs.role_connection_ui_new import (
     RoleConnectionManagerView,
-    RoleConnectionConditionTypeView,
-    QuickSetupView,
-    setup_vip_roles,
-    setup_staff_roles, 
-    setup_game_roles,
-    setup_custom_rule
+    QuickSetupView
 )
 from cogs.role_connection_improved import (
     RoleConnectionBuilderView

@@ -151,48 +151,33 @@ class ConditionTypeButton(ui.Button):
         await interaction.response.edit_message(view=self.parent_view)
 
 class QuickSetupView(ui.View):
-    """Quick setup view with common role connection scenarios"""
+    """Simple view for creating role rules"""
     
     def __init__(self, manager, guild: discord.Guild):
         super().__init__(timeout=300)
         self.manager = manager
         self.guild = guild
         
-        # Add quick setup buttons
-        self.add_item(QuickSetupButton(
-            "VIP Roles",
-            "Give VIP role when user has supporter roles",
-            self.setup_vip_roles
+        # Add simple button
+        self.add_item(ui.Button(
+            label="Create Custom Rule",
+            style=discord.ButtonStyle.success,
+            custom_id="create_custom_rule"
         ))
-        self.add_item(QuickSetupButton(
-            "Staff Roles",
-            "Give staff role when user has staff positions",
-            self.setup_staff_roles
-        ))
-        self.add_item(QuickSetupButton(
-            "Game Roles",
-            "Give game-specific roles based on other game roles",
-            self.setup_game_roles
-        ))
-        self.add_item(QuickSetupButton(
-            "Custom Rule",
-            "Create a completely custom role connection rule",
-            self.setup_custom_rule
-        ))
-
-class QuickSetupButton(ui.Button):
-    """Button for quick setup scenarios"""
     
-    def __init__(self, label: str, description: str, callback):
-        super().__init__(
-            label=label,
-            style=discord.ButtonStyle.primary
-        )
-        self.description = description
-        self.callback_func = callback
-    
-    async def callback(self, interaction: discord.Interaction):
-        await self.callback_func(interaction)
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.data["custom_id"] == "create_custom_rule":
+            # Launch the improved step-by-step builder
+            from cogs.role_connection_improved import RoleConnectionBuilderView
+            view = RoleConnectionBuilderView(self.manager, self.guild)
+            
+            embed = discord.Embed(
+                title="🔗 Role Connection Builder",
+                description="Create a role connection rule with our step-by-step builder.",
+                color=COLORS["primary"]
+            )
+            
+            await interaction.response.edit_message(embed=embed, view=view)
 
 class RoleConnectionManagerView(ui.View):
     """Main view for managing all role connections"""
@@ -522,41 +507,6 @@ class ProtectedRoleModal(ui.Modal):
                 ephemeral=True
             )
 
-# Helper functions for quick setup
-async def setup_vip_roles(interaction: discord.Interaction):
-    """Quick setup for VIP roles"""
-    # Implementation would depend on server-specific role names
-    await interaction.response.send_message(
-        embed=create_embed(
-            "Quick Setup - VIP Roles",
-            "This feature would automatically configure VIP role rules based on your server's role structure.",
-            COLORS["info"]
-        ),
-        ephemeral=True
-    )
-
-async def setup_staff_roles(interaction: discord.Interaction):
-    """Quick setup for staff roles"""
-    await interaction.response.send_message(
-        embed=create_embed(
-            "Quick Setup - Staff Roles", 
-            "This feature would automatically configure staff role rules based on your server's role structure.",
-            COLORS["info"]
-        ),
-        ephemeral=True
-    )
-
-async def setup_game_roles(interaction: discord.Interaction):
-    """Quick setup for game roles"""
-    await interaction.response.send_message(
-        embed=create_embed(
-            "Quick Setup - Game Roles",
-            "This feature would automatically configure game role rules based on your server's role structure.",
-            COLORS["info"]
-        ),
-        ephemeral=True
-    )
-
 async def setup_custom_rule(interaction: discord.Interaction):
     """Launch custom rule setup with improved builder"""
     # Get the manager from the parent view or client
@@ -565,15 +515,9 @@ async def setup_custom_rule(interaction: discord.Interaction):
     view = RoleConnectionBuilderView(manager, interaction.guild)
     
     embed = discord.Embed(
-        title="🔗 Custom Role Rule Builder",
-        description=(
-            "Create a custom role connection rule with our step-by-step builder.\n\n"
-            "This will guide you through each option with clear explanations "
-            "and live previews of what your rule will do."
-        ),
+        title="🔗 Role Connection Builder",
+        description="Create a role connection rule with our step-by-step builder.",
         color=COLORS["primary"]
     )
-    
-    embed.set_footer(text="Step 1 will begin below - Select your target role")
     
     await interaction.response.edit_message(embed=embed, view=view)
