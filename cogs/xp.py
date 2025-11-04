@@ -218,7 +218,7 @@ class XPGroup(app_commands.Group):
     @app_commands.checks.has_permissions(administrator=True)
     async def add(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Add XP to a user."""
-        if not is_owner(interaction.user) and not interaction.user.guild_permissions.administrator:
+        if not interaction.user.guild_permissions.administrator:
             embed = embed_helper.error_embed(
                 "Permission Denied",
                 "Only server owners and administrators can use this command."
@@ -255,7 +255,7 @@ class XPGroup(app_commands.Group):
     @app_commands.checks.has_permissions(administrator=True)
     async def add_all(self, interaction: discord.Interaction, amount: int, confirm: str):
         """Add XP to all users."""
-        if not is_owner(interaction.user):
+        if not interaction.user.guild_permissions.administrator:
             embed = embed_helper.error_embed(
                 "Permission Denied",
                 "Only the server owner can use this command."
@@ -304,7 +304,7 @@ class XPGroup(app_commands.Group):
     @app_commands.checks.has_permissions(administrator=True)
     async def remove(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Remove XP from a user."""
-        if not is_owner(interaction.user) and not interaction.user.guild_permissions.administrator:
+        if not interaction.user.guild_permissions.administrator:
             embed = embed_helper.error_embed(
                 "Permission Denied",
                 "Only server owners and administrators can use this command."
@@ -341,7 +341,7 @@ class XPGroup(app_commands.Group):
     @app_commands.checks.has_permissions(administrator=True)
     async def set(self, interaction: discord.Interaction, user: discord.Member, amount: int):
         """Set user XP."""
-        if not is_owner(interaction.user) and not interaction.user.guild_permissions.administrator:
+        if not interaction.user.guild_permissions.administrator:
             embed = embed_helper.error_embed(
                 "Permission Denied",
                 "Only server owners and administrators can use this command."
@@ -378,7 +378,7 @@ class XPGroup(app_commands.Group):
     @app_commands.checks.has_permissions(administrator=True)
     async def reset(self, interaction: discord.Interaction, user: discord.Member):
         """Reset user XP."""
-        if not is_owner(interaction.user) and not interaction.user.guild_permissions.administrator:
+        if not interaction.user.guild_permissions.administrator:
             embed = embed_helper.error_embed(
                 "Permission Denied",
                 "Only server owners and administrators can use this command."
@@ -407,7 +407,7 @@ class XPGroup(app_commands.Group):
     @app_commands.checks.has_permissions(administrator=True)
     async def reset_all(self, interaction: discord.Interaction, confirm: str):
         """Reset all users' XP."""
-        if not is_owner(interaction.user):
+        if not interaction.user.guild_permissions.administrator:
             embed = embed_helper.error_embed(
                 "Permission Denied",
                 "Only the server owner can use this command."
