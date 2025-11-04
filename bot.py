@@ -195,7 +195,7 @@ class MalaBoT(commands.Bot):
     async def _initialize_database(self):
         """Initialize database connection."""
         try:
-            self.db_manager = DatabaseManager(settings.DATABASE_URL.replace('sqlite:///', ''))
+            self.db_manager = DatabaseManager(settings.DATABASE_URL.replace('sqlite:///', '') if settings.DATABASE_URL.startswith('sqlite://') else settings.DATABASE_URL)
             await self.db_manager.initialize()
             self.logger.info("Database initialized successfully")
             
@@ -385,7 +385,7 @@ The bot will start in safe mode to prevent further issues.
             try:
                 # Check if bot is responsive
                 latency = self.latency
-                if latency and latency > 120:  # 120 seconds
+                if latency and latency > 3:  # 3 seconds for better responsiveness
                     await self.db_manager.log_health_check(
                         "latency", "CRITICAL",
                         latency,
@@ -514,7 +514,7 @@ The bot will start in safe mode to prevent further issues.
             await user.add_roles(birthday_role, reason="Birthday celebration")
             
             # Schedule role removal after 24 hours
-            await asyncio.sleep(86400)  # 24 hours
+            await asyncio.sleep(86400)  # 24 hours (TODO: Replace with persistent scheduler)
             if birthday_role in user.roles:
                 await user.remove_roles(birthday_role, reason="Birthday period ended")
         
@@ -532,6 +532,7 @@ The bot will start in safe mode to prevent further issues.
             
             # Get recent audit logs for statistics
             recent_logs = await self.db_manager.get_audit_logs(1000)
+            stats = await self.db_manager.get_daily_digest_stats()
             
             digest_data = {
                 'date': datetime.now().strftime('%Y-%m-%d'),

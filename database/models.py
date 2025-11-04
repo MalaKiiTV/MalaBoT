@@ -337,6 +337,31 @@ class DatabaseManager:
         conn = await self.get_connection()
         cursor = await conn.execute(f"SELECT * FROM audit_log ORDER BY created_at DESC LIMIT {limit}")
         return await cursor.fetchall()
+
+    async def get_daily_digest_stats(self):
+        """Get optimized daily digest statistics using SQL queries."""
+        conn = await self.get_connection()
+        
+        # Get statistics for the last 24 hours
+        cursor = await conn.execute("""
+            SELECT 
+                COUNT(*) as total_logs,
+                COUNT(CASE WHEN severity = 'CRITICAL' THEN 1 END) as critical_events,
+                COUNT(CASE WHEN severity = 'WARNING' THEN 1 END) as warnings,
+                COUNT(CASE WHEN action LIKE '%ban%' OR action LIKE '%kick%' OR action LIKE '%mute%' THEN 1 END) as moderation_actions,
+                COUNT(CASE WHEN action LIKE '%join%' OR action LIKE '%leave%' OR action LIKE '%role%' THEN 1 END) as user_events
+            FROM audit_log 
+            WHERE created_at >= datetime('now', '-1 day')
+        """)
+        
+        result = await cursor.fetchone()
+        return {
+            'total_logs': result[0] if result else 0,
+            'critical_events': result[1] if result else 0,
+            'warnings': result[2] if result else 0,
+            'moderation_actions': result[3] if result else 0,
+            'user_events': result[4] if result else 0
+        }
     
     async def set_birthday(self, user_id: int, birthday: str, timezone: str = 'UTC'):
         """Set user birthday."""
