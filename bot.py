@@ -513,14 +513,43 @@ The bot will start in safe mode to prevent further issues.
             # Assign role
             await user.add_roles(birthday_role, reason="Birthday celebration")
             
-            # Schedule role removal after 24 hours
-            await asyncio.sleep(86400)  # 24 hours (TODO: Replace with persistent scheduler)
-            if birthday_role in user.roles:
-                await user.remove_roles(birthday_role, reason="Birthday period ended")
+            # Schedule role removal after 24 hours using persistent scheduler
+            removal_time = datetime.now() + timedelta(hours=24)
+            self.scheduler.add_job(
+                self._remove_birthday_role,
+                'date',
+                run_date=removal_time,
+                args=[user.id, birthday_role.id, guild.id],
+                id=f"birthday_role_{user.id}_{int(datetime.now().timestamp())}",
+                replace_existing=True
+            )
         
         except Exception as e:
             self.logger.error(f"Error assigning birthday role: {e}")
     
+    async def _remove_birthday_role(self, user_id: int, role_id: int, guild_id: int):
+        """Remove birthday role from user after 24 hours."""
+        try:
+            guild = self.get_guild(guild_id)
+            if not guild:
+                return
+            user = guild.get_member(user_id)
+            if not user:
+                return
+            role = guild.get_role(role_id)
+            if not role:
+                return
+            if role in user.roles:
+                await user.remove_roles(role, reason="Birthday period ended")
+                await self.db_manager.log_event(
+                    category='BDAY',
+                    action='ROLE_REMOVED',
+                    user_id=user_id,
+                    details="Birthday role removed after 24 hours"
+                )
+        except Exception as e:
+            self.logger.error(f"Error removing birthday role: {e}")
+
     async def _send_daily_digest(self):
         """Send daily digest to owner."""
         if not self.db_manager or not settings.OWNER_DAILY_DIGEST_ENABLED:
@@ -540,7 +569,12 @@ The bot will start in safe mode to prevent further issues.
                 'active_users': len(set(log['user_id'] for log in recent_logs if log['user_id'])),
                 'total_xp': sum(1 for log in recent_logs if log['category'] == 'XP' and log['action'] == 'GAIN'),
                 'birthdays': sum(1 for log in recent_logs if log['category'] == 'BDAY' and log['action'] == 'CELEBRATED'),
-                'commands': len(recent_logs),
+                'total_logs': stats['total_logs'],
+                'critical_events': stats['critical_events'],
+                'warnings': stats['warnings'],
+                'moderation_actions': stats['moderation_actions'],
+                'user_events': stats['user_events'],
+                'commands': stats['total_logs'],
                 'restarts': sum(1 for log in recent_logs if log['category'] == 'SYSTEM' and log['action'] in ['STARTUP', 'RESTART']),
                 'errors': sum(1 for log in recent_logs if log['category'] == 'SYSTEM' and 'ERROR' in log['action'].upper()),
                 'memory': f"{get_system_info().get('memory_used_mb', 'Unknown')} MB",
