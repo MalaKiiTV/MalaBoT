@@ -1,0 +1,13 @@
+./cogs/appeal.py
+./cogs/birthdays.py
+./cogs/bot_control.py
+./cogs/fun.py
+./cogs/moderation.py
+./cogs/owner.py
+./cogs/role_connection_ui.py
+./cogs/setup.py
+./cogs/utility.py
+./cogs/verify.py
+./cogs/welcome.py
+./cogs/xp.py
+./utils/helpers.py
