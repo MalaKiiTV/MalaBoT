@@ -13,8 +13,8 @@ from typing import Optional
 from utils.helpers import create_embed, safe_send_message
 from utils.logger import log_system
 from config.constants import COLORS
-from cogs.role_connection_ui import (
-    AddConnectionView, ManageConnectionsView, ProtectedRolesView
+from cogs.role_connection_main import (
+    RoleConnectionMainView, EnhancedRoleConnectionModal
 )
 
 
@@ -2093,7 +2093,7 @@ class Setup(commands.Cog):
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def setup_role_connections(self, interaction: discord.Interaction):
-        """Setup role connections system"""
+        """Setup role connections system with new all-in-one interface"""
         await interaction.response.defer(ephemeral=True)
         # Get the role connections manager from the bot
         role_conn_cog = interaction.client.get_cog("RoleConnections")
@@ -2108,12 +2108,51 @@ class Setup(commands.Cog):
             )
             return
 
+        # Load current connections for display
+        await role_conn_cog.manager.load_connections(interaction.guild.id)
+        connections = role_conn_cog.manager.connections_cache.get(interaction.guild.id, [])
+        
         embed = discord.Embed(
-            title="🔗 Role Connections Setup",
-            description="Configure automatic role assignment based on user connections.",
-            color=COLORS["info"],
+            title="🔗 Role Connection System",
+            description=(
+                "**Welcome to the All-in-One Role Connection Setup!**\n\n"
+                "This new interface makes creating role rules much easier:\n"
+                "✅ **Create rules in one modal** - no more endless dropdowns\n"
+                "✅ **Multiple conditions at once** - add up to 10 conditions per rule\n"
+                "✅ **Quick setup templates** - for common scenarios\n"
+                "✅ **Live preview** - see exactly what your rule will do\n"
+                "✅ **Easy management** - edit, enable/disable, or delete rules anytime"
+            ),
+            color=COLORS["primary"]
         )
-        view = RoleConnectionSetupView(role_conn_cog.manager, interaction.guild)
+        
+        # Show current status
+        if connections:
+            status_text = f"📊 **Current Rules:** {len(connections)} active\n"
+            enabled_count = sum(1 for c in connections if c.enabled)
+            status_text += f"✅ **Enabled:** {enabled_count}\n"
+            status_text += f"❌ **Disabled:** {len(connections) - enabled_count}"
+        else:
+            status_text = "📊 **Current Rules:** None configured yet"
+        
+        embed.add_field(name="📈 Current Status", value=status_text, inline=False)
+        
+        # Show quick examples
+        embed.add_field(
+            name="💡 Quick Examples",
+            value=(
+                "• Give VIP role when user has Donor role\n"
+                "• Remove Guest role when user gets Member role\n"
+                "• Assign Staff role when user has Admin + Moderator roles\n"
+                "• Give game-specific roles based on other game roles"
+            ),
+            inline=False
+        )
+        
+        embed.set_footer(text="Choose an option below to get started")
+        
+        # Use the new all-in-one interface
+        view = RoleConnectionMainView(role_conn_cog.manager, interaction.guild)
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     async def view_config(self, interaction: discord.Interaction):
