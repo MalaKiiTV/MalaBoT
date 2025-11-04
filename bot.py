@@ -78,7 +78,7 @@ class MalaBoT(commands.Bot):
     
     def _setup_signal_handlers(self):
         """Set up signal handlers for graceful shutdown."""
-        def signal_handler(signum, frame):
+        def signal_handler(signum, _frame):
             self.logger.info(f"Received signal {signum}, initiating graceful shutdown...")
             # Use the bot's loop if available, otherwise force exit
             try:
