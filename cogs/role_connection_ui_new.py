@@ -558,9 +558,22 @@ async def setup_game_roles(interaction: discord.Interaction):
     )
 
 async def setup_custom_rule(interaction: discord.Interaction):
-    """Launch custom rule setup"""
+    """Launch custom rule setup with improved builder"""
     # Get the manager from the parent view or client
     manager = interaction.client.get_cog("RoleConnections").manager
-    from cogs.role_connection_main import EnhancedRoleConnectionModal
-    modal = EnhancedRoleConnectionModal(manager, interaction.guild)
-    await interaction.response.send_modal(modal)
+    from cogs.role_connection_improved import RoleConnectionBuilderView
+    view = RoleConnectionBuilderView(manager, interaction.guild)
+    
+    embed = discord.Embed(
+        title="🔗 Custom Role Rule Builder",
+        description=(
+            "Create a custom role connection rule with our step-by-step builder.\n\n"
+            "This will guide you through each option with clear explanations "
+            "and live previews of what your rule will do."
+        ),
+        color=COLORS["primary"]
+    )
+    
+    embed.set_footer(text="Step 1 will begin below - Select your target role")
+    
+    await interaction.response.edit_message(embed=embed, view=view)

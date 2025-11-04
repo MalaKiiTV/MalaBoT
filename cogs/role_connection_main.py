@@ -15,6 +15,9 @@ from cogs.role_connection_ui_new import (
     setup_game_roles,
     setup_custom_rule
 )
+from cogs.role_connection_improved import (
+    RoleConnectionBuilderView
+)
 
 class RoleConnectionMainView(ui.View):
     """Main entry point for role connection management"""
@@ -54,9 +57,36 @@ class RoleConnectionMainView(ui.View):
         custom_id = interaction.data["custom_id"]
         
         if custom_id == "create_new":
-            # Launch the enhanced all-in-one modal
-            modal = EnhancedRoleConnectionModal(self.manager, self.guild)
-            await interaction.response.send_modal(modal)
+            # Launch the improved step-by-step builder
+            view = RoleConnectionBuilderView(self.manager, self.guild)
+            
+            embed = discord.Embed(
+                title="🔗 Role Connection Builder",
+                description=(
+                    "Welcome to the step-by-step role connection builder!\n\n"
+                    "This will guide you through creating a role rule with clear explanations "
+                    "and live previews at each step."
+                ),
+                color=COLORS["primary"]
+            )
+            
+            embed.add_field(
+                name="📋 How It Works",
+                value=(
+                    "1. **Select Target Role** - Choose the role to manage\n"
+                    "2. **Choose Action** - Give or remove the role\n"
+                    "3. **Add Conditions** - Select roles to check for\n"
+                    "4. **Set Condition Type** - When should the rule trigger?\n"
+                    "5. **Choose Logic** - How do multiple conditions work?\n"
+                    "6. **Review & Save** - See exactly what your rule will do"
+                ),
+                inline=False
+            )
+            
+            embed.set_footer(text="Step 1 will begin below - Select your target role")
+            
+            await interaction.response.edit_message(embed=embed, view=view)
+            # The view will handle showing step 1 automatically
             
         elif custom_id == "quick_setup":
             # Show quick setup templates
