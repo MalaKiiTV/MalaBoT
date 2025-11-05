@@ -3,32 +3,34 @@ Fun commands cog for MalaBoT.
 Contains joke, fact, and roast commands with entertainment features.
 """
 
-import discord
-from discord import app_commands
-from discord.ext import commands
 import random
 from typing import Optional
 
-from utils.logger import get_logger
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+from config.constants import COLORS, COMMAND_COOLDOWNS, FACTS, JOKES, ROASTS
 from utils.helpers import (
-    embed_helper, cooldown_helper, safe_send_message, 
-    create_embed, system_helper
+    cooldown_helper,
+    embed_helper,
+    system_helper,
 )
-from config.constants import COLORS, JOKES, FACTS, ROASTS, COMMAND_COOLDOWNS
-from config.settings import settings
+from utils.logger import get_logger
+
 
 class Fun(commands.Cog):
     """Fun commands for entertainment and engagement."""
-    
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.logger = get_logger('fun')
-        
+
         # Load additional content if available
         self.jokes = JOKES.copy()
         self.facts = FACTS.copy()
         self.roasts = ROASTS.copy()
-    
+
     @app_commands.command(name="joke", description="Get a random joke to brighten your day!")
     async def joke(self, interaction: discord.Interaction):
         """Tell a random joke."""
@@ -42,24 +44,24 @@ class Fun(commands.Cog):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
-            
+
             # Set cooldown
             cooldown_helper.set_cooldown(interaction.user.id, 'joke')
-            
+
             # Select random joke
             joke_content = random.choice(self.jokes)
-            
+
             # Create joke embed
             embed = embed_helper.create_embed(
                 title="😄 Random Joke",
                 description=joke_content,
                 color=random.choice([COLORS["success"], COLORS["info"], COLORS["primary"]])
             )
-            
+
             embed.set_footer(text="Hope that made you smile! 😊")
-            
+
             await interaction.response.send_message(embed=embed)
-            
+
             # Log joke command usage
             if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
@@ -69,11 +71,11 @@ class Fun(commands.Cog):
                     channel_id=interaction.channel.id,
                     details=f"Joke told: {joke_content[:50]}..."
                 )
-            
+
         except Exception as e:
             self.logger.error(f"Error in joke command: {e}")
             await self._error_response(interaction, "Failed to tell a joke")
-    
+
     @app_commands.command(name="fact", description="Learn something new with a random fact!")
     async def fact(self, interaction: discord.Interaction):
         """Share a random interesting fact."""
@@ -87,24 +89,24 @@ class Fun(commands.Cog):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
-            
+
             # Set cooldown
             cooldown_helper.set_cooldown(interaction.user.id, 'fact')
-            
+
             # Select random fact
             fact_content = random.choice(self.facts)
-            
+
             # Create fact embed
             embed = embed_helper.create_embed(
                 title="🧠 Did You Know?",
                 description=fact_content,
                 color=COLORS["info"]
             )
-            
+
             embed.set_footer(text="Knowledge is power! 📚")
-            
+
             await interaction.response.send_message(embed=embed)
-            
+
             # Log fact command usage
             if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
@@ -114,11 +116,11 @@ class Fun(commands.Cog):
                     channel_id=interaction.channel.id,
                     details=f"Fact shared: {fact_content[:50]}..."
                 )
-            
+
         except Exception as e:
             self.logger.error(f"Error in fact command: {e}")
             await self._error_response(interaction, "Failed to share a fact")
-    
+
     @app_commands.command(name="roast", description="Challenge MalaBoT to a roast battle!")
     @app_commands.describe(
         target="Who do you want to roast? (Leave empty to roast the bot)"
@@ -135,10 +137,10 @@ class Fun(commands.Cog):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
-            
+
             # Set cooldown
             cooldown_helper.set_cooldown(interaction.user.id, 'roast')
-            
+
             # Determine roast target and content
             if target is None:
                 # User is roasting the bot
@@ -162,11 +164,11 @@ class Fun(commands.Cog):
             else:
                 # User roasting another user
                 await self._handle_user_roast(interaction, target)
-            
+
         except Exception as e:
             self.logger.error(f"Error in roast command: {e}")
             await self._error_response(interaction, "Failed to deliver roast")
-    
+
     async def _handle_bot_roast(self, interaction: discord.Interaction):
         """Handle when user roasts the bot."""
         try:
@@ -183,39 +185,39 @@ class Fun(commands.Cog):
                 "I'd be offended, but I'm too busy being awesome. And you're too busy... well, you. 🤷",
                 "Your mom jokes are so 2010. Step up your game! 📅"
             ]
-            
+
             roast_content = random.choice(comeback_roasts)
-            
+
             # Add bot's roast XP gain
             if self.bot.db_manager:
-                from config.constants import ROAST_XP_MIN, ROAST_XP_MAX
-                
+                from config.constants import ROAST_XP_MAX, ROAST_XP_MIN
+
                 xp_gained = random.randint(ROAST_XP_MIN, ROAST_XP_MAX)
                 updated_roast_xp = await self.bot.db_manager.add_roast_xp(xp_gained)
-                
+
                 # Log that user roasted the bot
                 await self.bot.db_manager.log_roast_user(interaction.user.id)
-                
+
                 # Check for level up
                 if updated_roast_xp:
                     from config.constants import ROAST_TITLES
                     current_title = ROAST_TITLES.get(updated_roast_xp['bot_level'], "Unknown")
-                    
+
                     # Add level up info to roast
                     if xp_gained >= 10:  # Show XP gain for good roasts
                         roast_content += f"\n\n*+{xp_gained} Roast XP • {current_title}*"
-            
+
             # Create roast embed
             embed = embed_helper.roast_embed(
                 title="🔥 Comeback!",
                 description=f"{interaction.user.mention} {roast_content}"
             )
-            
+
             embed.set_thumbnail(url=self.bot.user.avatar.url if self.bot.user.avatar else None)
             embed.set_footer(text="Roast battles make us stronger! 💪")
-            
+
             await interaction.response.send_message(embed=embed)
-            
+
             # Log roast command usage
             if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
@@ -225,11 +227,11 @@ class Fun(commands.Cog):
                     channel_id=interaction.channel.id,
                     details=f"Bot gained {xp_gained if 'xp_gained' in locals() else 0} XP"
                 )
-            
+
         except Exception as e:
             self.logger.error(f"Error handling bot roast: {e}")
             raise
-    
+
     async def _handle_user_roast(self, interaction: discord.Interaction, target: discord.Member):
         """Handle when user roasts another user."""
         try:
@@ -246,19 +248,19 @@ class Fun(commands.Cog):
                 f"{target.mention}, you're like a cloud - when you disappear, it's a beautiful day!",
                 f"{target.mention}, you're the human equivalent of a CAPTCHA test - annoying and unnecessary!"
             ]
-            
+
             roast_content = random.choice(user_roasts)
-            
+
             # Create roast embed
             embed = embed_helper.roast_embed(
                 title="🔥 Roast Battle!",
                 description=roast_content
             )
-            
+
             embed.set_footer(text="All in good fun! 😄 • Don't take it personally!")
-            
+
             await interaction.response.send_message(embed=embed)
-            
+
             # Log roast command usage
             if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
@@ -268,11 +270,11 @@ class Fun(commands.Cog):
                     target_id=target.id,
                     channel_id=interaction.channel.id
                 )
-            
+
         except Exception as e:
             self.logger.error(f"Error handling user roast: {e}")
             raise
-    
+
     @app_commands.command(name="8ball", description="Ask the magic 8-ball a question")
     @app_commands.describe(
         question="What do you want to ask the magic 8-ball?"
@@ -282,7 +284,7 @@ class Fun(commands.Cog):
         try:
             # Sanitize input
             question = system_helper.sanitize_input(question, 200)
-            
+
             if not question:
                 embed = embed_helper.error_embed(
                     title="Invalid Question",
@@ -290,10 +292,10 @@ class Fun(commands.Cog):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
-            
+
             if not question.endswith('?'):
                 question += '?'
-            
+
             # 8-ball responses
             responses = {
                 "positive": [
@@ -323,37 +325,37 @@ class Fun(commands.Cog):
                     "Very doubtful."
                 ]
             }
-            
+
             # Select response type and response
             response_type = random.choice(list(responses.keys()))
             response_text = random.choice(responses[response_type])
-            
+
             # Choose color based on response type
             colors = {
                 "positive": COLORS["success"],
                 "neutral": COLORS["warning"],
                 "negative": COLORS["error"]
             }
-            
+
             # Create 8-ball embed
             embed = embed_helper.create_embed(
                 title="🎱 Magic 8-Ball",
                 description=f"**Question:** {question}\n\n**Answer:** *{response_text}*",
                 color=colors[response_type]
             )
-            
+
             # Add 8-ball emoji based on response
             emoji = {
                 "positive": "✅",
                 "neutral": "⚖️",
                 "negative": "❌"
             }
-            
+
             embed.set_thumbnail(url="https://i.imgur.com/8QnHfRz.png")  # Magic 8-ball image
             embed.set_footer(text=f"The 8-ball has spoken! {emoji.get(response_type, '🎱')}")
-            
+
             await interaction.response.send_message(embed=embed)
-            
+
             # Log 8ball command usage
             if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
@@ -363,11 +365,11 @@ class Fun(commands.Cog):
                     channel_id=interaction.channel.id,
                     details=f"Question: {question[:50]}... | Answer: {response_text}"
                 )
-            
+
         except Exception as e:
             self.logger.error(f"Error in 8ball command: {e}")
             await self._error_response(interaction, "The magic 8-ball is feeling shy right now")
-    
+
     @app_commands.command(name="roll", description="Roll dice with custom sides")
     @app_commands.describe(
         sides="Number of sides on the dice (default: 6)",
@@ -384,7 +386,7 @@ class Fun(commands.Cog):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
-            
+
             if count < 1 or count > 10:
                 embed = embed_helper.error_embed(
                     title="Invalid Count",
@@ -392,11 +394,11 @@ class Fun(commands.Cog):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
-            
+
             # Roll the dice
             rolls = [random.randint(1, sides) for _ in range(count)]
             total = sum(rolls)
-            
+
             # Create embed
             if count == 1:
                 embed = embed_helper.create_embed(
@@ -414,20 +416,20 @@ class Fun(commands.Cog):
                               f"**Average:** {total / count:.1f}",
                     color=COLORS["primary"]
                 )
-            
+
             # Add dice visual
             dice_emojis = {
                 1: "⚀", 2: "⚁", 3: "⚂", 4: "⚃", 5: "⚄", 6: "⚅"
             }
-            
+
             if sides == 6 and count <= 6:
                 dice_visual = " ".join(dice_emojis.get(roll, "🎲") for roll in rolls)
                 embed.add_field(name="🎲 Visual", value=dice_visual, inline=False)
-            
+
             embed.set_footer(text="May the odds be ever in your favor! 🍀")
-            
+
             await interaction.response.send_message(embed=embed)
-            
+
             # Log roll command usage
             if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
@@ -437,36 +439,36 @@ class Fun(commands.Cog):
                     channel_id=interaction.channel.id,
                     details=f"{count}d{sides} = {total}"
                 )
-            
+
         except Exception as e:
             self.logger.error(f"Error in roll command: {e}")
             await self._error_response(interaction, "Failed to roll the dice")
-    
+
     @app_commands.command(name="coinflip", description="Flip a coin and get heads or tails")
     async def coinflip(self, interaction: discord.Interaction):
         """Flip a coin."""
         try:
             result = random.choice(["heads", "tails"])
-            
+
             # Coin visuals
             coin_visuals = {
                 "heads": "🪙 Heads",
                 "tails": "🪙 Tails"
             }
-            
+
             # Create embed
             embed = embed_helper.create_embed(
                 title="🪙 Coin Flip",
                 description=f"The coin landed on: **{result.title()}**!",
                 color=COLORS["success"]
             )
-            
+
             embed.add_field(name="Result", value=coin_visuals[result], inline=False)
             embed.set_thumbnail(url="https://i.imgur.com/j4YqVg5.png")  # Coin image
             embed.set_footer(text="50/50 chance! Was it fate? 🤔")
-            
+
             await interaction.response.send_message(embed=embed)
-            
+
             # Log coinflip command usage
             if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
@@ -476,18 +478,18 @@ class Fun(commands.Cog):
                     channel_id=interaction.channel.id,
                     details=f"Result: {result}"
                 )
-            
+
         except Exception as e:
             self.logger.error(f"Error in coinflip command: {e}")
             await self._error_response(interaction, "The coin got stuck in the air!")
-    
+
     async def _error_response(self, interaction: discord.Interaction, message: str):
         """Send error response."""
         embed = embed_helper.error_embed(
             title="Command Error",
             description=message
         )
-        
+
         try:
             if interaction.response.is_done():
                 await interaction.followup.send(embed=embed, ephemeral=True)

@@ -9,11 +9,9 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ui import Modal, TextInput
 
+from config.constants import COLORS
 from utils.helpers import create_embed, safe_send_message
 from utils.logger import log_system
-from config.constants import COLORS
-
-
 
 
 class AppealGroup(app_commands.Group):
@@ -26,14 +24,14 @@ class AppealGroup(app_commands.Group):
     async def submit(self, interaction: discord.Interaction):
         """Submit an appeal - can only be used once"""
         guild_id = interaction.guild.id
-        
+
         # Get settings in parallel to reduce latency
         import asyncio
         cheater_role_id, cheater_channel_id = await asyncio.gather(
             self.cog.db.get_setting("cheater_role", guild_id),
             self.cog.db.get_setting("cheater_channel", guild_id)
         )
-        
+
         # Check if user is in cheater jail
         if cheater_role_id:
             cheater_role = interaction.guild.get_role(int(cheater_role_id))
@@ -47,7 +45,7 @@ class AppealGroup(app_commands.Group):
                     ephemeral=True,
                 )
                 return
-        
+
         # Check if in cheater jail channel
         if cheater_channel_id and interaction.channel_id != int(cheater_channel_id):
             cheater_channel = interaction.guild.get_channel(int(cheater_channel_id))
@@ -60,7 +58,7 @@ class AppealGroup(app_commands.Group):
                 ephemeral=True,
             )
             return
-        
+
         modal = AppealModal(self.cog.db, guild_id)
         await interaction.response.send_modal(modal)
 
@@ -85,14 +83,14 @@ class AppealGroup(app_commands.Group):
         try:
             # Defer immediately to prevent timeout
             await interaction.response.defer(ephemeral=True, thinking=True)
-            
+
             # Check staff permission
             from utils.helpers import check_staff_permission
             if not await check_staff_permission(interaction, self.cog.db):
                 return
-            
+
             guild_id = interaction.guild.id
-            
+
             # Check if appeal exists
             conn = await self.cog.db.get_connection()
             cursor = await conn.execute(
@@ -100,7 +98,7 @@ class AppealGroup(app_commands.Group):
                 (user.id, guild_id)
             )
             appeal_data = await cursor.fetchone()
-            
+
             if not appeal_data:
                 await safe_send_message(
                     interaction,
@@ -108,9 +106,9 @@ class AppealGroup(app_commands.Group):
                     ephemeral=True
                 )
                 return
-            
+
             appeal_text, current_status = appeal_data
-            
+
             if current_status != "pending":
                 await safe_send_message(
                     interaction,
@@ -118,10 +116,10 @@ class AppealGroup(app_commands.Group):
                     ephemeral=True
                 )
                 return
-            
+
             decision_value = decision.value
             member = interaction.guild.get_member(user.id)
-            
+
             if decision_value == "approve" and member:
                 # Remove cheater role
                 cheater_role_id = await self.cog.db.get_setting("cheater_role", guild_id)
@@ -129,16 +127,16 @@ class AppealGroup(app_commands.Group):
                     cheater_role = interaction.guild.get_role(int(cheater_role_id))
                     if cheater_role and cheater_role in member.roles:
                         await member.remove_roles(cheater_role, reason=f"Appeal approved by {interaction.user}")
-                
+
                 # Update appeal status
                 await conn.execute(
                     "UPDATE appeals SET status = 'approved', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, review_notes = ? WHERE user_id = ? AND guild_id = ?",
                     (interaction.user.id, reason, user.id, guild_id)
                 )
                 await conn.commit()
-                
+
                 result_text = f"✅ Approved {member.mention}'s appeal and removed cheater role."
-                
+
                 # DM user
                 try:
                     dm_embed = create_embed(
@@ -151,7 +149,7 @@ class AppealGroup(app_commands.Group):
                     await user.send(embed=dm_embed)
                 except discord.Forbidden:
                     log_system(f"Could not DM {user} about appeal approval.", level="warning")
-                
+
             elif decision_value == "deny":
                 # Update appeal status
                 await conn.execute(
@@ -159,9 +157,9 @@ class AppealGroup(app_commands.Group):
                     (interaction.user.id, reason, user.id, guild_id)
                 )
                 await conn.commit()
-                
+
                 result_text = f"❌ Denied {user.mention}'s appeal. They remain in cheater jail."
-                
+
                 # DM user
                 try:
                     dm_embed = create_embed(
@@ -174,9 +172,9 @@ class AppealGroup(app_commands.Group):
                     await user.send(embed=dm_embed)
                 except discord.Forbidden:
                     log_system(f"Could not DM {user} about appeal denial.", level="warning")
-            
+
             await safe_send_message(interaction, content=result_text, ephemeral=True)
-            
+
             log_system(f"[APPEAL_REVIEW] {interaction.user} {decision_value.upper()} appeal from {user}")
             await self.cog.db.log_event(
                 category="APPEAL",
@@ -186,7 +184,7 @@ class AppealGroup(app_commands.Group):
                 guild_id=guild_id,
                 details=f"{decision_value.upper()} - {reason or 'No reason'}"
             )
-            
+
         except Exception as e:
             log_system(f"Appeal review error: {e}", level="error")
             await safe_send_message(interaction, content="An error occurred while processing the appeal review.", ephemeral=True)
@@ -211,7 +209,7 @@ class AppealModal(Modal, title="Submit Appeal"):
     async def on_submit(self, interaction: discord.Interaction):
         try:
             user_id = interaction.user.id
-            
+
             # Check if user already submitted a PENDING appeal for this jail session
             conn = await self.db.get_connection()
             cursor = await conn.execute(
@@ -219,7 +217,7 @@ class AppealModal(Modal, title="Submit Appeal"):
                 (user_id, self.guild_id)
             )
             count = (await cursor.fetchone())[0]
-            
+
             if count > 0:
                 await interaction.response.send_message(
                     embed=create_embed(
@@ -231,14 +229,14 @@ class AppealModal(Modal, title="Submit Appeal"):
                     ephemeral=True,
                 )
                 return
-            
+
             # Store appeal in database
             await conn.execute(
                 "INSERT INTO appeals (user_id, guild_id, appeal_text, status, submitted_at) VALUES (?, ?, ?, 'pending', CURRENT_TIMESTAMP)",
                 (user_id, self.guild_id, self.appeal_text.value)
             )
             await conn.commit()
-            
+
             await interaction.response.send_message(
                 embed=create_embed(
                     "Appeal Submitted ✅",
@@ -248,7 +246,7 @@ class AppealModal(Modal, title="Submit Appeal"):
                 ),
                 ephemeral=True,
             )
-            
+
             # Notify staff in review channel
             review_channel_id = await self.db.get_setting("verify_channel", self.guild_id)
             if review_channel_id:
@@ -266,7 +264,7 @@ class AppealModal(Modal, title="Submit Appeal"):
                     )
                     embed.set_footer(text=f"Use /appeal review @{interaction.user.name} <approve/deny> [reason]")
                     await review_channel.send(embed=embed)
-            
+
             log_system(f"[APPEAL] User {user_id} submitted appeal in guild {self.guild_id}")
             await self.db.log_event(
                 category="APPEAL",
@@ -275,7 +273,7 @@ class AppealModal(Modal, title="Submit Appeal"):
                 guild_id=self.guild_id,
                 details="Appeal submitted"
             )
-            
+
         except Exception as e:
             log_system(f"Error submitting appeal: {e}", level="error")
             await interaction.response.send_message(
@@ -293,27 +291,27 @@ class Appeal(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.db = bot.db_manager
-        
+
     async def cog_unload(self):
         """Remove the command group when cog is unloaded"""
         if hasattr(self, '_appeal_group'):
             self.bot.tree.remove_command(self._appeal_group.name)
-        
-        
-    
+
+
+
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
         """Cancel pending appeals when a user leaves the server"""
         try:
             conn = await self.db.get_connection()
-            
+
             # Update any pending appeals to 'cancelled' status
             await conn.execute(
                 "UPDATE appeals SET status = 'cancelled', reviewed_at = CURRENT_TIMESTAMP WHERE user_id = ? AND guild_id = ? AND status = 'pending'",
                 (member.id, member.guild.id)
             )
             await conn.commit()
-            
+
             log_system(f"[APPEAL] Cancelled pending appeals for {member.name} (left server)")
         except Exception as e:
             log_system(f"Error cancelling appeals on member leave: {e}", level="error")

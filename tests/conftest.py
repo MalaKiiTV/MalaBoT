@@ -1,9 +1,10 @@
 """
 Pytest configuration and fixtures.
 """
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 
 @pytest.fixture(scope="session")

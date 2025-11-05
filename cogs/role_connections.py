@@ -1,17 +1,15 @@
-import discord
-from discord import app_commands
-from discord.ext import commands, tasks
-import asyncio
 import json
-from typing import Optional, List, Dict
+
+import discord
+from discord.ext import commands, tasks
+
 from utils.logger import log_system
-from utils.helpers import create_embed
-from config.constants import COLORS
+
 
 class RoleConnection:
     """Represents a single role connection rule"""
-    def __init__(self, connection_id: int, guild_id: int, target_role_id: int, 
-                 action: str, conditions: List[Dict], logic: str = "AND", enabled: bool = True):
+    def __init__(self, connection_id: int, guild_id: int, target_role_id: int,
+                 action: str, conditions: list[dict], logic: str = "AND", enabled: bool = True):
         self.id = connection_id
         self.guild_id = guild_id
         self.target_role_id = target_role_id
@@ -24,28 +22,28 @@ class RoleConnection:
         """Check if member meets the conditions"""
         if not self.conditions:
             return False
-            
+
         member_role_ids = [role.id for role in member.roles]
-        
+
         results = []
         for condition in self.conditions:
             role_id = condition["role_id"]
             condition_type = condition["type"]
-            
+
             if condition_type == "has":
                 results.append(role_id in member_role_ids)
             elif condition_type == "doesnt_have":
                 results.append(role_id not in member_role_ids)
-        
+
         if not results:
             return False
-            
+
         if self.logic == "AND":
             return all(results)
         else:  # OR
             return any(results)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert to dictionary for storage"""
         return {
             "id": self.id,
@@ -78,7 +76,7 @@ class RoleConnectionManager:
                     log_system(f"[ROLE_CONNECTION] Unexpected data type: {type(connections_data)}", level="error")
                     self.connections_cache[guild_id] = []
                     return
-                
+
                 self.connections_cache[guild_id] = [
                     RoleConnection(
                         connection_id=conn["id"],
@@ -119,15 +117,15 @@ class RoleConnectionManager:
         protected = self.protected_roles_cache.get(guild_id, [])
         await self.db.set_setting("protected_roles", json.dumps(protected), guild_id)
 
-    async def add_connection(self, guild_id: int, target_role_id: int, action: str, 
-                           conditions: List[Dict], logic: str = "AND") -> int:
+    async def add_connection(self, guild_id: int, target_role_id: int, action: str,
+                           conditions: list[dict], logic: str = "AND") -> int:
         """Add a new connection"""
         await self.load_connections(guild_id)
         connections = self.connections_cache.get(guild_id, [])
-        
+
         # Generate new ID
         new_id = max([conn.id for conn in connections], default=0) + 1
-        
+
         new_connection = RoleConnection(
             connection_id=new_id,
             guild_id=guild_id,
@@ -136,11 +134,11 @@ class RoleConnectionManager:
             conditions=conditions,
             logic=logic
         )
-        
+
         connections.append(new_connection)
         self.connections_cache[guild_id] = connections
         await self.save_connections(guild_id)
-        
+
         return new_id
 
     async def remove_connection(self, guild_id: int, connection_id: int):
@@ -199,27 +197,27 @@ class RoleConnectionManager:
         """Process role connections for a member"""
         if member.bot:
             return
-        
+
         # Skip if member has protected role
         if self.is_protected(member):
             return
-        
+
         guild_id = member.guild.id
         connections = self.connections_cache.get(guild_id, [])
-        
+
         for connection in connections:
             if not connection.enabled:
                 continue
-            
+
             # Check if conditions are met
             conditions_met = connection.check_conditions(member)
             target_role = member.guild.get_role(connection.target_role_id)
-            
+
             if not target_role:
                 continue
-            
+
             has_role = target_role in member.roles
-            
+
             try:
                 if connection.action == "give" and conditions_met and not has_role:
                     await member.add_roles(target_role, reason="Role connection rule")
@@ -238,7 +236,7 @@ class RoleConnectionManager:
 
 class RoleConnections(commands.Cog):
     """Role connection system for automatic role management"""
-    
+
     def __init__(self, bot):
         self.bot = bot
         self.manager = RoleConnectionManager(bot, bot.db_manager)
@@ -254,7 +252,7 @@ class RoleConnections(commands.Cog):
             try:
                 await self.manager.load_connections(guild.id)
                 await self.manager.load_protected_roles(guild.id)
-                
+
                 for member in guild.members:
                     await self.manager.process_member(member)
             except Exception as e:
@@ -272,7 +270,7 @@ class RoleConnections(commands.Cog):
             if after.id in self.bot.processing_members:
                 log_system(f"[ROLE_CONNECTION] Skipping {after.name} - member is locked for processing")
                 return
-                
+
             try:
                 await self.manager.load_connections(after.guild.id)
                 await self.manager.load_protected_roles(after.guild.id)
