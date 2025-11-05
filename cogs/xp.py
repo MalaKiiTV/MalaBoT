@@ -13,7 +13,7 @@ from typing import Optional
 
 from utils.logger import get_logger
 from utils.helpers import (
-    embed_helper, xp_helper, time_helper, cooldown_helper,
+    embed_helper, time_helper, cooldown_helper,
     create_embed, is_owner, permission_helper
 )
 from config.constants import COLORS, XP_TABLE, XP_PER_MESSAGE, XP_PER_REACTION, XP_PER_VOICE_MINUTE, XP_COOLDOWN_SECONDS, DAILY_CHECKIN_XP, STREAK_BONUS_PERCENT
@@ -33,16 +33,9 @@ class XPGroup(app_commands.Group):
         try:
             target = user or interaction.user
             
-            # Get user stats
+            # Get user stats from database
             xp = await self.cog.bot.db_manager.get_user_xp(target.id)
-            level = 1
-            # Calculate level from XP
-            total_xp = xp
-            for lvl, req_xp in enumerate(XP_TABLE):
-                if total_xp >= req_xp:
-                    level = lvl + 1
-                else:
-                    break
+            level = await self.cog.bot.db_manager.get_user_level(target.id)
             
             # Get rank
             rank = await self.cog.bot.db_manager.get_user_rank(target.id, interaction.guild.id)
