@@ -40,20 +40,34 @@ class XPGroup(app_commands.Group):
             # Get rank
             rank = await self.cog.bot.db_manager.get_user_rank(target.id, interaction.guild.id)
             
-            # Calculate XP for next level using XP_TABLE
-            if level < len(XP_TABLE):
-                next_level_xp = XP_TABLE[min(level + 1, len(XP_TABLE) - 1)]
+            # Calculate XP for next level using XP_TABLE (dict with level as key)
+            sorted_levels = sorted(XP_TABLE.keys())
+            if level in XP_TABLE:
                 current_level_xp = XP_TABLE[level]
+                # Find next level
+                next_level = None
+                for lvl in sorted_levels:
+                    if lvl > level:
+                        next_level = lvl
+                        break
+                
+                if next_level:
+                    next_level_xp = XP_TABLE[next_level]
+                else:
+                    # For very high levels beyond table, use a formula
+                    next_level_xp = xp + 1000  # Default progression
+                    current_level_xp = xp
             else:
-                # For very high levels, use a formula
+                # For very high levels not in table, use a formula
                 next_level_xp = 1000 * (level + 1) * level
                 current_level_xp = 1000 * level * (level - 1)
+            
             xp_needed = next_level_xp - xp
             xp_progress = xp - current_level_xp
             xp_total_needed = next_level_xp - current_level_xp
             
             # Create progress bar
-            progress = int((xp_progress / xp_total_needed) * 20)
+            progress = int((xp_progress / xp_total_needed) * 20) if xp_total_needed > 0 else 0
             progress_bar = "█" * progress + "░" * (20 - progress)
             
             embed = create_embed(
@@ -118,12 +132,11 @@ class XPGroup(app_commands.Group):
             
             description = ""
             for i, (user_id, xp) in enumerate(rows, 1):
-                # Calculate level from XP
+                # Calculate level from XP - XP_TABLE is dict with level as key
                 level = 1
-                total_xp = xp
-                for lvl, req_xp in enumerate(XP_TABLE):
-                    if total_xp >= req_xp:
-                        level = lvl + 1
+                for lvl in sorted(XP_TABLE.keys()):
+                    if xp >= XP_TABLE[lvl]:
+                        level = lvl
                     else:
                         break
                 user = interaction.guild.get_member(user_id)

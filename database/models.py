@@ -248,15 +248,14 @@ class DatabaseManager:
         """Set user's XP to a specific amount and calculate level."""
         from config.constants import XP_TABLE
         
-        # Calculate the appropriate level for the XP amount (same logic as XP cog)
-        level = 1
-        total_xp = amount
-        for lvl, req_xp in enumerate(XP_TABLE):
-            if total_xp >= req_xp:
-                level = lvl + 1
+        # Calculate the appropriate level for the XP amount
+        # XP_TABLE is a dict with level as key and XP requirement as value
+        new_level = 1
+        for level in sorted(XP_TABLE.keys()):
+            if amount >= XP_TABLE[level]:
+                new_level = level
             else:
                 break
-        new_level = level
         
         conn = await self.get_connection()
         await conn.execute(
@@ -282,13 +281,13 @@ class DatabaseManager:
         new_xp = max(0, current_xp + xp_change)  # Ensure XP doesn't go negative
         
         # Calculate the appropriate level for the new XP amount
-        level = 1
-        for lvl, req_xp in enumerate(XP_TABLE):
-            if new_xp >= req_xp:
-                level = lvl + 1
+        # XP_TABLE is a dict with level as key and XP requirement as value
+        new_level = 1
+        for level in sorted(XP_TABLE.keys()):
+            if new_xp >= XP_TABLE[level]:
+                new_level = level
             else:
                 break
-        new_level = level
         
         # Update both XP and level in the same transaction
         await conn.execute(
@@ -358,13 +357,23 @@ class DatabaseManager:
         """, (component, status, details))
         await conn.commit()
     
-    async def get_today_birthdays(self):
-        """Get today's birthdays."""
+    async def get_today_birthdays(self, date_str: str = None):
+        """Get today's birthdays or birthdays for a specific date (MM-DD format)."""
         conn = await self.get_connection()
-        cursor = await conn.execute("""
-            SELECT user_id FROM birthdays 
-            WHERE DATE(birthday) = DATE('now')
-        """)
+        
+        if date_str:
+            # Query for specific date in MM-DD format
+            cursor = await conn.execute("""
+                SELECT user_id FROM birthdays 
+                WHERE birthday = ?
+            """, (date_str,))
+        else:
+            # Query for today
+            cursor = await conn.execute("""
+                SELECT user_id FROM birthdays 
+                WHERE birthday = strftime('%m-%d', 'now')
+            """)
+        
         return await cursor.fetchall()
     
     async def get_setting(self, key: str, guild_id: int = None):
@@ -446,6 +455,47 @@ class DatabaseManager:
         cursor = await conn.execute("SELECT level FROM users WHERE user_id = ?", (user_id,))
         result = await cursor.fetchone()
         return result[0] if result else 1
+    
+    async def remove_user_xp(self, user_id: int, xp_amount: int):
+        """Remove XP from a user (negative update)."""
+        return await self.update_user_xp(user_id, -xp_amount)
+    
+    async def get_user_rank(self, user_id: int, guild_id: int) -> int:
+        """Get user's rank in the server based on XP."""
+        conn = await self.get_connection()
+        cursor = await conn.execute(
+            "SELECT user_id FROM users WHERE xp > 0 ORDER BY xp DESC"
+        )
+        rows = await cursor.fetchall()
+        
+        # Find the user's position in the list
+        for rank, row in enumerate(rows, 1):
+            if row[0] == user_id:
+                return rank
+        
+        return 0  # User not found or has no XP
+    
+    async def set_user_birthday(self, user_id: int, birthday: str, timezone: str = 'UTC'):
+        """Set user birthday (alias for set_birthday)."""
+        await self.set_birthday(user_id, birthday, timezone)
+        return True
+    
+    async def get_user_birthday(self, user_id: int):
+        """Get user birthday (alias for get_birthday)."""
+        return await self.get_birthday(user_id)
+    
+    async def remove_user_birthday(self, user_id: int):
+        """Remove user birthday."""
+        conn = await self.get_connection()
+        cursor = await conn.execute("SELECT COUNT(*) FROM birthdays WHERE user_id = ?", (user_id,))
+        count = (await cursor.fetchone())[0]
+        
+        if count > 0:
+            await conn.execute("DELETE FROM birthdays WHERE user_id = ?", (user_id,))
+            await conn.commit()
+            return True
+        return False
+    
     async def set_setting(self, key: str, value: str, guild_id: int):
            """Set setting value."""
            conn = await self.get_connection()
