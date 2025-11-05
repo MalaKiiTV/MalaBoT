@@ -3,11 +3,12 @@ name = "malabot"
 version = "1.0.0"
 description = "Multifunctional Discord Bot with XP, Verification, and Moderation"
 authors = ["MalaKiiTV <contact@malakii.tv>"]
-package-mode = false
+readme = "README.md"
+packages = [{include = "malabot"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-"discord.py" = "^2.3.0"
+discord.py = "^2.3.0"
 aiosqlite = "^0.19.0"
 apscheduler = "^3.10.4"
 python-dotenv = "^1.0.0"
