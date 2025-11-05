@@ -91,14 +91,26 @@ class XPGroup(app_commands.Group):
     async def leaderboard(self, interaction: discord.Interaction):
         """Show XP leaderboard."""
         try:
-            # Get top users by XP (simplified - doesn't filter by guild)
+            # Get top users by XP for this guild only
+            guild_member_ids = [member.id for member in interaction.guild.members]
+            if not guild_member_ids:
+                embed = create_embed(
+                    title="\ud83c\udfc6 XP Leaderboard",
+                    description="No guild members found!",
+                    color=COLORS['warning']
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+                
             conn = await self.cog.bot.db_manager.get_connection()
+            placeholders = ','.join(['?' for _ in guild_member_ids])
             cursor = await conn.execute(
-                """SELECT user_id, xp 
+                f"""SELECT user_id, xp 
                    FROM users 
-                   WHERE xp > 0 
+                   WHERE user_id IN ({placeholders}) AND xp > 0 
                    ORDER BY xp DESC 
-                   LIMIT 10"""
+                   LIMIT 10""",
+                guild_member_ids
             )
             rows = await cursor.fetchall()
             
@@ -187,7 +199,7 @@ class XPGroup(app_commands.Group):
                 bonus = int(bonus * (1 + (STREAK_BONUS_PERCENT * (streak - 1))))
             
             # Give XP
-            await self.cog.bot.db_manager.add_user_xp(user_id, bonus)
+            await self.cog.bot.db_manager.update_user_xp(user_id, bonus)
             
             # Update checkin record
             await conn.execute(
@@ -235,7 +247,7 @@ class XPGroup(app_commands.Group):
             return
         
         try:
-            await self.cog.bot.db_manager.add_user_xp(user.id, amount)
+            await self.cog.bot.db_manager.update_user_xp(user.id, amount)
             embed = create_embed(
                 title="✅ XP Added",
                 description=f"Added **{amount:,} XP** to {user.mention}",
@@ -283,7 +295,7 @@ class XPGroup(app_commands.Group):
             # Add XP to all users in the server
             for member in interaction.guild.members:
                 if not member.bot:
-                    await self.cog.bot.db_manager.add_user_xp(member.id, amount)
+                    await self.cog.bot.db_manager.update_user_xp(member.id, amount)
             
             embed = create_embed(
                 title="✅ XP Added to All Users",
@@ -402,51 +414,6 @@ class XPGroup(app_commands.Group):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @app_commands.command(name="reset-all", description="Reset ALL users' XP to 0 (Server Owner only)")
-    @app_commands.describe(confirm="Type 'yes' to confirm")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def reset_all(self, interaction: discord.Interaction, confirm: str):
-        """Reset all users' XP."""
-        if not interaction.user.guild_permissions.administrator:
-            embed = embed_helper.error_embed(
-                "Permission Denied",
-                "Only the server owner can use this command."
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        
-        if confirm.lower() != "yes":
-            embed = embed_helper.error_embed(
-                "Confirmation Required",
-                "You must type 'yes' in the confirm field to reset all users' XP."
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        
-        try:
-            # Reset all users' XP in the server
-            conn = await self.cog.bot.db_manager.get_connection()
-            await conn.execute(
-                "UPDATE users SET xp = 0, level = 1 WHERE guild_id = ?",
-                (interaction.guild.id,)
-            )
-            await conn.commit()
-            
-            embed = create_embed(
-                title="✅ All XP Reset",
-                description="Reset all users' XP to **0** in the server",
-                color=COLORS['success']
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        except Exception as e:
-            self.cog.logger.error(f"Error in reset_all command: {e}")
-            embed = embed_helper.error_embed(
-                "Error",
-                "Failed to reset all XP."
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-
-
 class XP(commands.Cog):
     """XP and leveling system."""
 
@@ -478,7 +445,7 @@ class XP(commands.Cog):
                     return
             
             # Award XP
-            await self.bot.db_manager.add_user_xp(user_id, XP_PER_MESSAGE)
+            await self.bot.db_manager.update_user_xp(user_id, XP_PER_MESSAGE)
             self.last_xp_time[user_id] = current_time
             
             # Check for level up
@@ -505,7 +472,7 @@ class XP(commands.Cog):
                 return
             
             # Award XP to message author
-            await self.bot.db_manager.add_user_xp(message.author.id, XP_PER_REACTION)
+            await self.bot.db_manager.update_user_xp(message.author.id, XP_PER_REACTION)
             await self._check_level_up(message.author)
             
         except Exception as e:
@@ -531,7 +498,7 @@ class XP(commands.Cog):
                     
                     if minutes > 0:
                         xp_gained = minutes * XP_PER_VOICE_MINUTE
-                        await self.bot.db_manager.add_user_xp(member.id, xp_gained)
+                        await self.bot.db_manager.update_user_xp(member.id, xp_gained)
                         await self._check_level_up(member)
                     
                     del self.bot.voice_time[member.id]
