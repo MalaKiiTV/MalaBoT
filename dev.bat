@@ -364,36 +364,44 @@ goto menu
 :gitpush
 echo.
 echo [INFO] Pushing to GitHub...
-REM First try to pull any remote changes
-git pull origin main --rebase --no-edit >nul 2>&1
-REM Then push using default git credentials
-git push origin main
+call :get_current_branch
+if not defined current_branch (
+    echo [ERROR] Could not determine the current Git branch.
+    pause
+    goto menu
+)
+echo [INFO] Pushing to branch: %current_branch%
+git push origin %current_branch%
 if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Pushed to GitHub successfully!
 ) else (
-    echo [ERROR] Failed to push to GitHub
-    echo [INFO] Make sure you have committed changes first
-    echo [INFO] Make sure you're logged into GitHub Desktop or have git credentials configured
+    echo [ERROR] Failed to push to GitHub.
+    echo [INFO] 1. Check if you have new remote changes by running 'git pull'.
+    echo [INFO] 2. Check if you have committed your local changes.
+    echo [INFO] 3. Check your network connection and git credentials.
 )
-timeout /T 3 /NOBREAK >NUL
+pause
 goto menu
 
 :gitpull
 echo.
 echo [INFO] Pulling from GitHub...
-REM Stash any local changes including untracked files
-git add -A >nul 2>&1
-git stash --include-untracked >nul 2>&1
-REM Pull from GitHub
-echo [INFO] Pulling latest changes from GitHub...
+call :get_current_branch
+if not defined current_branch (
+    echo [ERROR] Could not determine the current Git branch.
+    pause
+    goto menu
+)
+echo [INFO] Pulling latest changes for branch: %current_branch%
 echo.
-git pull origin main
+git pull origin %current_branch%
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo [SUCCESS] Pulled from GitHub successfully!
 ) else (
     echo.
-    echo [ERROR] Failed to pull from GitHub
+    echo [ERROR] Failed to pull from GitHub. Your local changes might conflict.
+    echo [INFO] Use 'git status' to see conflicting files.
 )
 echo.
 pause
@@ -416,9 +424,15 @@ echo ========================================
 echo Starting Update Workflow
 echo ========================================
 echo.
+call :get_current_branch
+if not defined current_branch (
+    echo [ERROR] Could not determine the current Git branch.
+    pause
+    goto menu
+)
 
-echo [1/5] Pulling latest changes...
-git pull origin main --no-edit
+echo [1/5] Pulling latest changes for branch %current_branch%...
+git pull origin %current_branch%
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to pull from GitHub!
     pause
@@ -450,6 +464,12 @@ echo ========================================
 echo Starting Deploy Workflow
 echo ========================================
 echo.
+call :get_current_branch
+if not defined current_branch (
+    echo [ERROR] Could not determine the current Git branch.
+    pause
+    goto menu
+)
 
 echo [1/5] Checking git status...
 git status --short
@@ -477,8 +497,8 @@ if %ERRORLEVEL% NEQ 0 (
     goto menu
 )
 
-echo [5/5] Pushing to GitHub...
-git push origin main
+echo [5/5] Pushing to GitHub branch: %current_branch%...
+git push origin %current_branch%
 
 if %ERRORLEVEL% EQU 0 (
     echo.
@@ -508,7 +528,7 @@ timeout /T 3 /NOBREAK >NUL
 goto menu
 
 :installdeps_silent
-pip install -r requirements.txt
+pip install -r requirements.txt >nul 2>&1
 goto :eof
 
 :testconfig
@@ -545,31 +565,40 @@ if %ERRORLEVEL% NEQ 0 (
 pause
 goto menu
 
-
-echo [SUCCESS] Full update complete!
-pause
-goto menu
-
 :remotedeploy
 echo.
 echo ========================================
 echo Remote Deploy to Droplet (PM2)
 echo ========================================
+call :get_current_branch
+if not defined current_branch (
+    echo [ERROR] Could not determine the current Git branch.
+    pause
+    goto menu
+)
+if not "%current_branch%"=="main" (
+    echo [WARNING] You are not on the 'main' branch.
+    set /p confirm_deploy="Are you sure you want to deploy the '%current_branch%' branch? (y/n): "
+    if /i not "%confirm_deploy%"=="y" (
+        echo [CANCELLED] Remote deploy cancelled.
+        pause
+        goto menu
+    )
+)
+
 set DROPLET_USER=malabot
 set DROPLET_IP=165.232.156.230
 set DROPLET_DIR=/home/malabot/MalaBoT
-echo [1/5] Pushing local changes to GitHub...
-REM First pull any remote changes
-git pull origin main --rebase --no-edit >nul 2>&1
-REM Then push using default git credentials
-git push origin main
+
+echo [1/5] Pushing local changes to GitHub branch %current_branch%...
+git push origin %current_branch%
 if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] git push failed. Make sure changes are committed and you're logged into GitHub.
+    echo [ERROR] git push failed. Make sure changes are committed first.
     pause
     goto menu
 )
 echo [2/5] SSH into droplet and update code...
-ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git reset --hard && git pull origin main"
+ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git fetch origin && git checkout %current_branch% && git reset --hard origin/%current_branch%"
 echo [3/5] Installing/updating dependencies...
 ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && pip3 install -r requirements.txt --quiet"
 echo [4/5] Restarting bot with PM2...
@@ -601,10 +630,11 @@ set "TS=%dt:~0,4%-%dt:~4,2%-%dt:~6,2%_%dt:~8,2%-%dt:~10,2%"
 
 if not exist "backups\logs" mkdir "backups\logs"
 if not exist "backups\db" mkdir "backups\db"
-if exist "data\logs" xcopy "data\logs" "backups\logs\%TS%&quot; /E /Q /Y >nul
+if exist "data\logs" xcopy "data\logs" "backups\logs\%TS%\" /E /Q /Y >nul
 if exist "data\bot.db" copy /Y "data\bot.db" "backups\db\bot_%TS%.db" >nul
 echo [SUCCESS] Backup saved with tag %TS%.
-goto :eof
+pause
+goto menu
 
 :verifyenv
 echo.
@@ -789,6 +819,10 @@ if %ERRORLEVEL% EQU 0 (
         echo [STATUS] Bot is NOT RUNNING
     )
 )
+goto :eof
+
+:get_current_branch
+for /f "tokens=*" %%i in ('git rev-parse --abbrev-ref HEAD') do set "current_branch=%%i"
 goto :eof
 
 :exit
