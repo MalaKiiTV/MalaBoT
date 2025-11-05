@@ -73,4 +73,5 @@ outputs/
 *_REPORT.md
 
 # Crash flags
-data/flags/
+data/flags/# Environment variables
+.env
