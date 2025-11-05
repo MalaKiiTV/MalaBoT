@@ -3,6 +3,7 @@ name = "malabot"
 version = "1.0.0"
 description = "Multifunctional Discord Bot with XP, Verification, and Moderation"
 authors = ["MalaKiiTV <contact@malakii.tv>"]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.11"
