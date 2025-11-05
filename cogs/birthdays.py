@@ -19,15 +19,15 @@ from config.settings import settings
 class BirthdaySetView(discord.ui.View):
     """View with button to open birthday modal."""
     
-    def __init__(self, bot, logger):
+    def __init__(self, bot):
         super().__init__(timeout=180)
         self.bot = bot
-        self.logger = logger
+        # Removed logger parameter
     
     @discord.ui.button(label="Set Birthday", style=discord.ButtonStyle.primary, emoji="🎂")
     async def set_birthday_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Button to open birthday modal."""
-        modal = BirthdayModal(self.bot, self.logger)
+        modal = BirthdayModal(self.bot)
         await interaction.response.send_modal(modal)
 
 class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
@@ -41,10 +41,10 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
         max_length=5
     )
     
-    def __init__(self, bot, logger):
+    def __init__(self, bot):
         super().__init__()
         self.bot = bot
-        self.logger = logger
+        # Removed logger parameter
     
     async def on_submit(self, interaction: discord.Interaction):
         """Handle modal submission."""
