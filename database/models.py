@@ -245,6 +245,29 @@ class DatabaseManager:
         result = await cursor.fetchone()
         return result[0] if result else 0
     
+    async def set_user_xp(self, user_id: int, amount: int):
+        """Set user's XP to a specific amount and calculate level."""
+        from config.constants import XP_TABLE
+        
+        # Calculate the appropriate level for the XP amount (same logic as XP cog)
+        level = 1
+        total_xp = amount
+        for lvl, req_xp in enumerate(XP_TABLE):
+            if total_xp >= req_xp:
+                level = lvl + 1
+            else:
+                break
+        new_level = level
+        
+        conn = await self.get_connection()
+        await conn.execute(
+            "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
+            (amount, new_level, user_id)
+        )
+        await conn.commit()
+        
+        return amount, new_level
+
     async def update_user_xp(self, user_id: int, xp_change: int):
         """Update user's XP."""
         conn = await self.get_connection()
