@@ -455,7 +455,7 @@ class ManageConnectionSelect(Select):
         self.connections = connections
 
         options = []
-        for i, conn in enumerate(connections[:25], 1):
+        for _i, conn in enumerate(connections[:25], 1):
             target_role = guild.get_role(conn.target_role_id)
             if target_role:
                 status = "✅" if conn.enabled else "❌"

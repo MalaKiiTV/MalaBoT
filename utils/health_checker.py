@@ -3,9 +3,9 @@ Health Check System
 Monitors bot health and verifies critical data integrity
 """
 
+import datetime
 import logging
 import os
-from datetime import datetime
 
 logger = logging.getLogger('health_checker')
 
@@ -46,7 +46,7 @@ class HealthChecker:
         # Log results
         self._log_results(results)
 
-        self.last_check = datetime.now()
+        self.last_check = datetime.datetime.now(datetime.UTC)
         self.health_status = results
 
         return results
@@ -150,7 +150,7 @@ class HealthChecker:
                     return True
 
             return False
-        except:
+        except Exception:
             return False
 
     async def _check_cogs_loaded(self) -> bool:
@@ -161,7 +161,7 @@ class HealthChecker:
                 'Welcome', 'Birthdays'
             ]
 
-            loaded_cogs = [cog for cog in self.bot.cogs]
+            loaded_cogs = list(self.bot.cogs)
             missing = [c for c in required_cogs if c not in loaded_cogs]
 
             if missing:

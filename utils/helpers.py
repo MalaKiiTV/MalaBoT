@@ -3,9 +3,9 @@ Helper utilities for MalaBoT
 Provides various helper classes and functions for common operations
 """
 
+import datetime
 import os
 import platform
-from datetime import datetime, timedelta
 from typing import Any
 
 import discord
@@ -28,7 +28,7 @@ class EmbedHelper:
             title=title,
             description=description,
             color=color,
-            timestamp=datetime.now()
+            timestamp=datetime.datetime.now(datetime.UTC)
         )
 
         # Add thumbnail if provided
@@ -73,9 +73,9 @@ class TimeHelper:
     def format_duration(td) -> str:
         """Format duration (timedelta or seconds) to human-readable string."""
         # If it's a timedelta object, convert to seconds
-        if isinstance(td, datetime):
+        if isinstance(td, datetime.datetime):
             # If a datetime object is passed, calculate difference from now
-            td = datetime.now() - td
+            td = datetime.datetime.now(datetime.UTC) - td
         if hasattr(td, 'total_seconds'):
             seconds = int(td.total_seconds())
         else:
@@ -136,7 +136,7 @@ class CooldownHelper:
         """Check if user is on cooldown for a command."""
         key = f"{user_id}_{command}"
         if key in self.cooldowns:
-            return datetime.now() < self.cooldowns[key]
+            return datetime.datetime.now(datetime.UTC) < self.cooldowns[key]
         return False
 
     def set_cooldown(self, user_id: int, command: str, seconds: int = None):
@@ -147,13 +147,13 @@ class CooldownHelper:
             seconds = COMMAND_COOLDOWNS.get(command, 5)
 
         key = f"{user_id}_{command}"
-        self.cooldowns[key] = datetime.now() + timedelta(seconds=seconds)
+        self.cooldowns[key] = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=seconds)
 
     def get_remaining_cooldown(self, user_id: int, command: str) -> int:
         """Get remaining cooldown time in seconds."""
         key = f"{user_id}_{command}"
         if key in self.cooldowns:
-            remaining = (self.cooldowns[key] - datetime.now()).total_seconds()
+            remaining = (self.cooldowns[key] - datetime.datetime.now(datetime.UTC)).total_seconds()
             return max(0, int(remaining))
         return 0
 
@@ -189,7 +189,7 @@ class SystemHelper:
             'memory_usage': memory_info.rss / 1024 / 1024,  # MB
             'memory_percent': process.memory_percent(),
             'disk_usage': psutil.disk_usage('/'),
-            'boot_time': datetime.fromtimestamp(psutil.boot_time()).strftime("%Y-%m-%d %H:%M:%S")
+            'boot_time': datetime.datetime.fromtimestamp(psutil.boot_time(), tz=datetime.UTC).strftime("%Y-%m-%d %H:%M:%S")
         }
 
     @staticmethod
@@ -235,7 +235,7 @@ def get_system_info() -> dict[str, Any]:
     return system_helper.get_system_info()
 
 
-async def is_mod(interaction: discord.Interaction, db_manager, specific_mod_role_key: str = None) -> bool:
+async def check_is_mod(interaction: discord.Interaction, db_manager, specific_mod_role_key: str = None) -> bool:
     """
     Check if user has mod permissions.
 
@@ -296,7 +296,7 @@ async def check_mod_permission(interaction: discord.Interaction, db_manager, spe
     Returns:
         bool: True if user has permission, False otherwise (and sends error message)
     """
-    if await is_mod(interaction, db_manager, specific_mod_role_key):
+    if await check_is_mod(interaction, db_manager, specific_mod_role_key):
         return True
 
     # Get role names for error message
@@ -365,7 +365,7 @@ async def safe_send_message(channel, content=None, embed=None, ephemeral=False, 
 
 async def is_staff(interaction: discord.Interaction, db_manager) -> bool:
     """Check if user has staff permissions (alias for is_mod)."""
-    return await is_mod(interaction, db_manager)
+    return await check_is_mod(interaction, db_manager)
 
 
 async def check_staff_permission(interaction: discord.Interaction, db_manager) -> bool:
@@ -405,7 +405,7 @@ def is_mod(specific_mod_role_key: str = None):
                 )
                 return
 
-            if await is_mod(interaction, bot.db_manager, specific_mod_role_key):
+            if await check_is_mod(interaction, bot.db_manager, specific_mod_role_key):
                 return await func(interaction, *args, **kwargs)
             else:
                 await check_mod_permission(interaction, bot.db_manager, specific_mod_role_key)

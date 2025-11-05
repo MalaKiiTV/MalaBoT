@@ -4,7 +4,6 @@ Handles user XP gains, level progression, and XP administration.
 """
 
 import datetime
-from typing import Optional
 
 import discord
 from discord import app_commands
@@ -35,7 +34,7 @@ class XPGroup(app_commands.Group):
 
     @app_commands.command(name="rank", description="Check your or another user's rank and XP")
     @app_commands.describe(user="User to check (leave empty for yourself)")
-    async def rank(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
+    async def rank(self, interaction: discord.Interaction, user: discord.Member | None = None):
         """Check XP rank."""
         try:
             target = user or interaction.user
@@ -165,7 +164,7 @@ class XPGroup(app_commands.Group):
         """Daily checkin for XP bonus."""
         try:
             user_id = interaction.user.id
-            today = datetime.datetime.now().date()
+            today = datetime.datetime.now(datetime.UTC).date()
 
             # Check last checkin
             conn = await self.cog.bot.db_manager.get_connection()
@@ -176,7 +175,7 @@ class XPGroup(app_commands.Group):
             row = await cursor.fetchone()
 
             if row:
-                last_checkin = datetime.datetime.strptime(row[0], '%Y-%m-%d').date()
+                last_checkin = datetime.datetime.strptime(row[0], '%Y-%m-%d').replace(tzinfo=datetime.UTC).date()
                 if last_checkin == today:
                     embed = create_embed(
                         title="✅ Already Checked In",
@@ -437,7 +436,7 @@ class XP(commands.Cog):
 
             # Check cooldown
             user_id = message.author.id
-            current_time = datetime.datetime.now().timestamp()
+            current_time = datetime.datetime.now(datetime.UTC).timestamp()
 
             if user_id in self.last_xp_time:
                 time_diff = current_time - self.last_xp_time[user_id]
@@ -487,13 +486,13 @@ class XP(commands.Cog):
                 # Start tracking voice time
                 if not hasattr(self.bot, 'voice_time'):
                     self.bot.voice_time = {}
-                self.bot.voice_time[member.id] = datetime.datetime.now()
+                self.bot.voice_time[member.id] = datetime.datetime.now(datetime.UTC)
 
             # Check if user left a voice channel
             elif before.channel is not None and after.channel is None and not member.bot:
                 # Calculate time spent and award XP
                 if hasattr(self.bot, 'voice_time') and member.id in self.bot.voice_time:
-                    time_spent = datetime.datetime.now() - self.bot.voice_time[member.id]
+                    time_spent = datetime.datetime.now(datetime.UTC) - self.bot.voice_time[member.id]
                     minutes = int(time_spent.total_seconds() / 60)
 
                     if minutes > 0:

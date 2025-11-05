@@ -2,12 +2,11 @@
 Advanced logging system for MalaBoT with colorized output, rotation, and multiple log files.
 """
 
+import datetime
 import logging
 import logging.handlers
 import os
 import sys
-from datetime import datetime
-from typing import Optional
 
 import colorlog
 
@@ -137,7 +136,7 @@ class MalaBotLogger:
         logger = self.loggers['moderation']
         getattr(logger, level)(message)
 
-    def log_critical_error(self, message: str, exception: Optional[Exception] = None):
+    def log_critical_error(self, message: str, exception: Exception | None = None):
         """Log a critical error to all log files."""
         self.get_logger('system').critical(message)
         self.get_logger('bot').critical(message)
@@ -153,7 +152,7 @@ class MalaBotLogger:
 MalaBoT Startup Report
 {'='*60}
 Version: {settings.BOT_VERSION}
-Start Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Start Time: {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')}
 Log Level: {settings.LOG_LEVEL}
 Database: {settings.DATABASE_URL}
 Owner IDs: {settings.OWNER_IDS}
@@ -177,7 +176,7 @@ Features Enabled:
 {'='*60}
 MalaBoT Shutdown Report
 {'='*60}
-Shutdown Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Shutdown Time: {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')}
 Uptime: {uptime}
 Status: Clean Shutdown
 {'='*60}
@@ -190,7 +189,7 @@ Status: Clean Shutdown
 {'!'*60}
 CRASH REPORT - MALABOT UNEXPECTED SHUTDOWN
 {'!'*60}
-Crash Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Crash Time: {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')}
 Restart Reason: {restart_reason}
 Error Details:
 {error_details}
@@ -200,7 +199,7 @@ Error Details:
         self.get_logger('bot').critical(crash_info)
 
         # Create crash report file
-        crash_file_path = settings.LOG_FILE.replace('bot.log', f'crash_report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt')
+        crash_file_path = settings.LOG_FILE.replace('bot.log', f'crash_report_{datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S")}.txt')
         try:
             with open(crash_file_path, 'w', encoding='utf-8') as f:
                 f.write(crash_info)
@@ -217,7 +216,7 @@ Directory Check: {'✅ PASS' if verification_results.get('directories') else '�
 Log File Check: {'✅ PASS' if verification_results.get('log_files') else '❌ FAIL'}
 Database Check: {'✅ PASS' if verification_results.get('database') else '❌ FAIL'}
 Details: {verification_results.get('details', 'No additional details')}
-Verification Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Verification Time: {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')}
 {'='*60}
 """
         self.log_system_event(verification_info, 'info')
@@ -238,7 +237,7 @@ Errors: {digest_data.get('errors', 0)}
 Memory Usage: {digest_data.get('memory', 'Unknown MB')}
 DB Size: {digest_data.get('db_size', 'Unknown MB')}
 Version: {settings.BOT_VERSION}
-Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Generated: {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')}
 {'='*60}
 """
         self.log_system_event(digest_info, 'info')
@@ -250,7 +249,7 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 {SYSTEM_MESSAGES['watchdog_report']}
 Event Type: {event_type}
 Details: {details}
-Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Timestamp: {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')}
 {'='*60}
 """
         self.log_system_event(watchdog_info, 'warning')
@@ -286,7 +285,7 @@ def log_moderation(message: str, level: str = 'info'):
     """Log to moderation log."""
     logger_manager.log_moderation_event(message, level)
 
-def log_critical(message: str, exception: Optional[Exception] = None):
+def log_critical(message: str, exception: Exception | None = None):
     """Log critical error."""
     logger_manager.log_critical_error(message, exception)
 
@@ -308,8 +307,8 @@ def log_health_check(check_type: str, status: str, value: float = None, details:
 
 def log_xp(message: str):
     """Log XP-related actions."""
-    logger.info(f"[XP] {message}")
+    get_logger('xp').info(f"[XP] {message}")
 
 def log_birthday(message: str):
     """Log birthday-related actions."""
-    logger.info(f"[BIRTHDAY] {message}")
+    get_logger('birthday').info(f"[BIRTHDAY] {message}")

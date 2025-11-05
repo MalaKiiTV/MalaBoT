@@ -4,7 +4,6 @@ Handles environment variables and provides centralized configuration access.
 """
 
 import os
-from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -43,7 +42,7 @@ class Settings:
         self.OWNER_ALERTS_ENABLED: bool = self._parse_bool(os.getenv('OWNER_ALERTS_ENABLED', 'true'))
         self.OWNER_DAILY_DIGEST_ENABLED: bool = self._parse_bool(os.getenv('OWNER_DAILY_DIGEST_ENABLED', 'true'))
         self.OWNER_DAILY_DIGEST_TIME: str = os.getenv('OWNER_DAILY_DIGEST_TIME', '00:00')
-        self.OWNER_STATUS_CHANNEL_ID: Optional[int] = self._parse_int(os.getenv('OWNER_STATUS_CHANNEL_ID'))
+        self.OWNER_STATUS_CHANNEL_ID: int | None = self._parse_int(os.getenv('OWNER_STATUS_CHANNEL_ID'))
 
         # Health & Monitoring
         self.ENABLE_HEALTH_MONITOR: bool = self._parse_bool(os.getenv('ENABLE_HEALTH_MONITOR', 'true'))
@@ -60,7 +59,7 @@ class Settings:
         """Parse string to boolean."""
         return value.lower() in ('true', '1', 'yes', 'on')
 
-    def _parse_int(self, value: str) -> Optional[int]:
+    def _parse_int(self, value: str) -> int | None:
         """Parse string to integer, return None if invalid."""
         try:
             return int(value) if value else None

@@ -4,7 +4,6 @@ Contains joke, fact, and roast commands with entertainment features.
 """
 
 import random
-from typing import Optional
 
 import discord
 from discord import app_commands

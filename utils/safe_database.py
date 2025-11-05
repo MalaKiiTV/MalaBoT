@@ -3,10 +3,10 @@ Safe Database Wrapper
 Ensures all database operations are safe, verified, and logged
 """
 
+import datetime
 import json
 import logging
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger('safe_database')
 
@@ -162,7 +162,7 @@ class SafeDatabase:
     def _log_write(self, operation: str, key: str, value: Any):
         """Log write operation for debugging"""
         self.write_log.append({
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': datetime.datetime.now(datetime.UTC).isoformat(),
             'operation': operation,
             'key': key,
             'value_type': type(value).__name__,
@@ -173,7 +173,7 @@ class SafeDatabase:
         if len(self.write_log) > 100:
             self.write_log = self.write_log[-100:]
 
-    def get_write_history(self, key: Optional[str] = None) -> list:
+    def get_write_history(self, key: str | None = None) -> list:
         """Get write history for debugging"""
         if key:
             return [w for w in self.write_log if w['key'] == key]
@@ -260,7 +260,7 @@ class RoleConnectionSafeDB:
         try:
             connections = await self.load_connections(guild_id)
             return isinstance(connections, list)
-        except:
+        except Exception:
             return False
 
     async def save_protected_roles(self, guild_id: int, role_ids: list) -> bool:

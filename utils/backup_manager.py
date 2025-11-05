@@ -3,11 +3,11 @@ Automatic Backup Manager
 Handles database backups, verification, and recovery
 """
 
+import datetime
 import json
 import logging
 import os
 import shutil
-from datetime import datetime
 
 logger = logging.getLogger('backup_manager')
 
@@ -37,7 +37,7 @@ class BackupManager:
                 logger.error(f"Database file not found: {self.db_path}")
                 return None
 
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S")
             backup_filename = f"bot_backup_{backup_type}_{timestamp}.db"
             backup_path = os.path.join(self.backup_dir, backup_filename)
 
@@ -121,7 +121,7 @@ class BackupManager:
                 return False
 
             # Create backup of current database before restoring
-            current_backup = self.create_backup("pre-restore")
+            self.create_backup("pre-restore")
 
             # Restore backup
             shutil.copy2(backup_path, self.db_path)
@@ -151,7 +151,7 @@ class BackupManager:
                     'filename': filename,
                     'path': filepath,
                     'size': os.path.getsize(filepath),
-                    'created': datetime.fromtimestamp(os.path.getctime(filepath)),
+                    'created': datetime.datetime.fromtimestamp(os.path.getctime(filepath), tz=datetime.UTC),
                     'type': 'unknown'
                 }
 
@@ -161,7 +161,7 @@ class BackupManager:
                         with open(metadata_path) as f:
                             metadata = json.load(f)
                             backup_info.update(metadata)
-                    except:
+                    except Exception:
                         pass
 
                 backups.append(backup_info)
@@ -185,7 +185,7 @@ class BackupManager:
         """Create metadata file for backup"""
         metadata = {
             'type': backup_type,
-            'created': datetime.now().isoformat(),
+            'created': datetime.datetime.now(datetime.UTC).isoformat(),
             'original_size': os.path.getsize(self.db_path),
             'backup_size': os.path.getsize(backup_path)
         }
@@ -225,7 +225,7 @@ class BackupManager:
             backups = self.list_backups()
 
             # Check if we have a backup from today
-            today = datetime.now().date()
+            today = datetime.datetime.now(datetime.UTC).date()
             for backup in backups:
                 if backup['created'].date() == today and backup['type'] == 'auto':
                     logger.debug("Daily backup already exists")

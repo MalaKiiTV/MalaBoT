@@ -5,7 +5,6 @@ Subcommands: submit, review
 """
 
 import datetime
-import typing
 
 import discord
 from discord import app_commands
