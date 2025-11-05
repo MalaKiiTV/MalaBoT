@@ -233,10 +233,9 @@ class DatabaseManager:
     
     # Add missing methods that the bot needs
     
-    async def add_user_xp(self, user_id: int, xp_gained: int) -> int:
-        """Add XP to a user and return their new total."""
-        await self.update_user_xp(user_id, xp_gained)
-        return await self.get_user_xp(user_id)
+    # REMOVED: Redundant add_user_xp method - use update_user_xp instead
+    # This method was functionally identical to update_user_xp and created confusion
+    # All XP operations now use update_user_xp which properly handles both XP and level calculation
     
     async def get_user_xp(self, user_id: int) -> int:
         """Get user's current XP."""
@@ -269,13 +268,36 @@ class DatabaseManager:
         return amount, new_level
 
     async def update_user_xp(self, user_id: int, xp_change: int):
-        """Update user's XP."""
+        """Update user's XP and recalculate level."""
+        from config.constants import XP_TABLE
+        
         conn = await self.get_connection()
+        
+        # Get current XP
+        cursor = await conn.execute("SELECT xp FROM users WHERE user_id = ?", (user_id,))
+        result = await cursor.fetchone()
+        current_xp = result[0] if result else 0
+        
+        # Calculate new XP
+        new_xp = max(0, current_xp + xp_change)  # Ensure XP doesn't go negative
+        
+        # Calculate the appropriate level for the new XP amount
+        level = 1
+        for lvl, req_xp in enumerate(XP_TABLE):
+            if new_xp >= req_xp:
+                level = lvl + 1
+            else:
+                break
+        new_level = level
+        
+        # Update both XP and level in the same transaction
         await conn.execute(
-            "UPDATE users SET xp = xp + ? WHERE user_id = ?",
-            (xp_change, user_id)
+            "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
+            (new_xp, new_level, user_id)
         )
         await conn.commit()
+        
+        return new_xp, new_level
     
     async def get_user(self, user_id: int):
         """Get user data."""

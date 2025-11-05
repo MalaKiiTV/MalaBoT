@@ -444,12 +444,12 @@ class XP(commands.Cog):
                 if time_diff < XP_COOLDOWN_SECONDS:
                     return
             
-            # Award XP
-            await self.bot.db_manager.update_user_xp(user_id, XP_PER_MESSAGE)
+            # Award XP and get new level
+            new_xp, new_level = await self.bot.db_manager.update_user_xp(user_id, XP_PER_MESSAGE)
             self.last_xp_time[user_id] = current_time
             
-            # Check for level up
-            await self._check_level_up(message.author)
+            # Level up is now handled automatically in update_user_xp
+            # No separate level check needed
             
         except Exception as e:
             self.logger.error(f"Error awarding message XP: {e}")
@@ -471,9 +471,9 @@ class XP(commands.Cog):
             if not message or message.author.bot:
                 return
             
-            # Award XP to message author
+            # Award XP to message author (level up handled automatically)
             await self.bot.db_manager.update_user_xp(message.author.id, XP_PER_REACTION)
-            await self._check_level_up(message.author)
+            # Level up is now handled automatically in update_user_xp
             
         except Exception as e:
             self.logger.error(f"Error awarding reaction XP: {e}")
@@ -498,8 +498,9 @@ class XP(commands.Cog):
                     
                     if minutes > 0:
                         xp_gained = minutes * XP_PER_VOICE_MINUTE
+                        # Award voice XP (level up handled automatically)
                         await self.bot.db_manager.update_user_xp(member.id, xp_gained)
-                        await self._check_level_up(member)
+                        # Level up is now handled automatically in update_user_xp
                     
                     del self.bot.voice_time[member.id]
             
