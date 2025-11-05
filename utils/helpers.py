@@ -5,9 +5,9 @@ Helper functions for MalaBoT.
 import discord
 import psutil
 from datetime import datetime, timezone
-import aiosqlite
 
-from config.constants import OWNER_ID
+# Correctly import OWNER_ID from the settings file where it is defined.
+from config.settings import OWNER_ID
 
 # --- Embed Helper ---
 
