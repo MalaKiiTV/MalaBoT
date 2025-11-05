@@ -7,7 +7,7 @@ import psutil
 from datetime import datetime, timezone
 import aiosqlite
 
-from config.constants import MOD_ROLE_ID, OWNER_ID
+from config.constants import OWNER_ID
 
 # --- Embed Helper ---
 
