@@ -258,10 +258,22 @@ class DatabaseManager:
                 break
         
         conn = await self.get_connection()
-        await conn.execute(
-            "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
-            (amount, new_level, user_id)
-        )
+        
+        # Check if user exists
+        cursor = await conn.execute("SELECT COUNT(*) FROM users WHERE user_id = ?", (user_id,))
+        exists = (await cursor.fetchone())[0] > 0
+        
+        if exists:
+            await conn.execute(
+                "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
+                (amount, new_level, user_id)
+            )
+        else:
+            await conn.execute("""
+                INSERT INTO users (user_id, username, discriminator, xp, level)
+                VALUES (?, ?, ?, ?, ?)
+            """, (user_id, f"User{user_id}", "0000", amount, new_level))
+        
         await conn.commit()
         
         return amount, new_level
@@ -272,10 +284,28 @@ class DatabaseManager:
         
         conn = await self.get_connection()
         
-        # Get current XP
+        # Get current XP or create user if doesn't exist
         cursor = await conn.execute("SELECT xp FROM users WHERE user_id = ?", (user_id,))
         result = await cursor.fetchone()
-        current_xp = result[0] if result else 0
+        
+        if result is None:
+            # User doesn't exist, create them with initial XP
+            new_xp = max(0, xp_change)
+            new_level = 1
+            for level in sorted(XP_TABLE.keys()):
+                if new_xp >= XP_TABLE[level]:
+                    new_level = level
+                else:
+                    break
+            
+            await conn.execute("""
+                INSERT INTO users (user_id, username, discriminator, xp, level)
+                VALUES (?, ?, ?, ?, ?)
+            """, (user_id, f"User{user_id}", "0000", new_xp, new_level))
+            await conn.commit()
+            return new_xp, new_level
+        
+        current_xp = result[0]
         
         # Calculate new XP
         new_xp = max(0, current_xp + xp_change)  # Ensure XP doesn't go negative
