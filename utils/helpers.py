@@ -17,7 +17,6 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-
 class EmbedHelper:
     """Helper class for creating consistent embeds."""
     
@@ -98,7 +97,6 @@ class TimeHelper:
             minutes = (seconds % 3600) // 60
             return f"{days}d {hours}h {minutes}m"
 
-
     @staticmethod
     def get_discord_timestamp(dt: datetime, style: str = "R") -> str:
         """
@@ -111,6 +109,7 @@ class TimeHelper:
         
         timestamp = int(dt.timestamp())
         return f"<t:{timestamp}:{style}>"
+
 
 class PermissionHelper:
     """Helper class for permission-related operations."""
@@ -126,68 +125,6 @@ class PermissionHelper:
         """Check if member has administrator permissions."""
         return member.guild_permissions.administrator
 
-class XPHelper:
-    """Helper class for XP-related operations."""
-    
-    @staticmethod
-    def calculate_level_from_xp(total_xp: int, xp_table: Dict[int, int] = None) -> int:
-        """Calculate level from total XP using the XP table."""
-        if xp_table is None:
-            # Import here to avoid circular dependency
-            from config.constants import XP_TABLE
-            xp_table = XP_TABLE
-        
-        level = 1
-        for lvl, xp_required in sorted(xp_table.items()):
-            if total_xp >= xp_required:
-                level = lvl
-            else:
-                break
-        return level
-    
-    @staticmethod
-    def get_xp_for_next_level(current_level: int, xp_table: Dict[int, int]) -> int:
-        """Get XP required for next level."""
-        next_level = current_level + 1
-        return xp_table.get(next_level, xp_table[max(xp_table.keys())])
-    
-    @staticmethod
-    def get_xp_for_level(level: int, xp_table: Dict[int, int] = None) -> int:
-        """Get XP required for a specific level."""
-        if xp_table is None:
-            from config.constants import XP_TABLE
-            xp_table = XP_TABLE
-        return xp_table.get(level, 0)
-    
-    @staticmethod
-    def get_random_xp(min_xp: int, max_xp: int) -> int:
-        """Get random XP amount within range."""
-        return random.randint(min_xp, max_xp)
-
-class RoleHelper:
-    """Helper class for role-related operations."""
-    
-    @staticmethod
-    async def add_role_to_member(member: discord.Member, role_name_or_id) -> bool:
-        """Add a role to a member by name or ID."""
-        try:
-            if not role_name_or_id:
-                return False
-                
-            # Try to find role by ID first, then by name
-            role = None
-            if isinstance(role_name_or_id, int) or role_name_or_id.isdigit():
-                role = discord.utils.get(member.guild.roles, id=int(role_name_or_id))
-            else:
-                role = discord.utils.get(member.guild.roles, name=role_name_or_id)
-                
-            if not role:
-                return False
-                
-            await member.add_roles(role)
-            return True
-        except:
-            return False
 
 class CooldownHelper:
     """Helper class for cooldown management."""
@@ -233,40 +170,9 @@ class CooldownHelper:
         self.set_cooldown(user_id, command, cooldown_seconds)
         return True
 
-    
+
 class SystemHelper:
     """Helper class for system-related operations."""
-    
-    @staticmethod
-    def get_system_info() -> Dict[str, Any]:
-        """Get system information."""
-        process = psutil.Process(os.getpid())
-        memory_info = process.memory_info()
-        
-        return {
-            'platform': platform.system(),
-            'platform_version': platform.version(),
-            'platform_release': platform.release(),
-            'cpu_count': psutil.cpu_count(),
-            'cpu_usage': psutil.cpu_percent(interval=1),
-            'memory_usage': memory_info.rss / 1024 / 1024,  # MB
-            'memory_percent': process.memory_percent(),
-            'disk_usage': psutil.disk_usage('/'),
-            'boot_time': datetime.fromtimestamp(psutil.boot_time()).strftime("%Y-%m-%d %H:%M:%S")
-        }
-    
-    @staticmethod
-    def get_file_size(file_path: str) -> str:
-        """Get file size in human-readable format."""
-        try:
-            size_bytes = os.path.getsize(file_path)
-            for unit in ['B', 'KB', 'MB', 'GB']:
-                if size_bytes < 1024.0:
-                    return f"{size_bytes:.2f} {unit}"
-                size_bytes /= 1024.0
-            return f"{size_bytes:.2f} TB"
-        except:
-            return "Unknown"
     
     @staticmethod
     def sanitize_input(text: str, max_length: int = 200) -> str:
@@ -286,11 +192,11 @@ class SystemHelper:
         
         return text
 
+
 # Convenience instances
 embed_helper = EmbedHelper()
 time_helper = TimeHelper()
 permission_helper = PermissionHelper()
-xp_helper = XPHelper()
 cooldown_helper = CooldownHelper()
 system_helper = SystemHelper()
 
@@ -307,8 +213,6 @@ def is_owner(user: discord.User) -> bool:
 def is_admin(member: discord.Member) -> bool:
     return permission_helper.is_admin(member)
 
-def get_system_info() -> Dict[str, Any]:
-    return system_helper.get_system_info()
 
 async def is_mod(interaction: discord.Interaction, db_manager, specific_mod_role_key: str = None) -> bool:
     """
@@ -357,6 +261,7 @@ async def is_mod(interaction: discord.Interaction, db_manager, specific_mod_role
         return False
     
     return mod_role in interaction.user.roles
+
 
 async def check_mod_permission(interaction: discord.Interaction, db_manager, specific_mod_role_key: str = None) -> bool:
     """
@@ -410,6 +315,7 @@ async def check_mod_permission(interaction: discord.Interaction, db_manager, spe
     await interaction.response.send_message(embed=embed, ephemeral=True)
     return False
 
+
 async def safe_send_message(channel, content=None, embed=None, ephemeral=False, **kwargs):
     """Safely send a message to a channel with error handling."""
     try:
@@ -434,10 +340,68 @@ async def safe_send_message(channel, content=None, embed=None, ephemeral=False, 
         # Any other errors
         print(f"Unexpected error when sending message: {e}")
         return None
+
+
 async def is_staff(interaction: discord.Interaction, db_manager) -> bool:
     """Check if user has staff permissions (alias for is_mod)."""
     return await is_mod(interaction, db_manager)
 
+
 async def check_staff_permission(interaction: discord.Interaction, db_manager) -> bool:
     """Check staff permission and send error message if denied."""
     return await check_mod_permission(interaction, db_manager)
+
+
+def is_mod(specific_mod_role_key: str = None):
+    """
+    Decorator for checking mod permissions.
+    
+    Args:
+        specific_mod_role_key: Optional specific mod role key to check first
+    
+    Usage:
+        @app_commands.command()
+        @is_mod()
+        async def my_command(interaction: discord.Interaction):
+            await interaction.response.send_message("You have mod permissions!")
+            
+        @app_commands.command()
+        @is_mod('verification_mod_role')
+        async def verification_command(interaction: discord.Interaction):
+            await interaction.response.send_message("You have verification mod permissions!")
+    """
+    def decorator(func):
+        async def wrapper(interaction: discord.Interaction, *args, **kwargs):
+            # Get the bot instance from the interaction
+            bot = interaction.client
+            if not hasattr(bot, 'db_manager'):
+                await interaction.response.send_message(
+                    embed=embed_helper.error_embed(
+                        "❌ Database Error", 
+                        "Database manager not available."
+                    ),
+                    ephemeral=True
+                )
+                return
+            
+            if await is_mod(interaction, bot.db_manager, specific_mod_role_key):
+                return await func(interaction, *args, **kwargs)
+            else:
+                await check_mod_permission(interaction, bot.db_manager, specific_mod_role_key)
+                return
+        
+        return wrapper
+    return decorator
+
+
+def is_staff_decorator():
+    """
+    Decorator for checking staff permissions (alias for is_mod).
+    
+    Usage:
+        @app_commands.command()
+        @is_staff_decorator()
+        async def my_command(interaction: discord.Interaction):
+            await interaction.response.send_message("You have staff permissions!")
+    """
+    return is_mod()
