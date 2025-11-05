@@ -12,30 +12,15 @@ import asyncio
 
 from utils.logger import get_logger
 from utils.helpers import embed_helper, create_embed
-from utils.logger import get_logger, log_birthday
 from config.constants import COLORS
 from config.settings import settings
 
-class BirthdaySetView(discord.ui.View):
-    """View with button to open birthday modal."""
-    
-    def __init__(self, bot):
-        super().__init__(timeout=180)
-        self.bot = bot
-        # Removed logger parameter
-    
-    @discord.ui.button(label="Set Birthday", style=discord.ButtonStyle.primary, emoji="🎂")
-    async def set_birthday_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Button to open birthday modal."""
-        modal = BirthdayModal(self.bot)
-        await interaction.response.send_modal(modal)
-
 class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
-    """Modal for setting user birthday."""
+    """Modal for users to set their birthday."""
     
-    birthday_input = discord.ui.TextInput(
-        label="Birthday (MM-DD)",
-        placeholder="09-16",
+    birthday = discord.ui.TextInput(
+        label="Your Birthday (MM-DD format)",
+        placeholder="12-25",
         required=True,
         min_length=5,
         max_length=5
@@ -44,87 +29,86 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
     def __init__(self, bot):
         super().__init__()
         self.bot = bot
-        # Removed logger parameter
     
     async def on_submit(self, interaction: discord.Interaction):
-        """Handle modal submission."""
+        """Handle birthday submission."""
         try:
-            birthday = self.birthday_input.value.strip()
+            # Parse birthday input
+            birthday_str = self.birthday.value.strip()
+            month, day = map(int, birthday_str.split('-'))
             
-            # Validate format
-            if not self._validate_birthday(birthday):
-                embed = embed_helper.error_embed(
-                    title="❌ Invalid Format",
-                    description="Please use the format MM-DD (e.g., 09-16 for September 16th)\n\n"
-                               "Make sure:\n"
-                               "• Month is between 01-12\n"
-                               "• Day is valid for that month\n"
-                               "• Format is exactly MM-DD"
+            # Validate date
+            if month < 1 or month > 12 or day < 1 or day > 31:
+                await interaction.response.send_message(
+                    embed=create_embed(
+                        "❌ Invalid Date",
+                        "Please enter a valid date in MM-DD format.",
+                        discord.Color.red()
+                    ),
+                    ephemeral=True
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
             
-            # Save to database
-            if self.bot.db_manager:
-                await self.bot.db_manager.set_birthday(
-                    user_id=interaction.user.id,
-                    birthday=birthday
+            # Check for February 30th, April 31st, etc.
+            invalid_dates = [
+                (2, 29), (2, 30), (2, 31),  # February
+                (4, 31), (6, 31), (9, 31), (11, 31)  # 30-day months
+            ]
+            
+            if (month, day) in invalid_dates:
+                # Special case for Feb 29 - allow it but handle leap years
+                if not (month == 2 and day == 29):
+                    await interaction.response.send_message(
+                        embed=create_embed(
+                            "❌ Invalid Date",
+                            "That date doesn't exist. Please enter a valid date.",
+                            discord.Color.red()
+                        ),
+                        ephemeral=True
+                    )
+                    return
+            
+            # Store in database
+            success = await self.bot.db.set_user_birthday(interaction.user.id, birthday_str)
+            
+            if success:
+                await interaction.response.send_message(
+                    embed=create_embed(
+                        "🎂 Birthday Set!",
+                        f"Your birthday has been set to {birthday_str}. "
+                        "You'll receive a special message on your birthday!",
+                        discord.Color.green()
+                    ),
+                    ephemeral=True
                 )
-                
-                # Parse for display
-                month, day = birthday.split('-')
-                month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                             'July', 'August', 'September', 'October', 'November', 'December']
-                month_name = month_names[int(month) - 1]
-                
-                embed = embed_helper.success_embed(
-                    title="✅ Birthday Set!",
-                    description=f"Your birthday has been set to **{month_name} {int(day)}**\n\n"
-                               f"You'll receive a special celebration on your birthday! 🎉"
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                log_birthday(f"Birthday set for {interaction.user.name}: {birthday}")
             else:
-                embed = embed_helper.error_embed(
-                    title="❌ Database Error",
-                    description="Unable to save birthday. Please try again later."
+                await interaction.response.send_message(
+                    embed=create_embed(
+                        "❌ Database Error",
+                        "There was an error saving your birthday. Please try again.",
+                        discord.Color.red()
+                    ),
+                    ephemeral=True
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
                 
-        except Exception as e:
-            self.logger.error(f"Error in birthday modal: {e}")
-            embed = embed_helper.error_embed(
-                title="❌ Error",
-                description="An error occurred while setting your birthday."
+        except ValueError:
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "❌ Invalid Format",
+                    "Please use MM-DD format (e.g., 12-25 for December 25th).",
+                    discord.Color.red()
+                ),
+                ephemeral=True
             )
-            try:
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
-                await interaction.followup.send(embed=embed, ephemeral=True)
-    
-    def _validate_birthday(self, birthday: str) -> bool:
-        """Validate birthday format MM-DD."""
-        try:
-            parts = birthday.split('-')
-            if len(parts) != 2:
-                return False
-            
-            month, day = int(parts[0]), int(parts[1])
-            
-            if month < 1 or month > 12:
-                return False
-            
-            if day < 1 or day > 31:
-                return False
-            
-            # Check valid days for each month
-            days_in_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-            if day > days_in_month[month - 1]:
-                return False
-            
-            return True
-        except:
-            return False
+        except Exception as e:
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "❌ Error",
+                    "An unexpected error occurred. Please try again.",
+                    discord.Color.red()
+                ),
+                ephemeral=True
+            )
 
 class Birthdays(commands.Cog):
     """Birthday system for users."""
@@ -136,225 +120,196 @@ class Birthdays(commands.Cog):
     @app_commands.command(name="bday", description="Birthday commands")
     @app_commands.describe(action="What birthday action would you like to perform?")
     @app_commands.choices(action=[
-        app_commands.Choice(name="set", value="set"),
-        app_commands.Choice(name="view", value="view"),
-        app_commands.Choice(name="check", value="check"),
-        app_commands.Choice(name="list", value="list"),
-        app_commands.Choice(name="next", value="next")
+        app_commands.Choice(name="Set Birthday", value="set"),
+        app_commands.Choice(name="View Birthday", value="view"),
+        app_commands.Choice(name="List Today's Birthdays", value="list"),
+        app_commands.Choice(name="Remove Birthday", value="remove")
     ])
-    async def bday(self, interaction: discord.Interaction, action: str):
-        """Birthday system main command."""
-        try:
-            # Defer response for all actions to prevent timeout
-            await interaction.response.defer(ephemeral=True)
-            
-            if action == "set":
-                await self._bday_set(interaction)
-            elif action == "view":
-                await self._bday_view(interaction)
-            elif action == "check":
-                await self._bday_check(interaction)
-            elif action == "list":
-                await self._bday_list(interaction)
-            elif action == "next":
-                await self._bday_next(interaction)
-            else:
-                embed = embed_helper.error_embed(
-                    title="Unknown Action",
-                    description="Please select a valid birthday action."
-                )
-                await interaction.followup.send(embed=embed, ephemeral=True)
-                
-        except Exception as e:
-            self.logger.error(f"Error in bday command: {e}")
-            await self._error_response(interaction, "Failed to process birthday command")
-    
-    async def _bday_set(self, interaction: discord.Interaction):
-        """Set user's birthday using a modal."""
-        try:
-            # The interaction was already deferred in the main bday command
-            # We need to send a new interaction for the modal
-            # Since we can't send modal after defer, we'll use a button instead
-            
-            view = BirthdaySetView(self.bot, self.logger)
-            embed = embed_helper.info_embed(
-                title="🎂 Set Your Birthday",
-                description="Click the button below to open the birthday input form."
-            )
-            await interaction.followup.send(embed=embed, view=view, ephemeral=True)
-            
-        except Exception as e:
-            self.logger.error(f"Error in bday set: {e}")
-            await self._error_response(interaction, "Failed to set birthday")
-    
-    def _validate_birthday(self, birthday: str) -> bool:
-        """Validate birthday format MM-DD."""
-        try:
-            parts = birthday.split('-')
-            if len(parts) != 2:
-                return False
-            
-            month, day = int(parts[0]), int(parts[1])
-            
-            if month < 1 or month > 12:
-                return False
-            
-            if day < 1 or day > 31:
-                return False
-            
-            # Check valid days for each month
-            days_in_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-            if day > days_in_month[month - 1]:
-                return False
-            
-            return True
-        except:
-            return False
-    
-    async def _bday_view(self, interaction: discord.Interaction):
-        """View user's birthday."""
-        try:
-            if self.bot.db_manager:
-                birthday = await self.bot.db_manager.get_birthday(
-                    user_id=interaction.user.id
-                )
-                
-                if birthday:
-                    # Parse birthday to get month name
-                    try:
-                        month, day = birthday.split('-')
-                        month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                                     'July', 'August', 'September', 'October', 'November', 'December']
-                        month_name = month_names[int(month) - 1]
-                        
-                        embed = embed_helper.info_embed(
-                            title="🎂 Your Birthday",
-                            description=f"Your birthday is set to **{month_name} {int(day)}**\n\n"
-                                       f"Format: {birthday}"
-                        )
-                    except:
-                        embed = embed_helper.info_embed(
-                            title="🎂 Your Birthday",
-                            description=f"Your birthday is set to **{birthday}**"
-                        )
-                else:
-                    embed = embed_helper.info_embed(
-                        title="🎂 Your Birthday",
-                        description="You haven't set your birthday yet!\nUse `/bday set` to add your birthday."
-                    )
-            else:
-                embed = embed_helper.error_embed(
-                    title="❌ Database Error",
-                    description="Unable to retrieve birthday information."
-                )
-            
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            
-        except Exception as e:
-            self.logger.error(f"Error in bday view: {e}")
-            await self._error_response(interaction, "Failed to view birthday")
-    
-    async def _bday_check(self, interaction: discord.Interaction):
-        """Check today's birthdays."""
-        try:
-            embed = embed_helper.info_embed(
-                title="🎂 Today's Birthdays",
-                description="No birthdays today! Check back tomorrow."
-            )
-            
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            
-        except Exception as e:
-            self.logger.error(f"Error in bday check: {e}")
-            await self._error_response(interaction, "Failed to check birthdays")
-    
-    async def _bday_list(self, interaction: discord.Interaction):
-        """List all birthdays."""
-        try:
-            if self.bot.db_manager:
-                birthdays = await self.bot.db_manager.get_all_birthdays()
-                
-                if birthdays:
-                    # Sort birthdays by month and day
-                    month_names = ['January', 'February', 'March', 'April', 'May', 'June',
-                                 'July', 'August', 'September', 'October', 'November', 'December']
-                    
-                    birthday_list = []
-                    for bday in birthdays:
-                        user_id = bday['user_id']
-                        birthday = bday['birthday']
-                        
-                        try:
-                            # Get user
-                            user = await self.bot.fetch_user(user_id)
-                            
-                            # Parse birthday
-                            month, day = birthday.split('-')
-                            month_name = month_names[int(month) - 1]
-                            
-                            birthday_list.append(f"• **{user.name}** - {month_name} {int(day)}")
-                        except:
-                            continue
-                    
-                    if birthday_list:
-                        description = "\n".join(birthday_list)
-                        embed = embed_helper.info_embed(
-                            title="🎂 Birthday List",
-                            description=description
-                        )
-                    else:
-                        embed = embed_helper.info_embed(
-                            title="🎂 Birthday List",
-                            description="No birthdays have been set yet.\n\nUse `/bday set` to add your birthday!"
-                        )
-                else:
-                    embed = embed_helper.info_embed(
-                        title="🎂 Birthday List",
-                        description="No birthdays have been set yet.\n\nUse `/bday set` to add your birthday!"
-                    )
-            else:
-                embed = embed_helper.error_embed(
-                    title="❌ Database Error",
-                    description="Unable to retrieve birthday list."
-                )
-            
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            
-        except Exception as e:
-            self.logger.error(f"Error in bday list: {e}")
-            await self._error_response(interaction, "Failed to list birthdays")
-    
-    async def _bday_next(self, interaction: discord.Interaction):
-        """Show upcoming birthdays."""
-        try:
-            embed = embed_helper.info_embed(
-                title="🎂 Upcoming Birthdays",
-                description="No upcoming birthdays in the next 30 days."
-            )
-            
-            await interaction.followup.send(embed=embed, ephemeral=True)
-            
-        except Exception as e:
-            self.logger.error(f"Error in bday next: {e}")
-            await self._error_response(interaction, "Failed to show upcoming birthdays")
-    
-    async def _error_response(self, interaction: discord.Interaction, message: str):
-        """Send error response."""
-        embed = embed_helper.error_embed(
-            title="Birthday System Error",
-            description=message
-        )
+    async def birthday(self, interaction: discord.Interaction, action: str):
+        """Main birthday command handler."""
         
+        if action == "set":
+            modal = BirthdayModal(self.bot)
+            await interaction.response.send_modal(modal)
+            
+        elif action == "view":
+            await self._view_birthday(interaction)
+            
+        elif action == "list":
+            await self._list_birthdays(interaction)
+            
+        elif action == "remove":
+            await self._remove_birthday(interaction)
+    
+    async def _view_birthday(self, interaction: discord.Interaction):
+        """View your birthday."""
         try:
-            if interaction.response.is_done():
-                await interaction.followup.send(embed=embed, ephemeral=True)
+            birthday_data = await self.bot.db.get_user_birthday(interaction.user.id)
+            
+            if birthday_data:
+                birthday_str = birthday_data[1]  # birthday is at index 1
+                # Format the birthday string to be more readable
+                month, day = map(int, birthday_str.split('-'))
+                month_names = [
+                    "January", "February", "March", "April", "May", "June",
+                    "July", "August", "September", "October", "November", "December"
+                ]
+                formatted_date = f"{month_names[month-1]} {day}{self._get_ordinal_suffix(day)}"
+                
+                embed = create_embed(
+                    "🎂 Your Birthday",
+                    f"Your birthday is set to **{formatted_date}** ({birthday_str})",
+                    discord.Color.blue()
+                )
+                embed.add_field(
+                    name="Want to change it?",
+                    value="Use `/bday set` to update your birthday.",
+                    inline=False
+                )
             else:
-                await interaction.followup.send(embed=embed, ephemeral=True)
-        except:
-            pass
+                embed = create_embed(
+                    "❌ No Birthday Set",
+                    "You haven't set your birthday yet!\n\n"
+                    "Use `/bday set` to set your birthday and get special messages on your special day!",
+                    discord.Color.orange()
+                )
+            
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            
+        except Exception as e:
+            self.logger.error(f"Error viewing birthday for user {interaction.user.id}: {e}")
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "❌ Error",
+                    "There was an error retrieving your birthday. Please try again.",
+                    discord.Color.red()
+                ),
+                ephemeral=True
+            )
+    
+    async def _list_birthdays(self, interaction: discord.Interaction):
+        """List today's birthdays."""
+        try:
+            today = datetime.now().strftime("%m-%d")
+            today_birthdays = await self.bot.db.get_today_birthdays(today)
+            
+            if today_birthdays:
+                # Format the list
+                birthday_list = []
+                for user_data in today_birthdays:
+                    user_id = user_data[0]
+                    try:
+                        user = await self.bot.fetch_user(user_id)
+                        if user:
+                            # Get user's display name
+                            display_name = user.display_name
+                            birthday_list.append(f"🎉 {display_name}")
+                    except:
+                        birthday_list.append(f"🎉 User {user_id}")
+                
+                embed = create_embed(
+                    "🎂 Today's Birthdays!",
+                    "\n".join(birthday_list),
+                    discord.Color.magenta()
+                )
+                embed.set_footer(text="🎊 Wish them a happy birthday!")
+            else:
+                embed = create_embed(
+                    "🎂 Today's Birthdays",
+                    "No birthdays today! 🎈",
+                    discord.Color.blue()
+                )
+            
+            await interaction.response.send_message(embed=embed)
+            
+        except Exception as e:
+            self.logger.error(f"Error listing birthdays: {e}")
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "❌ Error",
+                    "There was an error retrieving today's birthdays. Please try again.",
+                    discord.Color.red()
+                ),
+                ephemeral=True
+            )
+    
+    async def _remove_birthday(self, interaction: discord.Interaction):
+        """Remove your birthday."""
+        try:
+            success = await self.bot.db.remove_user_birthday(interaction.user.id)
+            
+            if success:
+                embed = create_embed(
+                    "🗑️ Birthday Removed",
+                    "Your birthday has been removed from the system.\n"
+                    "You can set it again anytime with `/bday set`.",
+                    discord.Color.orange()
+                )
+            else:
+                embed = create_embed(
+                    "❌ No Birthday Found",
+                    "You don't have a birthday set in the system.",
+                    discord.Color.red()
+                )
+            
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            
+        except Exception as e:
+            self.logger.error(f"Error removing birthday for user {interaction.user.id}: {e}")
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "❌ Error",
+                    "There was an error removing your birthday. Please try again.",
+                    discord.Color.red()
+                ),
+                ephemeral=True
+            )
+    
+    def _get_ordinal_suffix(self, day: int) -> str:
+        """Get ordinal suffix for day (1st, 2nd, 3rd, 4th, etc.)."""
+        if 11 <= day <= 13:
+            return "th"
+        return {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    
+    # Daily birthday check task
+    async def check_birthdays(self):
+        """Check for today's birthdays and send celebration messages."""
+        try:
+            # Get today's date in MM-DD format
+            today = datetime.now().strftime("%m-%d")
+            today_birthdays = await self.bot.db.get_today_birthdays(today)
+            
+            for user_data in today_birthdays:
+                user_id = user_data[0]
+                try:
+                    # Try to fetch user
+                    user = await self.bot.fetch_user(user_id)
+                    if user:
+                        # Send birthday message
+                        embed = create_embed(
+                            "🎂 Happy Birthday! 🎉",
+                            f"Happy birthday to **{user.display_name}**! 🎊\n\n"
+                            "Hope you have an amazing day filled with joy and celebration! 🎈",
+                            discord.Color.magenta()
+                        )
+                        embed.set_thumbnail(url=user.display_avatar.url if user.display_avatar else None)
+                        
+                        # Try to send to a configured birthday channel or DM
+                        # For now, we'll try to DM the user
+                        try:
+                            await user.send(embed=embed)
+                            self.logger.info(f"Sent birthday message to user {user_id}")
+                        except discord.Forbidden:
+                            self.logger.warning(f"Could not DM user {user_id} for birthday")
+                            
+                except discord.NotFound:
+                    self.logger.warning(f"User {user_id} not found for birthday check")
+                except Exception as e:
+                    self.logger.error(f"Error processing birthday for user {user_id}: {e}")
+                    
+        except Exception as e:
+            self.logger.error(f"Error in birthday check: {e}")
 
 async def setup(bot: commands.Bot):
-    """Setup function for the cog."""
-    birthdays_cog = Birthdays(bot)
-    await bot.add_cog(birthdays_cog)
-    # Commands are automatically registered when cog is loaded
+    """Setup function for the birthdays cog."""
+    await bot.add_cog(Birthdays(bot))
