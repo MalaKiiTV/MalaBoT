@@ -3,6 +3,8 @@ Welcome system cog for MalaBoT.
 Handles welcome messages for new members with customizable embeds.
 """
 
+import asyncio
+
 import discord
 from discord.ext import commands
 
@@ -14,7 +16,7 @@ from config.constants import (
     DEFAULT_WELCOME_TITLE,
 )
 from config.settings import settings
-from utils.helpers import create_embed, embed_helper, safe_send_message
+from utils.helpers import create_embed, embed_helper, is_admin, safe_send_message
 from utils.logger import get_logger
 
 
@@ -197,7 +199,7 @@ class Welcome(commands.Cog):
         """Set the welcome channel."""
         try:
             # Get all text channels
-            channels = [channel for channel in interaction.guild.text_channels]
+            channels = list(interaction.guild.text_channels)
 
             if not channels:
                 embed = embed_helper.error_embed(
@@ -369,7 +371,7 @@ class Welcome(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-        except:
+        except Exception:
             pass
 
 async def setup(bot: commands.Bot):

@@ -273,7 +273,7 @@ class Moderation(commands.Cog):
             )
             try:
                 await interaction.followup.send(embed=embed, ephemeral=True)
-            except:
+            except Exception:
                 pass
         except Exception as e:
             self.logger.error(f"Error purging channel: {e}")
@@ -316,7 +316,7 @@ class Moderation(commands.Cog):
                 try:
                     moderator = self.bot.get_user(moderator_id) or await self.bot.fetch_user(moderator_id)
                     mod_name = moderator.display_name if moderator else f"User {moderator_id}"
-                except:
+                except Exception:
                     mod_name = f"User {moderator_id}"
 
                 channel = self.bot.get_channel(channel_id)
@@ -595,7 +595,7 @@ class Moderation(commands.Cog):
                 await user.remove_roles(muted_role, reason="Temporary mute expired")
                 try:
                     await user.send(f"You have been unmuted in {interaction.guild.name}")
-                except:
+                except Exception:
                     pass  # Can't send DM, that's okay
 
         except discord.Forbidden:
@@ -702,7 +702,7 @@ class Moderation(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-        except:
+        except Exception:
             pass
 
 async def setup(bot: commands.Bot):

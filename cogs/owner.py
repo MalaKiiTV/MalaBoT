@@ -163,7 +163,7 @@ class Owner(commands.Cog):
 
             try:
                 subprocess.run(["./update.sh", "manual"], check=True)
-            except:
+            except Exception:
                 os.execv(sys.executable, [sys.executable] + sys.argv)
 
         except Exception as e:
@@ -367,7 +367,7 @@ class Owner(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-        except:
+        except Exception:
             pass
 
     @app_commands.command(name="clear-commands", description="Clear and re-sync slash commands (Bot Owner only)")

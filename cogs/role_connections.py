@@ -101,7 +101,7 @@ class RoleConnectionManager:
         if protected_data:
             try:
                 self.protected_roles_cache[guild_id] = json.loads(protected_data)
-            except:
+            except Exception:
                 self.protected_roles_cache[guild_id] = []
         else:
             self.protected_roles_cache[guild_id] = []

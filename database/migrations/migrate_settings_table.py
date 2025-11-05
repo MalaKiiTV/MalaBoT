@@ -7,10 +7,10 @@ import asyncio
 import os
 import sys
 
-# Add project root to path
+# Add project root to path before importing from project modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from database.models import DatabaseManager
+from database.models import DatabaseManager  # noqa: E402
 
 
 async def migrate_settings_table():

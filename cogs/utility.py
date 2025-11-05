@@ -3,9 +3,8 @@ Utility commands cog for MalaBoT.
 Contains help, ping, userinfo, serverinfo, about, and serverstats commands.
 """
 
+import datetime
 import time
-from datetime import datetime
-from typing import Optional
 
 import discord
 from discord import app_commands
@@ -119,7 +118,7 @@ class Utility(commands.Cog):
     @app_commands.describe(
         user="The user to get information about (leave empty for yourself)"
     )
-    async def userinfo(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
+    async def userinfo(self, interaction: discord.Interaction, user: discord.Member | None = None):
         """Display detailed user information."""
         try:
             # Use command author if no user specified
@@ -488,7 +487,7 @@ class Utility(commands.Cog):
                               f"System healthy: ✅",
                         inline=True
                     )
-                except:
+                except Exception:
                     pass
 
             # Footer with invite link
@@ -572,7 +571,7 @@ class Utility(commands.Cog):
             )
 
             # Growth information
-            server_age = (datetime.utcnow() - guild.created_at.replace(tzinfo=None)).days
+            server_age = (datetime.datetime.now(datetime.UTC) - guild.created_at.replace(tzinfo=None)).days
             members_per_day = round(total_members / server_age, 1) if server_age > 0 else 0
 
             embed.add_field(
@@ -603,7 +602,7 @@ class Utility(commands.Cog):
                 inline=False
             )
 
-            embed.set_footer(text=f"Statistics as of {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            embed.set_footer(text=f"Statistics as of {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')}")
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -634,7 +633,7 @@ class Utility(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-        except:
+        except Exception:
             pass
 
 async def setup(bot: commands.Bot):

@@ -125,7 +125,7 @@ class Fun(commands.Cog):
     @app_commands.describe(
         target="Who do you want to roast? (Leave empty to roast the bot)"
     )
-    async def roast(self, interaction: discord.Interaction, target: Optional[discord.Member] = None):
+    async def roast(self, interaction: discord.Interaction, target: discord.Member | None = None):
         """Roast someone or get roasted by the bot."""
         try:
             # Check cooldown
@@ -495,7 +495,7 @@ class Fun(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-        except:
+        except Exception:
             pass
 
 async def setup(bot: commands.Bot):

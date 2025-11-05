@@ -4,11 +4,10 @@ Main entry point and core bot framework.
 """
 
 import asyncio
+import datetime
 import os
 import signal
 import sys
-from datetime import datetime, timedelta
-from typing import Optional
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -17,9 +16,9 @@ from discord.ext import commands
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from config.settings import settings
-from database.models import DatabaseManager
-from utils.helpers import (
+from config.settings import settings  # noqa: E402
+from database.models import DatabaseManager  # noqa: E402
+from utils.helpers import (  # noqa: E402
     create_embed,
     embed_helper,
     format_duration,
@@ -27,7 +26,12 @@ from utils.helpers import (
     safe_send_message,
     system_helper,
 )
-from utils.logger import get_logger, log_critical, log_startup_verification, log_system
+from utils.logger import (  # noqa: E402
+    get_logger,
+    log_critical,
+    log_startup_verification,
+    log_system,
+)
 
 
 class MalaBoT(commands.Bot):
@@ -50,9 +54,9 @@ class MalaBoT(commands.Bot):
         )
 
         # Core components
-        self.db_manager: Optional[DatabaseManager] = None
-        self.scheduler: Optional[AsyncIOScheduler] = None
-        self.start_time: Optional[datetime] = None
+        self.db_manager: DatabaseManager | None = None
+        self.scheduler: AsyncIOScheduler | None = None
+        self.start_time: datetime.datetime | None = None
         self.safe_mode: bool = False
         self.logger = get_logger('bot')
 
@@ -101,7 +105,7 @@ class MalaBoT(commands.Bot):
     async def setup_hook(self):
         """Called when the bot is starting up."""
         try:
-            self.start_time = datetime.now()
+            self.start_time = datetime.datetime.now(datetime.UTC)
 
             # Run startup verification if enabled
             if settings.ENABLE_STARTUP_VERIFICATION:
@@ -171,7 +175,7 @@ class MalaBoT(commands.Bot):
             # Check log file access
             try:
                 os.makedirs(os.path.dirname(settings.LOG_FILE), exist_ok=True)
-                with open(settings.LOG_FILE, 'a') as f:
+                with open(settings.LOG_FILE, 'a'):
                     pass
                 verification_results['log_files'] = True
             except Exception as e:
@@ -243,7 +247,7 @@ class MalaBoT(commands.Bot):
         """Create a crash report file."""
         try:
             crash_report = f"""
-CRASH REPORT - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+CRASH REPORT - {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')}
 =========================================
 Crash Reason: {crash_reason}
 Bot Version: {settings.BOT_VERSION}
@@ -254,7 +258,7 @@ The bot will start in safe mode to prevent further issues.
 """
 
             # Write crash report to file
-            crash_file = f"data/logs/crash_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+            crash_file = f"data/logs/crash_report_{datetime.datetime.now(datetime.UTC).strftime('%Y%m%d_%H%M%S')}.txt"
             with open(crash_file, 'w', encoding='utf-8') as f:
                 f.write(crash_report)
 
@@ -380,7 +384,7 @@ The bot will start in safe mode to prevent further issues.
 
     async def _watchdog_loop(self):
         """Background watchdog loop for monitoring bot health."""
-        last_log_time = datetime.now()
+        last_log_time = datetime.datetime.now(datetime.UTC)
 
         while self.is_ready():
             try:
@@ -395,7 +399,7 @@ The bot will start in safe mode to prevent further issues.
                     await self.db_manager.set_flag('crash_detected', 'high_latency')
 
                 # Check if logs are being updated
-                current_time = datetime.now()
+                current_time = datetime.datetime.now(datetime.UTC)
                 if (current_time - last_log_time).total_seconds() > 300:  # 5 minutes
                     await self.db_manager.log_health_check(
                         "logs", "WARNING",
@@ -414,7 +418,7 @@ The bot will start in safe mode to prevent further issues.
         while True:
             try:
                 # Calculate time until next daily digest
-                now = datetime.now()
+                now = datetime.datetime.now(datetime.UTC)
                 digest_time = settings.OWNER_DAILY_DIGEST_TIME
 
                 # Parse digest time (format: "HH:MM")
@@ -423,7 +427,7 @@ The bot will start in safe mode to prevent further issues.
                     next_digest = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
                     if next_digest <= now:
-                        next_digest += timedelta(days=1)
+                        next_digest += datetime.timedelta(days=1)
 
                     sleep_seconds = (next_digest - now).total_seconds()
                     await asyncio.sleep(sleep_seconds)
@@ -515,13 +519,13 @@ The bot will start in safe mode to prevent further issues.
             await user.add_roles(birthday_role, reason="Birthday celebration")
 
             # Schedule role removal after 24 hours using persistent scheduler
-            removal_time = datetime.now() + timedelta(hours=24)
+            removal_time = datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=24)
             self.scheduler.add_job(
                 self._remove_birthday_role,
                 'date',
                 run_date=removal_time,
                 args=[user.id, birthday_role.id, guild.id],
-                id=f"birthday_role_{user.id}_{int(datetime.now().timestamp())}",
+                id=f"birthday_role_{user.id}_{int(datetime.datetime.now(datetime.UTC).timestamp())}",
                 replace_existing=True
             )
 
@@ -558,16 +562,16 @@ The bot will start in safe mode to prevent further issues.
 
         try:
             # Collect digest data
-            uptime = format_duration(int((datetime.now() - self.start_time).total_seconds())) if self.start_time else "Unknown"
+            uptime = format_duration(int((datetime.datetime.now(datetime.UTC) - self.start_time).total_seconds())) if self.start_time else "Unknown"
 
             # Get recent audit logs for statistics
             recent_logs = await self.db_manager.get_audit_logs(1000)
             stats = await self.db_manager.get_daily_digest_stats()
 
             digest_data = {
-                'date': datetime.now().strftime('%Y-%m-%d'),
+                'date': datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d'),
                 'uptime': uptime,
-                'active_users': len(set(log['user_id'] for log in recent_logs if log['user_id'])),
+                'active_users': len({log['user_id'] for log in recent_logs if log['user_id']}),
                 'total_xp': sum(1 for log in recent_logs if log['category'] == 'XP' and log['action'] == 'GAIN'),
                 'birthdays': sum(1 for log in recent_logs if log['category'] == 'BDAY' and log['action'] == 'CELEBRATED'),
                 'total_logs': stats['total_logs'],
@@ -598,7 +602,7 @@ The bot will start in safe mode to prevent further issues.
             embed.add_field(name="🔢 Version", value=settings.BOT_VERSION, inline=True)
             embed.add_field(name="💾 DB Size", value=digest_data['db_size'], inline=True)
 
-            embed.set_footer(text=f"Report generated automatically • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            embed.set_footer(text=f"Report generated automatically • {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')}")
 
             # Send to owner(s)
             for owner_id in settings.OWNER_IDS:

@@ -4,8 +4,8 @@ Parent slash command: /verify
 Subcommands: submit, review
 """
 
+import datetime
 import typing
-from datetime import datetime
 
 import discord
 from discord import app_commands
@@ -51,7 +51,7 @@ class ActivisionIDModal(Modal, title="Submit Verification"):
         # Store the activision_id temporarily with channel context
         self.bot.pending_verifications[interaction.user.id] = {
             "activision_id": self.activision_id.value,
-            "timestamp": datetime.now(),
+            "timestamp": datetime.datetime.now(datetime.UTC),
             "channel_id": interaction.channel_id,
         }
 
@@ -87,7 +87,7 @@ class PlatformSelect(Select):
             # Delete the platform selection message to clean up the channel
             try:
                 await interaction.message.delete()
-            except:
+            except Exception:
                 pass
 
             # Send a brief public confirmation that auto-deletes
@@ -114,7 +114,7 @@ class PlatformSelect(Select):
             await asyncio.sleep(5)
             try:
                 await confirmation_msg.delete()
-            except:
+            except Exception:
                 pass
 
 
@@ -134,7 +134,7 @@ class PlatformSelect(Select):
                         f"**User:** <@{self.user_id}>\n"
                         f"**Activision ID:** `{self.activision_id}`\n"
                         f"**Platform:** `{platform}`\n"
-                        f"**Submitted:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                        f"**Submitted:** {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S')}"
                     ),
                     color=COLORS["info"],
                 )
@@ -208,7 +208,7 @@ class VerifyGroup(app_commands.Group):
         interaction: discord.Interaction,
         user: discord.User,
         decision: app_commands.Choice[str],
-        notes: typing.Optional[str] = None,
+        notes: str | None = None,
     ):
         try:
             # Defer immediately to prevent timeout

@@ -624,7 +624,7 @@ class GeneralSettingsView(View):
                     mod_role_text = f"{mod_role.name}"
                 else:
                     mod_role_text = f"<@&{mod_role_id}>"
-            except:
+            except Exception:
                 mod_role_text = f"<@&{mod_role_id}>"
 
         join_role_text = "Not set"
@@ -635,7 +635,7 @@ class GeneralSettingsView(View):
                     join_role_text = f"{join_role.name}"
                 else:
                     join_role_text = f"<@&{join_role_id}>"
-            except:
+            except Exception:
                 join_role_text = f"<@&{join_role_id}>"
 
         online_channel_text = "Not set"
@@ -1543,7 +1543,7 @@ class BirthdaySetupView(View):
                     color=COLORS["success"]
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except Exception:
                 embed = discord.Embed(
                     title="❌ Invalid Time Format",
                     description="Please use 24-hour format (HH:MM), e.g., 08:00 or 14:30",
@@ -1614,7 +1614,8 @@ class LevelRolesView(View):
                 level = int(level_input.value)
 
                 if level < 1:
-                    raise ValueError("Level must be 1 or higher")
+                    msg = "Level must be 1 or higher"
+                    raise ValueError(msg)
 
                 # Try to find role by ID first, then by name
                 role = None
@@ -1828,7 +1829,7 @@ class XPSetupView(View):
                     color=COLORS["success"]
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except Exception:
                 embed = discord.Embed(
                     title="❌ Invalid Value",
                     description="Please enter a valid number (minimum 1).",
@@ -1867,7 +1868,7 @@ class XPSetupView(View):
                     color=COLORS["success"]
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except Exception:
                 embed = discord.Embed(
                     title="❌ Invalid Value",
                     description="Please enter a valid number (0 or higher).",
@@ -1906,7 +1907,7 @@ class XPSetupView(View):
                     color=COLORS["success"]
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except Exception:
                 embed = discord.Embed(
                     title="❌ Invalid Value",
                     description="Please enter a valid number (0 or higher).",
@@ -1945,7 +1946,7 @@ class XPSetupView(View):
                     color=COLORS["success"]
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except Exception:
                 embed = discord.Embed(
                     title="❌ Invalid Value",
                     description="Please enter a valid number (0 or higher).",

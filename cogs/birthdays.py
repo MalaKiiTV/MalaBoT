@@ -3,7 +3,7 @@ Birthday system cog for MalaBoT.
 Handles user birthday tracking and celebrations.
 """
 
-from datetime import datetime
+import datetime
 
 import discord
 from discord import app_commands
@@ -188,7 +188,7 @@ class Birthdays(commands.Cog):
     async def _list_birthdays(self, interaction: discord.Interaction):
         """List today's birthdays."""
         try:
-            today = datetime.now().strftime("%m-%d")
+            today = datetime.datetime.now(datetime.UTC).strftime("%m-%d")
             today_birthdays = await self.bot.db.get_today_birthdays(today)
 
             if today_birthdays:
@@ -202,7 +202,7 @@ class Birthdays(commands.Cog):
                             # Get user's display name
                             display_name = user.display_name
                             birthday_list.append(f"🎉 {display_name}")
-                    except:
+                    except Exception:
                         birthday_list.append(f"🎉 User {user_id}")
 
                 embed = create_embed(
@@ -274,7 +274,7 @@ class Birthdays(commands.Cog):
         """Check for today's birthdays and send celebration messages."""
         try:
             # Get today's date in MM-DD format
-            today = datetime.now().strftime("%m-%d")
+            today = datetime.datetime.now(datetime.UTC).strftime("%m-%d")
             today_birthdays = await self.bot.db.get_today_birthdays(today)
 
             for user_data in today_birthdays:
