@@ -25,7 +25,8 @@ class DatabaseManager:
         conn = await self.get_connection()
 
         # Users table
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
                 username TEXT NOT NULL,
@@ -57,10 +58,12 @@ class DatabaseManager:
                 premium_expires TIMESTAMP,
                 is_premium BOOLEAN DEFAULT FALSE
             )
-        """)
+        """
+        )
 
         # Birthdays table
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS birthdays (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -71,10 +74,12 @@ class DatabaseManager:
                 UNIQUE(user_id),
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             )
-        """)
+        """
+        )
 
         # Settings table
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 guild_id INTEGER NOT NULL,
@@ -84,10 +89,12 @@ class DatabaseManager:
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(guild_id, setting_key)
             )
-        """)
+        """
+        )
 
         # Mod logs table
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS mod_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 guild_id INTEGER NOT NULL,
@@ -100,20 +107,24 @@ class DatabaseManager:
                 FOREIGN KEY (user_id) REFERENCES users(user_id),
                 FOREIGN KEY (moderator_id) REFERENCES users(user_id)
             )
-        """)
+        """
+        )
 
         # Roast XP table
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS roast_xp (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 action TEXT NOT NULL,
                 base_xp INTEGER NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         # Roast log table
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS roast_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -124,10 +135,12 @@ class DatabaseManager:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             )
-        """)
+        """
+        )
 
         # Audit log table
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS audit_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -139,10 +152,12 @@ class DatabaseManager:
                 details TEXT,
                 guild_id INTEGER DEFAULT NULL
             )
-        """)
+        """
+        )
 
         # Health logs table
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS health_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 cpu_usage REAL NOT NULL,
@@ -153,10 +168,12 @@ class DatabaseManager:
                 user_count INTEGER NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         # System flags table
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS system_flags (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 flag_name TEXT NOT NULL UNIQUE,
@@ -164,10 +181,12 @@ class DatabaseManager:
                 description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         # Verifications table
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS verifications (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -178,10 +197,12 @@ class DatabaseManager:
                 expires_at TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             )
-        """)
+        """
+        )
 
         # Appeals table
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS appeals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -193,10 +214,12 @@ class DatabaseManager:
                 reviewed_at TIMESTAMP DEFAULT NULL,
                 review_notes TEXT DEFAULT NULL
             )
-        """)
+        """
+        )
 
         # Level roles table
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS level_roles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 guild_id INTEGER NOT NULL,
@@ -205,7 +228,8 @@ class DatabaseManager:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(guild_id, level)
             )
-        """)
+        """
+        )
 
         await conn.commit()
 
@@ -219,14 +243,16 @@ class DatabaseManager:
         count = (await cursor.fetchone())[0]
 
         if count == 0:
-            await conn.execute("""
+            await conn.execute(
+                """
                 INSERT INTO roast_xp (action, base_xp) VALUES
                     ('roast_success', 15),
                     ('roast_fail', 5),
                     ('defend_success', 10),
                     ('defend_fail', 3),
                     ('compliment', 8)
-            """)
+            """
+            )
             await conn.commit()
 
     # Add missing methods that the bot needs
@@ -238,7 +264,9 @@ class DatabaseManager:
     async def get_user_xp(self, user_id: int) -> int:
         """Get user's current XP."""
         conn = await self.get_connection()
-        cursor = await conn.execute("SELECT xp FROM users WHERE user_id = ?", (user_id,))
+        cursor = await conn.execute(
+            "SELECT xp FROM users WHERE user_id = ?", (user_id,)
+        )
         result = await cursor.fetchone()
         return result[0] if result else 0
 
@@ -259,7 +287,7 @@ class DatabaseManager:
         conn = await self.get_connection()
         await conn.execute(
             "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
-            (amount, new_level, user_id)
+            (amount, new_level, user_id),
         )
         await conn.commit()
 
@@ -272,7 +300,9 @@ class DatabaseManager:
         conn = await self.get_connection()
 
         # Get current XP
-        cursor = await conn.execute("SELECT xp FROM users WHERE user_id = ?", (user_id,))
+        cursor = await conn.execute(
+            "SELECT xp FROM users WHERE user_id = ?", (user_id,)
+        )
         result = await cursor.fetchone()
         current_xp = result[0] if result else 0
 
@@ -291,7 +321,7 @@ class DatabaseManager:
         # Update both XP and level in the same transaction
         await conn.execute(
             "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
-            (new_xp, new_level, user_id)
+            (new_xp, new_level, user_id),
         )
         await conn.commit()
 
@@ -303,18 +333,35 @@ class DatabaseManager:
         cursor = await conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
         return await cursor.fetchone()
 
-    async def log_event(self, category: str, action: str, user_id: int = None,
-                      target_id: int = None, channel_id: int = None,
-                      details: str = None, guild_id: int = None):
+    async def log_event(
+        self,
+        category: str,
+        action: str,
+        user_id: int = None,
+        target_id: int = None,
+        channel_id: int = None,
+        details: str = None,
+        guild_id: int = None,
+    ):
         """Log an event to the audit log."""
         conn = await self.get_connection()
-        await conn.execute("""
+        await conn.execute(
+            """
             INSERT INTO audit_log (category, action, user_id, target_id, channel_id, details, guild_id)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (category, action, user_id, target_id, channel_id, details, guild_id))
+        """,
+            (category, action, user_id, target_id, channel_id, details, guild_id),
+        )
         await conn.commit()
 
-    async def log_moderation_action(self, moderator_id: int, target_id: int, action: str, reason: str = None, guild_id: int = None):
+    async def log_moderation_action(
+        self,
+        moderator_id: int,
+        target_id: int,
+        action: str,
+        reason: str = None,
+        guild_id: int = None,
+    ):
         """Log moderation action (wrapper for log_event)."""
         await self.log_event(
             category="MODERATION",
@@ -322,23 +369,28 @@ class DatabaseManager:
             user_id=moderator_id,
             target_id=target_id,
             details=reason,
-            guild_id=guild_id
+            guild_id=guild_id,
         )
 
     async def get_flag(self, flag_name: str):
         """Get system flag value."""
         conn = await self.get_connection()
-        cursor = await conn.execute("SELECT flag_value FROM system_flags WHERE flag_name = ?", (flag_name,))
+        cursor = await conn.execute(
+            "SELECT flag_value FROM system_flags WHERE flag_name = ?", (flag_name,)
+        )
         result = await cursor.fetchone()
         return result[0] if result else False
 
     async def set_flag(self, flag_name: str, flag_value: bool, description: str = None):
         """Set system flag."""
         conn = await self.get_connection()
-        await conn.execute("""
+        await conn.execute(
+            """
             INSERT OR REPLACE INTO system_flags (flag_name, flag_value, description)
             VALUES (?, ?, ?)
-        """, (flag_name, flag_value, description))
+        """,
+            (flag_name, flag_value, description),
+        )
         await conn.commit()
 
     async def clear_flag(self, flag_name: str):
@@ -350,35 +402,47 @@ class DatabaseManager:
     async def log_health_check(self, component: str, status: str, details: str = None):
         """Log health check results."""
         conn = await self.get_connection()
-        await conn.execute("""
+        await conn.execute(
+            """
             INSERT INTO health_logs (component, status, details)
             VALUES (?, ?, ?)
-        """, (component, status, details))
+        """,
+            (component, status, details),
+        )
         await conn.commit()
 
     async def get_today_birthdays(self):
         """Get today's birthdays."""
         conn = await self.get_connection()
-        cursor = await conn.execute("""
+        cursor = await conn.execute(
+            """
             SELECT user_id FROM birthdays
             WHERE DATE(birthday) = DATE('now')
-        """)
+        """
+        )
         return await cursor.fetchall()
 
     async def get_setting(self, key: str, guild_id: int = None):
         """Get setting value."""
         conn = await self.get_connection()
         if guild_id:
-            cursor = await conn.execute("SELECT value FROM settings WHERE setting_key = ? AND guild_id = ?", (key, guild_id))
+            cursor = await conn.execute(
+                "SELECT value FROM settings WHERE setting_key = ? AND guild_id = ?",
+                (key, guild_id),
+            )
         else:
-            cursor = await conn.execute("SELECT value FROM settings WHERE setting_key = ?", (key,))
+            cursor = await conn.execute(
+                "SELECT value FROM settings WHERE setting_key = ?", (key,)
+            )
         result = await cursor.fetchone()
         return result[0] if result else None
 
     async def get_audit_logs(self, limit: int = 100):
         """Get recent audit logs."""
         conn = await self.get_connection()
-        cursor = await conn.execute(f"SELECT * FROM audit_log ORDER BY created_at DESC LIMIT {limit}")
+        cursor = await conn.execute(
+            f"SELECT * FROM audit_log ORDER BY created_at DESC LIMIT {limit}"
+        )
         return await cursor.fetchall()
 
     async def get_daily_digest_stats(self):
@@ -386,7 +450,8 @@ class DatabaseManager:
         conn = await self.get_connection()
 
         # Get statistics for the last 24 hours
-        cursor = await conn.execute("""
+        cursor = await conn.execute(
+            """
             SELECT
                 COUNT(*) as total_logs,
                 COUNT(CASE WHEN severity = 'CRITICAL' THEN 1 END) as critical_events,
@@ -395,30 +460,36 @@ class DatabaseManager:
                 COUNT(CASE WHEN action LIKE '%join%' OR action LIKE '%leave%' OR action LIKE '%role%' THEN 1 END) as user_events
             FROM audit_log
             WHERE created_at >= datetime('now', '-1 day')
-        """)
+        """
+        )
 
         result = await cursor.fetchone()
         return {
-            'total_logs': result[0] if result else 0,
-            'critical_events': result[1] if result else 0,
-            'warnings': result[2] if result else 0,
-            'moderation_actions': result[3] if result else 0,
-            'user_events': result[4] if result else 0
+            "total_logs": result[0] if result else 0,
+            "critical_events": result[1] if result else 0,
+            "warnings": result[2] if result else 0,
+            "moderation_actions": result[3] if result else 0,
+            "user_events": result[4] if result else 0,
         }
 
-    async def set_birthday(self, user_id: int, birthday: str, timezone: str = 'UTC'):
+    async def set_birthday(self, user_id: int, birthday: str, timezone: str = "UTC"):
         """Set user birthday."""
         conn = await self.get_connection()
-        await conn.execute("""
+        await conn.execute(
+            """
             INSERT OR REPLACE INTO birthdays (user_id, birthday, timezone)
             VALUES (?, ?, ?)
-        """, (user_id, birthday, timezone))
+        """,
+            (user_id, birthday, timezone),
+        )
         await conn.commit()
 
     async def get_birthday(self, user_id: int):
         """Get user birthday."""
         conn = await self.get_connection()
-        cursor = await conn.execute("SELECT * FROM birthdays WHERE user_id = ?", (user_id,))
+        cursor = await conn.execute(
+            "SELECT * FROM birthdays WHERE user_id = ?", (user_id,)
+        )
         return await cursor.fetchone()
 
     async def get_all_birthdays(self):
@@ -441,14 +512,17 @@ class DatabaseManager:
     async def get_user_level(self, user_id: int) -> int:
         """Get user's current level."""
         conn = await self.get_connection()
-        cursor = await conn.execute("SELECT level FROM users WHERE user_id = ?", (user_id,))
+        cursor = await conn.execute(
+            "SELECT level FROM users WHERE user_id = ?", (user_id,)
+        )
         result = await cursor.fetchone()
         return result[0] if result else 1
+
     async def set_setting(self, key: str, value: str, guild_id: int):
-           """Set setting value."""
-           conn = await self.get_connection()
-           await conn.execute(
-         "INSERT OR REPLACE INTO settings (setting_key, value, guild_id, updated_at) VALUES (?, ?, ?, datetime('now'))",
-         (key, value, guild_id)
-           )
-           await conn.commit()
+        """Set setting value."""
+        conn = await self.get_connection()
+        await conn.execute(
+            "INSERT OR REPLACE INTO settings (setting_key, value, guild_id, updated_at) VALUES (?, ?, ?, datetime('now'))",
+            (key, value, guild_id),
+        )
+        await conn.commit()

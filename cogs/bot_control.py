@@ -21,7 +21,7 @@ class SendMessageModal(Modal, title="Send Message as Bot"):
         placeholder="Enter the message you want to send...",
         required=True,
         max_length=2000,
-        style=discord.TextStyle.paragraph
+        style=discord.TextStyle.paragraph,
     )
 
     def __init__(self, channel: discord.TextChannel):
@@ -37,24 +37,24 @@ class SendMessageModal(Modal, title="Send Message as Bot"):
             embed = create_embed(
                 "✅ Message Sent",
                 f"Message sent to {self.channel.mention}\n\n**Content:**\n{self.message_content.value[:100]}{'...' if len(self.message_content.value) > 100 else ''}",
-                COLORS["success"]
+                COLORS["success"],
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-            log_system(f"[BOT CONTROL] {interaction.user.name} sent message to {self.channel.name}")
+            log_system(
+                f"[BOT CONTROL] {interaction.user.name} sent message to {self.channel.name}"
+            )
 
         except discord.Forbidden:
             embed = create_embed(
                 "❌ Permission Error",
                 f"I don't have permission to send messages in {self.channel.mention}",
-                COLORS["error"]
+                COLORS["error"],
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as e:
             embed = create_embed(
-                "❌ Error",
-                f"Failed to send message: {str(e)}",
-                COLORS["error"]
+                "❌ Error", f"Failed to send message: {str(e)}", COLORS["error"]
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -63,7 +63,9 @@ class BotControlGroup(app_commands.Group):
     """Bot control commands group"""
 
     def __init__(self, cog):
-        super().__init__(name="bot", description="Bot control commands (Server Owner only)")
+        super().__init__(
+            name="bot", description="Bot control commands (Server Owner only)"
+        )
         self.cog = cog
 
     async def channel_autocomplete(
@@ -79,7 +81,10 @@ class BotControlGroup(app_commands.Group):
         ]
         return channels[:25]  # Discord limits to 25 choices
 
-    @app_commands.command(name="send", description="Send a message as the bot to a channel (Server Owner only)")
+    @app_commands.command(
+        name="send",
+        description="Send a message as the bot to a channel (Server Owner only)",
+    )
     @app_commands.describe(channel="The channel to send the message to")
     @app_commands.autocomplete(channel=channel_autocomplete)
     async def send(self, interaction: discord.Interaction, channel: str):
@@ -90,7 +95,7 @@ class BotControlGroup(app_commands.Group):
             embed = create_embed(
                 "🚫 Permission Denied",
                 "This command is only available to the server owner.",
-                COLORS["error"]
+                COLORS["error"],
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
@@ -99,9 +104,7 @@ class BotControlGroup(app_commands.Group):
         channel_obj = interaction.guild.get_channel(int(channel))
         if not channel_obj or not isinstance(channel_obj, discord.TextChannel):
             embed = create_embed(
-                "❌ Error",
-                "Invalid channel selected.",
-                COLORS["error"]
+                "❌ Error", "Invalid channel selected.", COLORS["error"]
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return

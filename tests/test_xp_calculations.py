@@ -12,7 +12,7 @@ class TestXPCalculations:
     def test_calculate_level_basic(self):
         """Test basic level calculation."""
         # Test with XP_TABLE mock
-        with patch('config.constants.XP_TABLE', [0, 100, 300, 600, 1000]):
+        with patch("config.constants.XP_TABLE", [0, 100, 300, 600, 1000]):
             from cogs.xp import calculate_level
 
             assert calculate_level(0) == 1
@@ -26,7 +26,7 @@ class TestXPCalculations:
 
     def test_calculate_level_edge_cases(self):
         """Test edge cases for level calculation."""
-        with patch('config.constants.XP_TABLE', [0, 100, 300]):
+        with patch("config.constants.XP_TABLE", [0, 100, 300]):
             from cogs.xp import calculate_level
 
             # Test negative XP

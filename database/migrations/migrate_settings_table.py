@@ -30,7 +30,9 @@ async def migrate_settings_table():
         conn = await db_manager.get_connection()
 
         # Check if settings table exists
-        cursor = await conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='settings'")
+        cursor = await conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='settings'"
+        )
         table_exists = await cursor.fetchone()
 
         if table_exists:
@@ -44,8 +46,17 @@ async def migrate_settings_table():
             print(f"Current columns: {column_names}")
 
             # Check if required columns exist
-            required_columns = ['id', 'guild_id', 'setting_key', 'value', 'created_at', 'updated_at']
-            missing_columns = [col for col in required_columns if col not in column_names]
+            required_columns = [
+                "id",
+                "guild_id",
+                "setting_key",
+                "value",
+                "created_at",
+                "updated_at",
+            ]
+            missing_columns = [
+                col for col in required_columns if col not in column_names
+            ]
 
             if missing_columns:
                 print(f"❌ Missing columns: {missing_columns}")
@@ -72,9 +83,11 @@ async def migrate_settings_table():
         print(f"❌ Migration failed: {e}")
         raise
 
+
 async def create_settings_table(conn):
     """Create the settings table with correct schema"""
-    await conn.execute("""
+    await conn.execute(
+        """
         CREATE TABLE settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
@@ -84,7 +97,9 @@ async def create_settings_table(conn):
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(guild_id, setting_key)
         )
-    """)
+    """
+    )
+
 
 if __name__ == "__main__":
     asyncio.run(migrate_settings_table())
