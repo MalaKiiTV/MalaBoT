@@ -175,6 +175,24 @@ class SystemHelper:
     """Helper class for system-related operations."""
     
     @staticmethod
+    def get_system_info() -> Dict[str, Any]:
+        """Get system information."""
+        process = psutil.Process(os.getpid())
+        memory_info = process.memory_info()
+        
+        return {
+            'platform': platform.system(),
+            'platform_version': platform.version(),
+            'platform_release': platform.release(),
+            'cpu_count': psutil.cpu_count(),
+            'cpu_usage': psutil.cpu_percent(interval=1),
+            'memory_usage': memory_info.rss / 1024 / 1024,  # MB
+            'memory_percent': process.memory_percent(),
+            'disk_usage': psutil.disk_usage('/'),
+            'boot_time': datetime.fromtimestamp(psutil.boot_time()).strftime("%Y-%m-%d %H:%M:%S")
+        }
+    
+    @staticmethod
     def sanitize_input(text: str, max_length: int = 200) -> str:
         """Sanitize user input by removing potentially harmful characters and limiting length."""
         if not text:
@@ -212,6 +230,9 @@ def is_owner(user: discord.User) -> bool:
 
 def is_admin(member: discord.Member) -> bool:
     return permission_helper.is_admin(member)
+
+def get_system_info() -> Dict[str, Any]:
+    return system_helper.get_system_info()
 
 
 async def is_mod(interaction: discord.Interaction, db_manager, specific_mod_role_key: str = None) -> bool:
