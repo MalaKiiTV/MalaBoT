@@ -9,7 +9,8 @@ import os
 import shutil
 from datetime import datetime
 
-logger = logging.getLogger('backup_manager')
+logger = logging.getLogger("backup_manager")
+
 
 class BackupManager:
     """Manages automatic database backups and recovery"""
@@ -143,16 +144,16 @@ class BackupManager:
         backups = []
 
         for filename in os.listdir(self.backup_dir):
-            if filename.endswith('.db'):
+            if filename.endswith(".db"):
                 filepath = os.path.join(self.backup_dir, filename)
-                metadata_path = filepath + '.meta'
+                metadata_path = filepath + ".meta"
 
                 backup_info = {
-                    'filename': filename,
-                    'path': filepath,
-                    'size': os.path.getsize(filepath),
-                    'created': datetime.fromtimestamp(os.path.getctime(filepath)),
-                    'type': 'unknown'
+                    "filename": filename,
+                    "path": filepath,
+                    "size": os.path.getsize(filepath),
+                    "created": datetime.fromtimestamp(os.path.getctime(filepath)),
+                    "type": "unknown",
                 }
 
                 # Load metadata if exists
@@ -167,7 +168,7 @@ class BackupManager:
                 backups.append(backup_info)
 
         # Sort by creation time (newest first)
-        backups.sort(key=lambda x: x['created'], reverse=True)
+        backups.sort(key=lambda x: x["created"], reverse=True)
 
         return backups
 
@@ -179,19 +180,19 @@ class BackupManager:
             Path to latest backup or None
         """
         backups = self.list_backups()
-        return backups[0]['path'] if backups else None
+        return backups[0]["path"] if backups else None
 
     def _create_metadata(self, backup_path: str, backup_type: str):
         """Create metadata file for backup"""
         metadata = {
-            'type': backup_type,
-            'created': datetime.now().isoformat(),
-            'original_size': os.path.getsize(self.db_path),
-            'backup_size': os.path.getsize(backup_path)
+            "type": backup_type,
+            "created": datetime.now().isoformat(),
+            "original_size": os.path.getsize(self.db_path),
+            "backup_size": os.path.getsize(backup_path),
         }
 
-        metadata_path = backup_path + '.meta'
-        with open(metadata_path, 'w') as f:
+        metadata_path = backup_path + ".meta"
+        with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=2)
 
     def _cleanup_old_backups(self):
@@ -201,10 +202,10 @@ class BackupManager:
 
             # Keep only max_backups most recent
             if len(backups) > self.max_backups:
-                for backup in backups[self.max_backups:]:
+                for backup in backups[self.max_backups :]:
                     try:
-                        os.remove(backup['path'])
-                        metadata_path = backup['path'] + '.meta'
+                        os.remove(backup["path"])
+                        metadata_path = backup["path"] + ".meta"
                         if os.path.exists(metadata_path):
                             os.remove(metadata_path)
                         logger.info(f"Removed old backup: {backup['filename']}")
@@ -227,7 +228,7 @@ class BackupManager:
             # Check if we have a backup from today
             today = datetime.now().date()
             for backup in backups:
-                if backup['created'].date() == today and backup['type'] == 'auto':
+                if backup["created"].date() == today and backup["type"] == "auto":
                     logger.debug("Daily backup already exists")
                     return False
 
@@ -246,6 +247,7 @@ def create_backup(backup_type: str = "manual") -> str:
     manager = BackupManager()
     return manager.create_backup(backup_type)
 
+
 def restore_latest_backup() -> bool:
     """Restore from most recent backup"""
     manager = BackupManager()
@@ -253,6 +255,7 @@ def restore_latest_backup() -> bool:
     if latest:
         return manager.restore_backup(latest)
     return False
+
 
 def list_backups() -> list:
     """List all available backups"""

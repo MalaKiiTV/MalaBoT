@@ -3,9 +3,10 @@ import os
 import sys
 
 # This allows the script to find your settings file
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from config.settings import settings
+
 
 def migrate():
     """
@@ -13,7 +14,7 @@ def migrate():
     """
     db_path = settings.DATABASE_URL.replace("sqlite:///", "")
     print(f"Connecting to database at: {db_path}")
-    
+
     if not os.path.exists(db_path):
         print(f"Error: Database file not found at {db_path}")
         return
@@ -28,16 +29,18 @@ def migrate():
 
         # --- Check for ALL required columns ---
         required_cols = {
-            'component': 'TEXT',
-            'status': 'TEXT',
-            'value': 'REAL',
-            'details': 'TEXT'
+            "component": "TEXT",
+            "status": "TEXT",
+            "value": "REAL",
+            "details": "TEXT",
         }
 
         for col_name, col_type in required_cols.items():
             if col_name not in columns:
                 print(f"Adding '{col_name}' column...")
-                cursor.execute(f"ALTER TABLE health_logs ADD COLUMN {col_name} {col_type}")
+                cursor.execute(
+                    f"ALTER TABLE health_logs ADD COLUMN {col_name} {col_type}"
+                )
                 print(f"Successfully added '{col_name}' column.")
             else:
                 print(f"Column '{col_name}' already exists.")
@@ -48,6 +51,7 @@ def migrate():
 
     except sqlite3.Error as e:
         print(f"An error occurred during migration: {e}")
+
 
 if __name__ == "__main__":
     migrate()

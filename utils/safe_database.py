@@ -8,7 +8,8 @@ import logging
 from datetime import datetime
 from typing import Any, Optional
 
-logger = logging.getLogger('safe_database')
+logger = logging.getLogger("safe_database")
+
 
 class SafeDatabase:
     """
@@ -39,7 +40,7 @@ class SafeDatabase:
         try:
             # Log the write attempt
             logger.info(f"[WRITE] Setting: {key}")
-            self._log_write('set_setting', key, value)
+            self._log_write("set_setting", key, value)
 
             # Perform the write
             await self.db.set_setting(key, value)
@@ -48,7 +49,9 @@ class SafeDatabase:
             if verify:
                 stored_value = await self.db.get_setting(key)
                 if stored_value != value:
-                    logger.error(f"[VERIFY FAILED] {key}: expected {value}, got {stored_value}")
+                    logger.error(
+                        f"[VERIFY FAILED] {key}: expected {value}, got {stored_value}"
+                    )
                     return False
                 logger.debug(f"[VERIFY OK] {key}")
 
@@ -77,7 +80,9 @@ class SafeDatabase:
             logger.error(f"[READ ERROR] {key}: {e}")
             return default
 
-    async def save_json_setting(self, key: str, data: dict, verify: bool = True) -> bool:
+    async def save_json_setting(
+        self, key: str, data: dict, verify: bool = True
+    ) -> bool:
         """
         Save JSON data with verification
 
@@ -161,13 +166,15 @@ class SafeDatabase:
 
     def _log_write(self, operation: str, key: str, value: Any):
         """Log write operation for debugging"""
-        self.write_log.append({
-            'timestamp': datetime.now().isoformat(),
-            'operation': operation,
-            'key': key,
-            'value_type': type(value).__name__,
-            'value_size': len(str(value)) if value else 0
-        })
+        self.write_log.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "operation": operation,
+                "key": key,
+                "value_type": type(value).__name__,
+                "value_size": len(str(value)) if value else 0,
+            }
+        )
 
         # Keep only last 100 writes
         if len(self.write_log) > 100:
@@ -176,7 +183,7 @@ class SafeDatabase:
     def get_write_history(self, key: Optional[str] = None) -> list:
         """Get write history for debugging"""
         if key:
-            return [w for w in self.write_log if w['key'] == key]
+            return [w for w in self.write_log if w["key"] == key]
         return self.write_log
 
 
@@ -205,13 +212,18 @@ class RoleConnectionSafeDB:
 
         try:
             # Convert to JSON
-            data = [conn if isinstance(conn, dict) else conn.to_dict() for conn in connections]
+            data = [
+                conn if isinstance(conn, dict) else conn.to_dict()
+                for conn in connections
+            ]
 
             # Save with verification
             success = await self.safe_db.save_json_setting(key, data, verify=True)
 
             if success:
-                logger.info(f"✅ Saved {len(connections)} role connections for guild {guild_id}")
+                logger.info(
+                    f"✅ Saved {len(connections)} role connections for guild {guild_id}"
+                )
             else:
                 logger.error(f"❌ Failed to save role connections for guild {guild_id}")
 
@@ -237,7 +249,9 @@ class RoleConnectionSafeDB:
             data = await self.safe_db.load_json_setting(key, default=[])
 
             if data:
-                logger.info(f"✅ Loaded {len(data)} role connections for guild {guild_id}")
+                logger.info(
+                    f"✅ Loaded {len(data)} role connections for guild {guild_id}"
+                )
             else:
                 logger.debug(f"No role connections found for guild {guild_id}")
 
