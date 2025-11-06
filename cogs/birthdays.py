@@ -33,7 +33,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
         try:
             # Parse birthday input
             birthday_str = self.birthday.value.strip()
-            if "-" in birthday_str: month, day = map(int, birthday_str.split("-")); else: birthday_str = f"{int(birthday_str):04d}"; month = int(birthday_str[:2]); day = int(birthday_str[2:]); birthday_str = f"{month:02d}-{day:02d}"
+            month, day = map(int, birthday_str.split("-"))
 
             # Validate date
             if month < 1 or month > 12 or day < 1 or day > 31:
@@ -72,7 +72,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                     return
 
             # Store in database
-            success = await self.bot.db_manager.set_user_birthday(
+            success = await self.bot.db_manager.set_user_birthday(  # type: ignore
                 interaction.user.id, birthday_str
             )
 
@@ -122,6 +122,8 @@ class Birthdays(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.logger = get_logger("birthdays")
+        # Type ignore to handle MyPy Bot class attribute issue
+        self.db = bot.db_manager  # type: ignore  # type: ignore  # type: ignore
 
     @app_commands.command(name="bday", description="Birthday commands")
     @app_commands.describe(action="What birthday action would you like to perform?")
@@ -152,14 +154,12 @@ class Birthdays(commands.Cog):
     async def _view_birthday(self, interaction: discord.Interaction):
         """View your birthday."""
         try:
-            birthday_data = await self.bot.db_manager.get_user_birthday(
-                interaction.user.id
-            )
+            birthday_data = await self.bot.db_manager.get_user_birthday(interaction.user.id)  # type: ignore
 
             if birthday_data:
-                birthday_str = str(birthday_data[1]) if birthday_data[1] else "01-01"  # birthday is at index 1
+                birthday_str = birthday_data[1]  # birthday is at index 1
                 # Format the birthday string to be more readable
-                if "-" in birthday_str: month, day = map(int, birthday_str.split("-")); else: birthday_str = f"{int(birthday_str):04d}"; month = int(birthday_str[:2]); day = int(birthday_str[2:]); birthday_str = f"{month:02d}-{day:02d}"
+                month, day = map(int, birthday_str.split("-"))
                 month_names = [
                     "January",
                     "February",
@@ -215,7 +215,7 @@ class Birthdays(commands.Cog):
         """List today's birthdays."""
         try:
             today = datetime.now().strftime("%m-%d")
-            today_birthdays = await self.bot.db_manager.get_today_birthdays(today)
+            today_birthdays = await self.bot.db_manager.get_today_birthdays(today)  # type: ignore
 
             if today_birthdays:
                 # Format the list
@@ -260,9 +260,7 @@ class Birthdays(commands.Cog):
     async def _remove_birthday(self, interaction: discord.Interaction):
         """Remove your birthday."""
         try:
-            success = await self.bot.db_manager.remove_user_birthday(
-                interaction.user.id
-            )
+            success = await self.bot.db_manager.remove_user_birthday(interaction.user.id)  # type: ignore
 
             if success:
                 embed = create_embed(
@@ -305,7 +303,7 @@ class Birthdays(commands.Cog):
         try:
             # Get today's date in MM-DD format
             today = datetime.now().strftime("%m-%d")
-            today_birthdays = await self.bot.db_manager.get_today_birthdays(today)
+            today_birthdays = await self.bot.db_manager.get_today_birthdays(today)  # type: ignore
 
             for user_data in today_birthdays:
                 user_id = user_data[0]
@@ -327,7 +325,7 @@ class Birthdays(commands.Cog):
                         # Try to send to a configured birthday channel or DM
                         # For now, we'll try to DM the user
                         try:
-                            await user.send(embed=embed)
+                            await user and user.send(embed=embed)
                             self.logger.info(f"Sent birthday message to user {user_id}")
                         except discord.Forbidden:
                             self.logger.warning(
