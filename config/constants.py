@@ -175,14 +175,13 @@ BACKUP_RETENTION_DAYS = 30
 
 # Command Categories for Help System
 COMMAND_CATEGORIES = {
-    "🎮 Fun": ["joke", "fact", "roast", "8ball", "roll", "coinflip"],
+    "🎮 Fun": ["joke", "fact", "roast"],
     "⚙️ Utility": ["help", "ping", "userinfo", "serverinfo", "about", "serverstats"],
-    "🎂 Birthdays": ["bday"],
-    "🏆 XP": ["xp rank", "xp leaderboard", "xp checkin", "xp add", "xp remove", "xp set", "xp reset"],
-    "🛡️ Admin": ["delete", "kick", "ban", "mute", "unmute", "setup"],
-    "✅ Verification": ["verify activision", "verify review"],
-    "📋 Appeals": ["appeal submit", "appeal review"],
-    "👑 Owner": ["owner", "clear-commands"],
+    "🎂 Birthdays": ["bday set", "bday view", "bday check", "bday list", "bday next"],
+    "🏆 XP": ["xp rank", "xp leaderboard", "xpadmin"],
+    "🧠 Admin": ["delete", "welcome", "bday setposttime", "settimezone"],
+    "🔥 Roast": ["roast", "roastrank", "roastboard", "roastadmin"],
+    "👑 Owner": ["owner"],
 }
 
 # Jokes Database (sample jokes)
@@ -192,9 +191,6 @@ JOKES = [
     "Why don't eggs tell jokes? They'd crack each other up!",
     "What do you call a bear with no teeth? A gummy bear!",
     "Why can't a bicycle stand up by itself? It's two tired!",
-    "What do you call a fake noodle? An impasta!",
-    "Why did the math book look sad? Because it had too many problems!",
-    "What do you call cheese that isn't yours? Nacho cheese!",
 ]
 
 # Facts Database (sample facts)
@@ -204,9 +200,6 @@ FACTS = [
     "Octopuses have three hearts and blue blood.",
     "Bananas are berries, but strawberries aren't!",
     "A day on Venus is longer than its year.",
-    "The shortest war in history lasted 38 minutes (Anglo-Zanzibar War, 1896).",
-    "A group of crows is called a 'murder'.",
-    "Sharks have been around longer than trees!",
 ]
 
 # Roasts Database (sample roasts)
