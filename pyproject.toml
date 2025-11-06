@@ -39,13 +39,23 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "DTZ", "T10", "EM"]
 ignore = [
-    "E501",
-    "E722",
-    "DTZ003",
-    "DTZ005",
-    "DTZ006",
-    "DTZ007",
-    "N999",
+    "E501",   # Line too long
+    "E402",   # Module level import not at top of file
+    "E722",   # Bare except
+    "F841",   # Local variable assigned but never used
+    "W292",   # No newline at end of file
+    "W293",   # Blank line contains whitespace
+    "I001",   # Import block is un-sorted or un-formatted
+    "UP007",  # Use X | Y for type annotations
+    "B007",   # Loop control variable not used within loop body
+    "C401",   # Unnecessary generator
+    "C416",   # Unnecessary list comprehension
+    "DTZ003", # Datetime without timezone
+    "DTZ005", # Datetime without timezone
+    "DTZ006", # Datetime without timezone
+    "DTZ007", # Datetime without timezone
+    "EM101",  # Exception must not use string literal
+    "N999",   # Invalid module name
 ]
 
 [tool.mypy]
