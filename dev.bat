@@ -8,16 +8,26 @@ chcp 65001 >nul
 REM Set window title
 title MalaBoT Development Tools
 
-REM Configure git to never open editor for merges
+REM Configure git to never open editor for merges and handle authentication
 git config pull.rebase false >nul 2>&1
 git config merge.commit no >nul 2>&1
 git config core.editor "echo" >nul 2>&1
+git config credential.helper store >nul 2>&1
 
 REM Check if Python is installed
 python --version >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Python is not installed or not in PATH!
     echo Please install Python 3.8+ and try again.
+    pause
+    exit /b 1
+)
+
+REM Check if we're in a git repository
+git rev-parse --git-dir >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] This is not a Git repository!
+    echo Please navigate to the MalaBoT directory first.
     pause
     exit /b 1
 )
@@ -63,29 +73,22 @@ echo  9. Check Git Status             - View modified/staged files
 echo 10. Stage All Changes            - Stage all files for commit
 echo 11. Commit Changes               - Commit staged files with message
 echo 12. Push to GitHub               - Push commits to remote
-echo 13. Remote Deploy to Droplet    - Deploy to production server (PM2)
-echo 14. Pull from GitHub             - Get latest changes from remote
+echo 13. Pull from GitHub             - Get latest changes from remote (MAIN BRANCH)
+echo 14. Switch Branch                - Switch to different branch
 echo 15. View Commit History          - Show last 10 commits
 echo.
-echo [DROPLET MANAGEMENT]
-echo 16. View Droplet Status          - Check PM2 bot status on droplet
-echo 17. View Droplet Logs            - View live logs from droplet
-echo 18. Restart Droplet Bot          - Restart bot on droplet
-echo 19. Stop Droplet Bot             - Stop bot on droplet
-echo.
 echo [UTILITIES]
-echo 20. Install Dependencies         - Install/update Python packages
-echo 21. Test Configuration           - Validate .env settings
-echo.
-echo [ADVANCED OPS]
-echo 22. Backup Now                   - Backup logs and database
-echo 23. Verify Environment           - Check configuration validity
-echo 24. Clear All                    - Clear commands + caches + logs + temp
+echo 16. Install Dependencies         - Install/update Python packages
+echo 17. Test Configuration           - Validate .env settings
+echo 18. Create Backup                - Backup logs and database
+echo 19. Environment Check            - Check configuration validity
 echo.
 echo [EXIT]
 echo  0. Exit                         - Close development tools
 echo.
 echo ================================================================================
+echo.
+
 set /p choice="Enter your choice: "
 
 if "%choice%"=="1" goto start
@@ -100,18 +103,13 @@ if "%choice%"=="9" goto gitstatus
 if "%choice%"=="10" goto gitstage
 if "%choice%"=="11" goto gitcommit
 if "%choice%"=="12" goto gitpush
-if "%choice%"=="13" goto remotedeploy
-if "%choice%"=="14" goto gitpull
+if "%choice%"=="13" goto gitpull_main
+if "%choice%"=="14" goto switchbranch
 if "%choice%"=="15" goto githistory
-if "%choice%"=="16" goto droplet_status
-if "%choice%"=="17" goto droplet_logs
-if "%choice%"=="18" goto droplet_restart
-if "%choice%"=="19" goto droplet_stop
-if "%choice%"=="20" goto installdeps
-if "%choice%"=="21" goto testconfig
-if "%choice%"=="22" goto backupnow
-if "%choice%"=="23" goto verifyenv
-if "%choice%"=="24" goto clearall
+if "%choice%"=="16" goto installdeps
+if "%choice%"=="17" goto testconfig
+if "%choice%"=="18" goto backupnow
+if "%choice%"=="19" goto verifyenv
 if "%choice%"=="0" goto exit
 
 echo Invalid choice. Please try again.
@@ -120,319 +118,173 @@ goto menu
 
 :start
 echo.
-echo [1/4] Clearing Python cache...
-for /r %%F in (*.pyc) do del "%%F" 2>NUL
-for /d /r %%D in (__pycache__) do rmdir /S /Q "%%D" 2>NUL
+echo [INFO] Starting MalaBoT...
+echo.
 
-echo [2/4] Checking for .env file...
-if not exist .env (
-    echo [WARNING] .env file not found!
-    echo [INFO] Creating from template...
-    if exist .env.example (
-        copy .env.example .env >NUL
-        echo [INFO] .env file created from template!
-        echo [IMPORTANT] Please edit .env file with your bot token and settings:
-        echo          - DISCORD_TOKEN: Your Discord bot token
-        echo          - OWNER_IDS: Your Discord user ID
-        pause
-        goto menu
-    ) else (
-        echo [ERROR] .env.example file not found!
-        pause
-        goto menu
-    )
-)
+REM Clear cache
+call :clearcache_internal
 
-echo [3/4] Testing configuration...
+REM Validate configuration
+echo [INFO] Validating configuration...
 python -c "from config.settings import settings; errors = settings.validate(); print('Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
 if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Configuration test failed!
-    echo [INFO] Please check your .env file and ensure:
-    echo        - DISCORD_TOKEN is set correctly
-    echo        - OWNER_IDS contains your Discord user ID
+    echo [WARNING] Configuration validation failed. Please check your .env file.
+    echo.
+    echo [IMPORTANT] Please edit .env file with your bot token and settings:
+    echo          - DISCORD_TOKEN: Your Discord bot token
+    echo          - OWNER_IDS: Your Discord user ID
+    echo.
     pause
     goto menu
 )
 
-echo [4/4] Starting MalaBoT...
-start "MalaBoT Console" cmd /k "title MalaBoT Console && python bot.py"
+REM Start bot
+echo [INFO] Starting bot...
+start "MalaBoT" cmd /k "python bot.py"
 echo [SUCCESS] Bot started in new window!
-echo [INFO] Use option 5 to view live logs
-timeout /T 3 /NOBREAK >NUL
+timeout /T 2 /NOBREAK >NUL
 goto menu
 
 :stop
 echo.
 echo [INFO] Stopping MalaBoT...
+call :stop_internal
+goto menu
 
+:stop_internal
 REM Method 1: Try to close by window title
-echo [1/3] Attempting to stop via window title...
-taskkill /FI "WINDOWTITLE eq MalaBoT Console" /F >nul 2>&1
-if %ERRORLEVEL% EQU 0 (
-    echo [SUCCESS] Bot stopped via window title
-    goto stop_done
-)
+taskkill /FI "WINDOWTITLE eq MalaBoT*" /F >nul 2>&1
 
 REM Method 2: Try to find and kill python processes running bot.py
-echo [2/3] Attempting to stop via process detection...
-tasklist /FI "IMAGENAME eq python.exe" /FO CSV | findstr /I "bot.py" >nul 2>&1
-if %ERRORLEVEL% EQU 0 (
-    for /f "tokens=2 delims=," %%P in ('tasklist /FI "IMAGENAME eq python.exe" /FO CSV ^| findstr /I "bot.py"') do (
-        taskkill /PID %%P /F >nul 2>&1
+for /f "tokens=2" %%i in ('tasklist /FI "IMAGENAME eq python.exe" /FO LIST ^| find "PID:"') do (
+    wmic process where "ProcessId=%%i" get CommandLine /format:list 2>nul | find "bot.py" >nul
+    if !ERRORLEVEL! EQU 0 (
+        taskkill /PID %%i /F >nul 2>&1
     )
-    echo [SUCCESS] Bot stopped via process detection
-    goto stop_done
 )
 
-REM Method 3: Fallback - try all python processes
-echo [3/3] Attempting fallback termination...
-taskkill /IM python.exe /F >nul 2>&1
+REM Method 3: Fallback - try all python processes (safer approach)
+timeout /T 1 /NOBREAK >NUL
+tasklist /FI "IMAGENAME eq python.exe" 2>nul | find "python.exe" >nul
 if %ERRORLEVEL% EQU 0 (
-    echo [SUCCESS] Bot stopped via fallback method
-    goto stop_done
+    echo [WARNING] Python processes still running. Please check manually.
+) else (
+    echo [SUCCESS] Bot stopped successfully!
 )
-
-echo [WARNING] Could not find running bot process
-:stop_done
-timeout /T 2 /NOBREAK >nul
-goto menu
+goto :eof
 
 :restart
 echo.
-echo [1/5] Stopping bot...
+echo [INFO] Restarting MalaBoT...
 call :stop_internal
 timeout /T 2 /NOBREAK >NUL
-
-echo [2/5] Clearing Python cache...
-for /r %%F in (*.pyc) do del "%%F" 2>NUL
-for /d /r %%D in (__pycache__) do rmdir /S /Q "%%D" 2>NUL
-
-echo [3/5] Testing configuration...
-if not exist .env (
-    echo [ERROR] .env file missing! Use option 16 to create it.
-    pause
-    goto menu
-)
-
-python -c "from config.settings import settings; errors = settings.validate(); print('Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Configuration test failed!
-    echo [INFO] Check your .env file settings
-    pause
-    goto menu
-)
-
-echo [4/5] Starting bot...
-start "MalaBoT Console" cmd /k "title MalaBoT Console && python bot.py"
-
-echo [5/5] Bot restarted successfully!
-echo [INFO] Use option 5 to view live logs
-timeout /T 3 /NOBREAK >NUL
-goto menu
+goto start
 
 :status
 echo.
-echo ========================================
 echo Bot Status:
-echo ========================================
-
-REM Safe timestamp
-for /f "tokens=2 delims==." %%A in ('wmic os get localdatetime /value 2^>nul') do set "ts_raw=%%A"
-if not defined ts_raw (
-    set "ts=Unknown"
-) else (
-    set "ts=%ts_raw:~0,4%-%ts_raw:~4,2%-%ts_raw:~6,2% %ts_raw:~8,2%:%ts_raw:~10,2%"
-)
-echo Checked: %ts%
-echo ========================================
-
-REM Check if bot window is running
-tasklist /V /FI "WINDOWTITLE eq MalaBoT Console" 2>nul | find /I "MalaBoT Console" >nul 2>&1
-if %ERRORLEVEL% EQU 0 (
-    echo [STATUS] Bot is RUNNING via window title
-    goto status_done
-)
-
-REM Check if python processes are running bot.py
-tasklist /FI "IMAGENAME eq python.exe" /FO CSV | findstr /I "bot.py" >nul 2>&1
-if %ERRORLEVEL% EQU 0 (
-    echo [STATUS] Bot is RUNNING via process detection
-    echo Running processes:
-    tasklist /FI "IMAGENAME eq python.exe" /FO CSV | findstr /I "bot.py"
-    goto status_done
-)
-
-echo [STATUS] Bot is NOT RUNNING
-
-:status_done
+echo ==========
 echo.
-echo ========================================
-echo Recent log entries (last 10 lines):
-echo ========================================
+
+REM Check for running python processes
+tasklist /FI "IMAGENAME eq python.exe" 2>nul | find "python.exe" >nul
+if %ERRORLEVEL% EQU 0 (
+    echo [RUNNING] Bot process(es) detected:
+    tasklist /FI "IMAGENAME eq python.exe" /FO TABLE
+    
+    REM Check if bot.py is running
+    for /f "tokens=2" %%i in ('tasklist /FI "IMAGENAME eq python.exe" /FO LIST ^| find "PID:"') do (
+        wmic process where "ProcessId=%%i" get CommandLine /format:list 2>nul | find "bot.py" >nul
+        if !ERRORLEVEL! EQU 0 (
+            echo [CONFIRMED] bot.py is running (PID: %%i)
+        )
+    )
+) else (
+    echo [STOPPED] No bot processes detected.
+)
+
+echo.
+if exist "bot.db" (
+    for %%F in ("bot.db") do (
+        set "ts_raw=%%~tF"
+        set "ts=!ts_raw:~0,4!-!ts_raw:~4,2!-!ts_raw:~6,2! !ts_raw:~8,2!:!ts_raw:~10,2!"
+    )
+    echo Database: bot.db (Modified: !ts!)
+) else (
+    echo Database: bot.db (NOT FOUND)
+)
 
 if exist "data\logs\bot.log" (
-    echo [INFO] Displaying last 10 log lines...
-    for /f "skip=-10" %%L in ('type "data\logs\bot.log" 2^>nul') do echo %%L
+    for %%F in ("data\logs\bot.log") do (
+        set "ts_raw=%%~tF"
+        set "ts=!ts_raw:~0,4!-!ts_raw:~4,2!-!ts_raw:~6,2! !ts_raw:~8,2!:!ts_raw:~10,2!"
+    )
+    echo Log File: data\logs\bot.log (Modified: !ts!)
 ) else (
-    echo [INFO] No log file found - bot may not have started yet
+    echo Log File: data\logs\bot.log (NOT FOUND)
 )
 
-echo ========================================
+echo.
+echo Recent log entries (last 10 lines):
+if exist "data\logs\bot.log" (
+    powershell "Get-Content 'data\logs\bot.log' -Tail 10"
+) else (
+    echo [WARNING] Log file not found at: data\logs\bot.log
+)
+
 echo.
 pause
 goto menu
 
 :logs
 echo.
-echo [INFO] Opening log viewer...
-echo [INFO] Press Ctrl+C to stop viewing logs
+echo [INFO] Viewing live logs (Press Ctrl+C to stop)...
 echo.
-
 if exist "data\logs\bot.log" (
-    type "data\logs\bot.log" | more
+    powershell "Get-Content 'data\logs\bot.log' -Wait -Tail 20"
 ) else (
-    echo [WARNING] Log file not found at: data\logs\bot.log
-    echo [INFO] Check if bot is running
+    echo [ERROR] Log file not found: data\logs\bot.log
+    pause
 )
-pause
 goto menu
 
 :clearcache
 echo.
 echo [INFO] Clearing all caches...
-echo [1/4] Clearing Python cache...
-for /r %%F in (*.pyc) do del "%%F" 2>NUL
-for /d /r %%D in (__pycache__) do rmdir /S /Q "%%D" 2>NUL
-
-echo [2/4] Clearing pytest cache...
-rmdir /S /Q .pytest_cache 2>NUL
-
-echo [3/4] Cleaning temporary files...
-del /F /Q *.tmp 2>NUL
-
-echo [4/4] Cleaning old logs (keeping last 5)...
-if exist "data\logs\*.log" (
-    dir /B /O-D "data\logs\*.log" 2>nul > temp_files.txt
-    for /f "skip=5 delims=" %%F in (temp_files.txt) do del "data\logs\%%F" 2>NUL
-    del temp_files.txt 2>NUL
-)
-
+call :clearcache_internal
 echo [SUCCESS] All caches cleared!
 timeout /T 2 /NOBREAK >NUL
 goto menu
 
-:gitstatus
-echo.
-echo ========================================
-echo Git Status:
-echo ========================================
-git status
-echo.
-echo ========================================
-pause
-goto menu
+:clearcache_internal
+REM Clear Python cache
+if exist "__pycache__" rmdir /s /q "__pycache__" >nul 2>&1
+if exist ".pytest_cache" rmdir /s /q ".pytest_cache" >nul 2>&1
+if exist "data\logs\*.log" del /q "data\logs\*.log" >nul 2>&1
+if exist "*.pyc" del /q "*.pyc" >nul 2>&1
 
-:gitstage
-echo.
-echo [INFO] Staging all changes...
-git add .
-echo [SUCCESS] All changes staged!
-echo.
-echo Staged files:
-git status --short
-timeout /T 3 /NOBREAK >NUL
-goto menu
+REM Clear temp files
+if exist "temp" rmdir /s /q "temp" >nul 2>&1
+if exist "tmp" rmdir /s /q "tmp" >nul 2>&1
 
-:gitcommit
-echo.
-set /p message="Enter commit message: "
-if "%message%"=="" (
-    echo [ERROR] Commit message cannot be empty!
-    timeout /T 2 /NOBREAK >NUL
-    goto menu
-)
-echo [INFO] Committing changes...
-git commit -m "%message%"
-if %ERRORLEVEL% EQU 0 (
-    echo [SUCCESS] Changes committed!
-) else (
-    echo [INFO] No changes to commit or commit failed
-)
-timeout /T 3 /NOBREAK >NUL
-goto menu
-
-:gitpush
-echo.
-echo [INFO] Pushing to GitHub...
-call :get_current_branch
-if not defined current_branch (
-    echo [ERROR] Could not determine the current Git branch.
-    pause
-    goto menu
-)
-echo [INFO] Pushing to branch: %current_branch%
-git push origin %current_branch%
-if %ERRORLEVEL% EQU 0 (
-    echo [SUCCESS] Pushed to GitHub successfully!
-) else (
-    echo [ERROR] Failed to push to GitHub.
-    echo [INFO] 1. Check if you have new remote changes by running 'git pull'.
-    echo [INFO] 2. Check if you have committed your local changes.
-    echo [INFO] 3. Check your network connection and git credentials.
-)
-pause
-goto menu
-
-:gitpull
-echo.
-echo [INFO] Pulling from GitHub...
-call :get_current_branch
-if not defined current_branch (
-    echo [ERROR] Could not determine the current Git branch.
-    pause
-    goto menu
-)
-echo [INFO] Pulling latest changes for branch: %current_branch%
-echo.
-git pull origin %current_branch%
-if %ERRORLEVEL% EQU 0 (
-    echo.
-    echo [SUCCESS] Pulled from GitHub successfully!
-) else (
-    echo.
-    echo [ERROR] Failed to pull from GitHub. Your local changes might conflict.
-    echo [INFO] Use 'git status' to see conflicting files.
-)
-echo.
-pause
-goto menu
-
-:githistory
-echo.
-echo ========================================
-echo Last 10 Commits:
-echo ========================================
-git log --oneline -10
-echo.
-echo ========================================
-pause
-goto menu
+REM Clear Python bytecode cache recursively
+for /d /r . %%d in (__pycache__) do @if exist "%%d" rmdir /s /q "%%d" >nul 2>&1
+goto :eof
 
 :updateworkflow
 echo.
-echo ========================================
-echo Starting Update Workflow
-echo ========================================
-echo.
-call :get_current_branch
-if not defined current_branch (
-    echo [ERROR] Could not determine the current Git branch.
+echo [INFO] Starting Update Workflow...
+echo [1/5] Pulling latest changes from main branch...
+
+REM Switch to main branch first
+git checkout main >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to switch to main branch!
     pause
     goto menu
 )
 
-echo [1/5] Pulling latest changes for branch %current_branch%...
-git pull origin %current_branch%
+git pull origin main
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to pull from GitHub!
     pause
@@ -440,30 +292,36 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo [2/5] Installing dependencies...
-call :installdeps_silent
+call :installdeps_internal
 
-echo [3/5] Restarting bot...
+echo [3/5] Clearing caches...
+call :clearcache_internal
+
+echo [4/5] Restarting bot...
 call :stop_internal
 timeout /T 2 /NOBREAK >NUL
+
+echo [5/5] Starting bot...
 call :start_internal
 
-echo [4/5] Checking status...
+echo [SUCCESS] Update workflow completed!
 timeout /T 3 /NOBREAK >NUL
-call :status_basic
-
-echo [5/5] Workflow complete!
-echo ========================================
-echo [SUCCESS] Update Workflow Complete!
-echo ========================================
-pause
 goto menu
+
+:start_internal
+python -c "from config.settings import settings; errors = settings.validate(); print('Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
+if %ERRORLEVEL% NEQ 0 (
+    echo [WARNING] Configuration validation failed.
+    pause
+    goto :eof
+)
+
+start "MalaBoT" cmd /k "python bot.py"
+goto :eof
 
 :deployworkflow
 echo.
-echo ========================================
-echo Starting Deploy Workflow
-echo ========================================
-echo.
+echo [INFO] Starting Deploy Workflow...
 call :get_current_branch
 if not defined current_branch (
     echo [ERROR] Could not determine the current Git branch.
@@ -471,111 +329,6 @@ if not defined current_branch (
     goto menu
 )
 
-echo [1/5] Checking git status...
-git status --short
-echo.
-
-set /p confirm="Do you want to stage all changes? (Y/N): "
-if /i not "%confirm%"=="Y" goto menu
-
-echo [2/5] Staging changes...
-git add .
-
-echo [3/5] Enter commit message:
-set /p message="Commit message: "
-if "%message%"=="" (
-    echo [ERROR] Commit message cannot be empty!
-    timeout /T 2 /NOBREAK >NUL
-    goto menu
-)
-
-echo [4/5] Committing changes...
-git commit -m "%message%"
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Failed to commit changes!
-    pause
-    goto menu
-)
-
-echo [5/5] Pushing to GitHub branch: %current_branch%...
-git push origin %current_branch%
-
-if %ERRORLEVEL% EQU 0 (
-    echo.
-    echo ========================================
-    echo [SUCCESS] Deploy Workflow Complete!
-    echo ========================================
-    echo.
-    echo Your changes are now on GitHub!
-    echo.
-) else (
-    echo [ERROR] Failed to push to GitHub
-)
-
-pause
-goto menu
-
-:installdeps
-echo.
-echo [INFO] Installing dependencies...
-pip install -r requirements.txt
-if %ERRORLEVEL% EQU 0 (
-    echo [SUCCESS] Dependencies installed successfully!
-) else (
-    echo [ERROR] Failed to install dependencies!
-)
-timeout /T 3 /NOBREAK >NUL
-goto menu
-
-:installdeps_silent
-pip install -r requirements.txt >nul 2>&1
-goto :eof
-
-:testconfig
-echo.
-echo [INFO] Testing bot configuration...
-if not exist .env (
-    echo [ERROR] .env file not found! Create .env file first.
-    pause
-    goto menu
-)
-
-python -c "try:
-    from config.settings import settings
-    errors = settings.validate()
-    if errors:
-        print('[ERROR] Configuration errors:')
-        for error in errors:
-            print(f'  - {error}')
-    else:
-        print('[SUCCESS] Configuration is valid!')
-        print(f'[INFO] Bot Name: {settings.BOT_NAME}')
-        print(f'[INFO] Bot Prefix: {settings.BOT_PREFIX}')
-        print(f'[INFO] Log Level: {settings.LOG_LEVEL}')
-        print(f'[INFO] Log File: {settings.LOG_FILE}')
-except Exception as e:
-    print(f'[ERROR] Failed to load configuration: {e}')
-"
-
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Configuration test failed!
-) else (
-    echo [SUCCESS] Configuration test completed!
-)
-pause
-goto menu
-
-:remotedeploy
-echo.
-echo ========================================
-echo Remote Deploy to Droplet (PM2)
-echo ========================================
-call :get_current_branch
-if not defined current_branch (
-    echo [ERROR] Could not determine the current Git branch.
-    pause
-    goto menu
-)
 if not "%current_branch%"=="main" (
     echo [WARNING] You are not on the 'main' branch.
     set /p confirm_deploy="Are you sure you want to deploy the '%current_branch%' branch? (y/n): "
@@ -586,243 +339,291 @@ if not "%current_branch%"=="main" (
     )
 )
 
-set DROPLET_USER=malabot
-set DROPLET_IP=165.232.156.230
-set DROPLET_DIR=/home/malabot/MalaBoT
+echo [1/5] Checking git status...
+git status --short
+echo.
 
-echo [1/5] Pushing local changes to GitHub branch %current_branch%...
+echo [2/5] Staging all changes...
+git add -A
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to stage changes!
+    pause
+    goto menu
+)
+
+echo [3/5] Committing changes...
+set /p commit_msg="Enter commit message: "
+if "%commit_msg%"=="" (
+    echo [ERROR] Commit message cannot be empty!
+    pause
+    goto menu
+)
+
+git commit -m "%commit_msg%"
+if %ERRORLEVEL% NEQ 0 (
+    echo [WARNING] Nothing to commit or commit failed.
+) else (
+    echo [SUCCESS] Changes committed!
+)
+
+echo [4/5] Pushing to GitHub...
 git push origin %current_branch%
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] git push failed. Make sure changes are committed first.
+if %ERRORLEVEL% EQU 0 (
+    echo [SUCCESS] Pushed to GitHub successfully!
+) else (
+    echo [ERROR] Failed to push to GitHub. Check your connection and permissions.
     pause
     goto menu
 )
-echo [2/5] SSH into droplet and update code...
-ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git fetch origin && git checkout %current_branch% && git reset --hard origin/%current_branch%"
-echo [3/5] Installing/updating dependencies...
-ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && pip3 install -r requirements.txt --quiet"
-echo [4/5] Restarting bot with PM2...
-ssh %DROPLET_USER%@%DROPLET_IP% "pm2 restart malabot || pm2 start %DROPLET_DIR%/bot.py --name malabot --interpreter python3"
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Failed to restart bot with PM2
-    pause
-    goto menu
-)
-echo [5/5] Checking bot status...
-ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list && pm2 logs malabot --lines 20 --nostream"
-echo.
-echo [SUCCESS] Remote deploy complete!
-echo Bot is running on droplet with PM2
-echo.
 
+echo [5/5] Deployment workflow completed!
+echo.
+timeout /T 3 /NOBREAK >NUL
+goto menu
+
+:gitstatus
+echo.
+echo Git Status:
+echo ==========
+git status
+echo.
+pause
+goto menu
+
+:gitstage
+echo.
+echo Staging files...
+git add -A
+echo Staged files:
+git status --short
+echo.
+pause
+goto menu
+
+:gitcommit
+echo.
+echo Committing staged changes...
+set /p commit_msg="Enter commit message: "
+if "%commit_msg%"=="" (
+    echo [ERROR] Commit message cannot be empty!
+    pause
+    goto menu
+)
+
+git commit -m "%commit_msg%"
+if %ERRORLEVEL% EQU 0 (
+    echo [SUCCESS] Changes committed!
+) else (
+    echo [WARNING] Nothing to commit or commit failed.
+)
+echo.
+pause
+goto menu
+
+:gitpush
+echo.
+call :get_current_branch
+if not defined current_branch (
+    echo [ERROR] Could not determine the current Git branch.
+    pause
+    goto menu
+)
+
+echo [INFO] Pushing to branch: %current_branch%
+git push origin %current_branch%
+if %ERRORLEVEL% EQU 0 (
+    echo [SUCCESS] Pushed to GitHub successfully!
+) else (
+    echo [ERROR] Failed to push to GitHub. Check your connection and permissions.
+)
+echo.
+pause
+goto menu
+
+:gitpull_main
+echo.
+echo [INFO] Pulling from GitHub main branch...
+echo [WARNING] This will switch to main branch and pull latest changes.
+echo Any local changes will be stashed first.
+echo.
+set /p confirm="Continue? (y/n): "
+if /i not "%confirm%"=="y" (
+    echo [CANCELLED] Pull cancelled.
+    pause
+    goto menu
+)
+
+REM Stash any local changes
+git stash push -m "Auto-stash before pull" >nul 2>&1
+
+REM Switch to main and pull
+git checkout main
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to switch to main branch!
+    pause
+    goto menu
+)
+
+git pull origin main
+if %ERRORLEVEL% EQU 0 (
+    echo.
+    echo [SUCCESS] Pulled latest changes from main branch!
+    
+    REM Check if we stashed anything
+    git stash list >nul 2>&1
+    if %ERRORLEVEL% EQU 0 (
+        echo [INFO] You had local changes that were stashed.
+        set /p restore_stash="Restore stashed changes? (y/n): "
+        if /i "%restore_stash%"=="y" (
+            git stash pop
+            echo [INFO] Stashed changes restored.
+        )
+    )
+) else (
+    echo.
+    echo [ERROR] Failed to pull from GitHub. Your local changes might conflict.
+    echo [INFO] Use 'git status' to see conflicting files.
+)
+echo.
+pause
+goto menu
+
+:switchbranch
+echo.
+echo Available branches:
+git branch -a
+echo.
+set /p branch_name="Enter branch name to switch to: "
+if "%branch_name%"=="" (
+    echo [ERROR] Branch name cannot be empty!
+    pause
+    goto menu
+)
+
+git checkout %branch_name%
+if %ERRORLEVEL% EQU 0 (
+    echo [SUCCESS] Switched to branch: %branch_branch%
+) else (
+    echo [ERROR] Failed to switch to branch: %branch_name%
+    echo [INFO] Use 'git branch -r' to see available remote branches.
+)
+echo.
+pause
+goto menu
+
+:githistory
+echo.
+echo Commit History (last 10):
+echo ========================
+git log --oneline -10
+echo.
+pause
+goto menu
+
+:installdeps
+echo.
+echo [INFO] Installing/updating dependencies...
+call :installdeps_internal
+echo [SUCCESS] Dependencies installed!
+pause
+goto menu
+
+:installdeps_internal
+pip install -r requirements.txt --upgrade
+if %ERRORLEVEL% NEQ 0 (
+    echo [WARNING] Some dependencies may have failed to install.
+)
+goto :eof
+
+:testconfig
+echo.
+echo [INFO] Testing configuration...
+python -c "from config.settings import settings; errors = settings.validate(); print(f'Configuration OK' if not errors else f'Errors: {errors}')"
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Configuration validation failed!
+    echo.
+    echo [INFO] Please check your .env file and ensure:
+    echo - DISCORD_TOKEN is set and valid
+    echo - OWNER_IDS contains your Discord user ID(s)
+    echo - Other required settings are properly configured
+) else (
+    echo [SUCCESS] Configuration is valid!
+)
+echo.
 pause
 goto menu
 
 :backupnow
 echo.
-echo ========================================
-echo Backup Now
-echo ========================================
+echo [INFO] Creating backup...
+set "backup_dir=backups\%date:~-4,4%%date:~-10,2%%date:~-7,2%_%time:~0,2%%time:~3,2%"
+set "backup_dir=%backup_dir: =0%"
 
-REM Safe universal timestamp
-for /f "tokens=2 delims==." %%A in ('wmic os get localdatetime /value 2^>nul') do set "dt=%%A"
-set "TS=%dt:~0,4%-%dt:~4,2%-%dt:~6,2%_%dt:~8,2%-%dt:~10,2%"
+if not exist "%backup_dir%" mkdir "%backup_dir%"
 
-if not exist "backups\logs" mkdir "backups\logs"
-if not exist "backups\db" mkdir "backups\db"
-if exist "data\logs" xcopy "data\logs" "backups\logs\%TS%\" /E /Q /Y >nul
-if exist "data\bot.db" copy /Y "data\bot.db" "backups\db\bot_%TS%.db" >nul
-echo [SUCCESS] Backup saved with tag %TS%.
+REM Backup database
+if exist "bot.db" copy "bot.db" "%backup_dir%&quot; >nul 2>&1
+
+REM Backup logs
+if exist "data\logs" xcopy "data\logs" "%backup_dir%\logs&quot; /E /I >nul 2>&1
+
+REM Backup config
+if exist ".env" copy ".env" "%backup_dir%&quot; >nul 2>&1
+
+echo [SUCCESS] Backup created: %backup_dir%
 pause
 goto menu
 
 :verifyenv
 echo.
-echo ========================================
-echo Verify Environment
-echo ========================================
-if not exist .env (
-    echo [ERROR] .env not found!
-    pause
-    goto menu
-)
+echo [INFO] Verifying environment...
+echo.
 
-python -c "from config.settings import settings; errs=settings.validate(); import sys; sys.exit(0) if not errs else (print('[ERROR] Config validation failed:') or [print(' -', e) for e in errs] or sys.exit(1))"
+REM Python version
+python --version
+
+REM Git status
+echo Git repository: 
+git rev-parse --git-dir >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    echo [OK] Environment validated successfully.
+    echo [OK] Git repository detected
+    call :get_current_branch
+    echo Current branch: %current_branch%
 ) else (
-    echo [ERROR] Validation failed. Check your .env settings.
-)
-pause
-goto menu
-
-:clearall
-echo.
-echo ========================================
-echo Clear All - Complete System Cleanup
-echo ========================================
-echo.
-echo [WARNING] This will clear:
-echo   - Discord slash commands (all servers)
-echo   - Python cache files (.pyc, __pycache__)
-echo   - Pytest cache
-echo   - Temporary files
-echo   - Old log files (keeping last 5)
-echo   - Discord.py cache
-echo.
-set /p confirm="Are you sure you want to continue? (yes/no): "
-if /i "%confirm%"=="yes" goto clearall_continue
-if /i "%confirm%"=="y" goto clearall_continue
-echo [CANCELLED] Clear all operation cancelled.
-timeout /T 2 /NOBREAK >NUL
-goto menu
-
-:clearall_continue
-
-echo.
-echo [1/4] Stopping bot...
-call :stop_internal
-timeout /T 2 /NOBREAK >NUL
-
-echo [2/4] Running system cleanup...
-python cleanup.py --auto
-if %ERRORLEVEL% NEQ 0 (
-    echo [WARNING] Cleanup script encountered errors
-) else (
-    echo [SUCCESS] System cleanup completed
+    echo [ERROR] Not a Git repository!
 )
 
-echo [3/4] Clearing Discord commands...
-python clear_and_sync.py --auto
-if %ERRORLEVEL% NEQ 0 (
-    echo [WARNING] Command clear script failed or was cancelled
+REM Configuration check
+python -c "from config.settings import settings; errors = settings.validate(); print('Configuration: VALID' if not errors else f'Configuration: INVALID ({len(errors)} errors)')" 2>NUL
+
+REM Dependencies check
+pip show discord.py >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo Dependencies: discord.py installed
 ) else (
-    echo [SUCCESS] Discord commands cleared
+    echo Dependencies: discord.py NOT installed
 )
 
-echo [4/4] Final verification...
-echo [SUCCESS] All cleanup operations completed
+REM Files check
+if exist "bot.py" (
+    echo Files: bot.py found
+) else (
+    echo Files: bot.py NOT found
+)
 
-echo.
-echo ========================================
-echo [SUCCESS] Complete System Cleanup Done!
-echo ========================================
-echo.
-echo Next steps:
-echo   1. Start your bot (option 1)
-echo   2. Wait 30 seconds for commands to sync
-echo   3. Test commands in Discord
+if exist "bot.db" (
+    echo Database: bot.db found
+) else (
+    echo Database: bot.db not found (will be created on first run)
+)
+
 echo.
 pause
 goto menu
-
-:droplet_status
-echo.
-echo ========================================
-echo Droplet Status (PM2)
-echo ========================================
-set DROPLET_USER=malabot
-set DROPLET_IP=165.232.156.230
-echo Checking bot status on droplet...
-ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list && echo. && pm2 info malabot"
-echo.
-pause
-goto menu
-
-:droplet_logs
-echo.
-echo ========================================
-echo Droplet Logs (Live)
-echo ========================================
-set DROPLET_USER=malabot
-set DROPLET_IP=165.232.156.230
-echo Viewing live logs from droplet...
-echo Press Ctrl+C to stop viewing logs
-echo.
-ssh %DROPLET_USER%@%DROPLET_IP% "pm2 logs malabot"
-goto menu
-
-:droplet_restart
-echo.
-echo ========================================
-echo Restart Droplet Bot
-echo ========================================
-set DROPLET_USER=malabot
-set DROPLET_IP=165.232.156.230
-echo Restarting bot on droplet...
-ssh %DROPLET_USER%@%DROPLET_IP% "pm2 restart malabot"
-if %ERRORLEVEL% EQU 0 (
-    echo [SUCCESS] Bot restarted successfully
-    ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list"
-) else (
-    echo [ERROR] Failed to restart bot
-)
-echo.
-pause
-goto menu
-
-:droplet_stop
-echo.
-echo ========================================
-echo Stop Droplet Bot
-echo ========================================
-set DROPLET_USER=malabot
-set DROPLET_IP=165.232.156.230
-echo.
-echo WARNING: This will stop the bot on the droplet!
-set /p confirm="Are you sure? (y/n): "
-if /i not "%confirm%"=="y" (
-    echo Cancelled.
-    pause
-    goto menu
-)
-echo Stopping bot on droplet...
-ssh %DROPLET_USER%@%DROPLET_IP% "pm2 stop malabot"
-if %ERRORLEVEL% EQU 0 (
-    echo [SUCCESS] Bot stopped
-    ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list"
-) else (
-    echo [ERROR] Failed to stop bot
-)
-echo.
-pause
-goto menu
-
-REM Internal helper functions
-:stop_internal
-taskkill /FI "WINDOWTITLE eq MalaBoT Console" /F 2>NUL
-tasklist /FI "IMAGENAME eq python.exe" /FO CSV | findstr /I "bot.py" >nul 2>&1
-if %ERRORLEVEL% EQU 0 (
-    for /f "tokens=2 delims=," %%P in ('tasklist /FI "IMAGENAME eq python.exe" /FO CSV ^| findstr /I "bot.py"') do (
-        taskkill /PID %%P /F 2>NUL
-    )
-)
-goto :eof
-
-:start_internal
-for /r %%F in (*.pyc) do del "%%F" 2>NUL
-for /d /r %%D in (__pycache__) do rmdir /S /Q "%%D" 2>NUL
-if not exist "data" mkdir "data"
-if not exist "data\logs" mkdir "data\logs"
-start "MalaBoT Console" cmd /k "title MalaBoT Console && python bot.py"
-goto :eof
-
-:status_basic
-tasklist /V /FI "WINDOWTITLE eq MalaBoT Console" 2>nul | find /I "MalaBoT Console" >nul 2>&1
-if %ERRORLEVEL% EQU 0 (
-    echo [STATUS] Bot is RUNNING
-) else (
-    tasklist /FI "IMAGENAME eq python.exe" /FO CSV | findstr /I "bot.py" >nul 2>&1
-    if %ERRORLEVEL% EQU 0 (
-        echo [STATUS] Bot is RUNNING
-    ) else (
-        echo [STATUS] Bot is NOT RUNNING
-    )
-)
-goto :eof
 
 :get_current_branch
-for /f "tokens=*" %%i in ('git rev-parse --abbrev-ref HEAD') do set "current_branch=%%i"
+for /f "tokens=*" %%i in ('git rev-parse --abbrev-ref HEAD 2^>nul') do set "current_branch=%%i"
+if not defined current_branch set "current_branch=unknown"
 goto :eof
 
 :exit
