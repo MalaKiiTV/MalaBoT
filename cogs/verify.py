@@ -260,7 +260,7 @@ class VerifyGroup(app_commands.Group):
             # Check staff permission (uses general mod role)
             from utils.helpers import check_mod_permission
 
-            if not await check_mod_permission(interaction, self.cog.db):
+            if not await check_mod_permission(interaction, self.cog.db_manager):
                 return
 
             guild_id = interaction.guild.id
@@ -279,7 +279,7 @@ class VerifyGroup(app_commands.Group):
                 )
                 return
 
-            conn = await self.cog.db.get_connection()
+            conn = await self.cog.db_manager.get_connection()
             await conn.execute(
                 "UPDATE verifications SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, notes = ? WHERE discord_id = ?",
                 (decision_value, interaction.user.id, notes, user.id),
@@ -292,7 +292,7 @@ class VerifyGroup(app_commands.Group):
 
             if decision_value == "verified" and member:
                 # Get verified role from settings
-                verified_role_id = await self.cog.db.get_setting(
+                verified_role_id = await self.cog.db_manager.get_setting(
                     "verify_role", guild_id
                 )
 
@@ -314,11 +314,11 @@ class VerifyGroup(app_commands.Group):
             elif decision_value == "cheater" and member:
                 print(f"DEBUG: Processing cheater for {member.name}")
                 # Get cheater role and channel from settings
-                cheater_role_id = await self.cog.db.get_setting(
+                cheater_role_id = await self.cog.db_manager.get_setting(
                     "cheater_role", guild_id
                 )
                 print(f"DEBUG: Cheater role ID: {cheater_role_id}")
-                cheater_channel_id = await self.cog.db.get_setting(
+                cheater_channel_id = await self.cog.db_manager.get_setting(
                     "cheater_jail_channel", guild_id
                 )
 
@@ -412,7 +412,7 @@ class VerifyGroup(app_commands.Group):
             log_system(
                 f"[VERIFY_REVIEW] {interaction.user} {decision_value.upper()} {user} ({notes or 'no notes'})"
             )
-            await self.cog.db.log_event(
+            await self.cog.db_manager.log_event(
                 category="VERIFY",
                 action="REVIEW",
                 user_id=user.id,

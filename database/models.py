@@ -281,14 +281,14 @@ class DatabaseManager:
     async def get_user_xp(self, user_id: int) -> int:
         """Get user's current XP."""
         conn = await self.get_connection()
-        
+
         # Ensure user exists
         await conn.execute(
             "INSERT OR IGNORE INTO users (user_id, username, discriminator) VALUES (?, 'Unknown', '0')",
-            (user_id,)
+            (user_id,),
         )
         await conn.commit()
-        
+
         cursor = await conn.execute(
             "SELECT xp FROM users WHERE user_id = ?", (user_id,)
         )
@@ -308,13 +308,13 @@ class DatabaseManager:
                 break
 
         conn = await self.get_connection()
-        
+
         # Ensure user exists
         await conn.execute(
             "INSERT OR IGNORE INTO users (user_id, username, discriminator) VALUES (?, 'Unknown', '0')",
-            (user_id,)
+            (user_id,),
         )
-        
+
         await conn.execute(
             "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
             (amount, level, user_id),
@@ -332,7 +332,7 @@ class DatabaseManager:
         # Ensure user exists
         await conn.execute(
             "INSERT OR IGNORE INTO users (user_id, username, discriminator) VALUES (?, 'Unknown', '0')",
-            (user_id,)
+            (user_id,),
         )
         await conn.commit()
 
@@ -379,18 +379,18 @@ class DatabaseManager:
     async def get_user_rank(self, user_id: int, guild_id: int) -> int:
         """Get user's rank in the guild."""
         conn = await self.get_connection()
-        
+
         # Get all guild member IDs and their XP, sorted by XP descending
         cursor = await conn.execute(
             "SELECT user_id FROM users WHERE xp > 0 ORDER BY xp DESC"
         )
         all_users = await cursor.fetchall()
-        
+
         # Find user's position (1-indexed)
         for rank, (uid,) in enumerate(all_users, 1):
             if uid == user_id:
                 return rank
-        
+
         return len(all_users) + 1  # User not found or has no XP
 
     # === USER METHODS ===
@@ -400,17 +400,19 @@ class DatabaseManager:
         conn = await self.get_connection()
         cursor = await conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
         row = await cursor.fetchone()
-        
+
         if not row:
             return None
-        
+
         # Convert to dict
         columns = [desc[0] for desc in cursor.description]
         return dict(zip(columns, row))
 
     # === BIRTHDAY METHODS ===
 
-    async def set_birthday(self, user_id: int, birthday: str, timezone: str = "UTC") -> None:
+    async def set_birthday(
+        self, user_id: int, birthday: str, timezone: str = "UTC"
+    ) -> None:
         """Set user birthday."""
         conn = await self.get_connection()
         await conn.execute(
@@ -461,12 +463,11 @@ class DatabaseManager:
     async def get_today_birthdays(self, today: Optional[str] = None) -> list:
         """Get today's birthdays in MM-DD format."""
         conn = await self.get_connection()
-        
+
         if today:
             # Use provided date
             cursor = await conn.execute(
-                "SELECT user_id FROM birthdays WHERE birthday LIKE ?",
-                (f"%{today}%",)
+                "SELECT user_id FROM birthdays WHERE birthday LIKE ?", (f"%{today}%",)
             )
         else:
             # Use current date
@@ -476,7 +477,7 @@ class DatabaseManager:
                 WHERE strftime('%m-%d', birthday) = strftime('%m-%d', 'now')
             """
             )
-        
+
         return await cursor.fetchall()
 
     # === LOGGING METHODS ===
@@ -519,7 +520,15 @@ class DatabaseManager:
             INSERT INTO mod_logs (moderator_id, user_id, action, reason, guild_id, channel_id, message_count)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
-            (moderator_id, target_id, action, reason, guild_id, channel_id, message_count),
+            (
+                moderator_id,
+                target_id,
+                action,
+                reason,
+                guild_id,
+                channel_id,
+                message_count,
+            ),
         )
         await conn.commit()
 
@@ -532,20 +541,20 @@ class DatabaseManager:
             ORDER BY timestamp DESC 
             LIMIT ?
         """,
-            (limit,)
+            (limit,),
         )
-        
+
         rows = await cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
-        
+
         return [dict(zip(columns, row)) for row in rows]
 
     async def log_health_check(
-        self, 
-        component: str, 
-        status: str, 
+        self,
+        component: str,
+        status: str,
         value: Optional[float] = None,
-        details: Optional[str] = None
+        details: Optional[str] = None,
     ) -> None:
         """Log health check results."""
         conn = await self.get_connection()
@@ -564,12 +573,14 @@ class DatabaseManager:
             category="ROAST",
             action="USER_ROAST",
             user_id=user_id,
-            details="User roasted the bot"
+            details="User roasted the bot",
         )
 
     # === SETTINGS METHODS ===
 
-    async def get_setting(self, key: str, guild_id: Optional[int] = None) -> Optional[str]:
+    async def get_setting(
+        self, key: str, guild_id: Optional[int] = None
+    ) -> Optional[str]:
         """Get setting value."""
         conn = await self.get_connection()
         if guild_id:
@@ -580,12 +591,14 @@ class DatabaseManager:
         else:
             cursor = await conn.execute(
                 "SELECT value FROM settings WHERE setting_key = ? AND guild_id IS NULL",
-                (key,)
+                (key,),
             )
         result = await cursor.fetchone()
         return result[0] if result else None
 
-    async def set_setting(self, key: str, value: str, guild_id: Optional[int] = None) -> None:
+    async def set_setting(
+        self, key: str, value: str, guild_id: Optional[int] = None
+    ) -> None:
         """Set setting value."""
         conn = await self.get_connection()
         await conn.execute(
@@ -608,7 +621,9 @@ class DatabaseManager:
         result = await cursor.fetchone()
         return result[0] if result else None
 
-    async def set_flag(self, flag_name: str, flag_value: Any, description: Optional[str] = None) -> None:
+    async def set_flag(
+        self, flag_name: str, flag_value: Any, description: Optional[str] = None
+    ) -> None:
         """Set system flag."""
         conn = await self.get_connection()
         await conn.execute(
@@ -632,13 +647,12 @@ class DatabaseManager:
         """Get recent audit logs."""
         conn = await self.get_connection()
         cursor = await conn.execute(
-            "SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT ?",
-            (limit,)
+            "SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT ?", (limit,)
         )
-        
+
         rows = await cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
-        
+
         return [dict(zip(columns, row)) for row in rows]
 
     async def get_daily_digest_stats(self) -> dict:
