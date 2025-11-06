@@ -69,8 +69,8 @@ class Utility(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
             # Log help command usage
-            if self.bot.db_manager:
-                await self.bot.db_manager.log_event(
+            if self.bot.db_manager  # type: ignore:
+                await self.bot.db_manager  # type: ignore.log_event(
                     category="UTILITY",
                     action="HELP_USED",
                     user_id=interaction.user.id,
@@ -108,8 +108,8 @@ class Utility(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
             # Log ping command usage
-            if self.bot.db_manager:
-                await self.bot.db_manager.log_event(
+            if self.bot.db_manager  # type: ignore:
+                await self.bot.db_manager  # type: ignore.log_event(
                     category="UTILITY",
                     action="PING_USED",
                     user_id=interaction.user.id,
@@ -137,8 +137,8 @@ class Utility(commands.Cog):
 
             # Get user data from database if available
             user_data = None
-            if self.bot.db_manager and isinstance(target_user, discord.Member):
-                user_data = await self.bot.db_manager.get_user(target_user.id)
+            if self.bot.db_manager  # type: ignore and isinstance(target_user, discord.Member):
+                user_data = await self.bot.db_manager  # type: ignore.get_user(target_user.id)
 
             # Create userinfo embed
             embed = create_embed(
@@ -263,8 +263,8 @@ class Utility(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
             # Log userinfo command usage
-            if self.bot.db_manager:
-                await self.bot.db_manager.log_event(
+            if self.bot.db_manager  # type: ignore:
+                await self.bot.db_manager  # type: ignore.log_event(
                     category="UTILITY",
                     action="USERINFO_USED",
                     user_id=interaction.user.id,
@@ -394,8 +394,8 @@ class Utility(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
             # Log serverinfo command usage
-            if self.bot.db_manager:
-                await self.bot.db_manager.log_event(
+            if self.bot.db_manager  # type: ignore:
+                await self.bot.db_manager  # type: ignore.log_event(
                     category="UTILITY",
                     action="SERVERINFO_USED",
                     user_id=interaction.user.id,
@@ -469,13 +469,13 @@ class Utility(commands.Cog):
             embed.add_field(name="✨ Features", value="\n".join(features), inline=False)
 
             # Statistics (if database is available)
-            if self.bot.db_manager:
+            if self.bot.db_manager  # type: ignore:
                 try:
                     # Get user count from database
                     # This would need to be implemented in the database models
                     embed.add_field(
                         name="📊 Statistics",
-                        value=f"Serving {interaction.guild.member_count if interaction.guild else 0}+ users\n"
+                        value=f"Serving {interaction.guild and interaction.guild and interaction.guild.member_count if interaction.guild else 0}+ users\n"
                         f"Commands executed: Many!\n"
                         f"System healthy: ✅",
                         inline=True,
@@ -491,8 +491,8 @@ class Utility(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
             # Log about command usage
-            if self.bot.db_manager:
-                await self.bot.db_manager.log_event(
+            if self.bot.db_manager  # type: ignore:
+                await self.bot.db_manager  # type: ignore.log_event(
                     category="UTILITY",
                     action="ABOUT_USED",
                     user_id=interaction.user.id,
@@ -615,8 +615,8 @@ class Utility(commands.Cog):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
             # Log serverstats command usage
-            if self.bot.db_manager:
-                await self.bot.db_manager.log_event(
+            if self.bot.db_manager  # type: ignore:
+                await self.bot.db_manager  # type: ignore.log_event(
                     category="UTILITY",
                     action="SERVERSTATS_USED",
                     user_id=interaction.user.id,

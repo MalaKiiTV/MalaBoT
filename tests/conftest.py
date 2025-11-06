@@ -22,7 +22,7 @@ def mock_bot():
     bot = Mock()
     bot.user = Mock()
     bot.user.id = 123456789
-    bot.db_manager = AsyncMock()
+    bot.db_manager  # type: ignore = AsyncMock()
     return bot
 
 

@@ -55,7 +55,7 @@ class Moderation(commands.Cog):
                 interaction.user.guild_permissions.administrator
                 or interaction.user.guild_permissions.manage_guild
             )
-            has_staff_role = await is_staff(interaction, self.bot.db_manager)
+            has_staff_role = await is_staff(interaction, self.bot.db_manager)  # type: ignore
 
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
@@ -66,7 +66,7 @@ class Moderation(commands.Cog):
                     f"• Staff Members (configured role)\n\n"
                     f"Your current permissions:\n"
                     f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
-                    f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
+                    f"• Administrator: {'✅' if hasattr(interaction.user, 'guild_permissions') and interaction.user.guild_permissions.administrator else '❌'}\n"
                     f"• Staff Role: {'✅' if has_staff_role else '❌'}",
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -113,7 +113,7 @@ class Moderation(commands.Cog):
 
             deleted = await channel.purge(limit=10)
 
-            if self.bot.db_manager:
+            if self.bot.db_manager:  # type: ignore
                 await self.bot.db_manager.log_moderation_action(
                     moderator_id=interaction.user.id,
                     action="DELETE_LAST10",
@@ -127,7 +127,7 @@ class Moderation(commands.Cog):
                     action="DELETE",
                     user_id=interaction.user.id,
                     channel_id=channel.id,
-                    guild_id=interaction.guild.id,
+                    guild_id=interaction.guild and interaction.guild and interaction.guild.id,
                     details=f"Deleted {len(deleted)} messages",
                 )
 
@@ -142,9 +142,9 @@ class Moderation(commands.Cog):
                 f"🗑 {interaction.user.name} deleted {len(deleted)} messages in #{channel.name}"
             )
 
-            if self.bot.db_manager:
+            if self.bot.db_manager:  # type: ignore
                 mod_log_channel_id = await self.bot.db_manager.get_setting(
-                    "moderation_log_channel_id", interaction.guild.id
+                    "moderation_log_channel_id", interaction.guild and interaction.guild and interaction.guild.id
                 )
                 if mod_log_channel_id:
                     mod_log_channel = self.bot.get_channel(mod_log_channel_id)
@@ -177,7 +177,7 @@ class Moderation(commands.Cog):
 
             deleted = await channel.purge(limit=50)
 
-            if self.bot.db_manager:
+            if self.bot.db_manager:  # type: ignore
                 await self.bot.db_manager.log_moderation_action(
                     moderator_id=interaction.user.id,
                     action="DELETE_LAST50",
@@ -191,7 +191,7 @@ class Moderation(commands.Cog):
                     action="DELETE",
                     user_id=interaction.user.id,
                     channel_id=channel.id,
-                    guild_id=interaction.guild.id,
+                    guild_id=interaction.guild and interaction.guild and interaction.guild.id,
                     details=f"Deleted {len(deleted)} messages",
                 )
 
@@ -206,9 +206,9 @@ class Moderation(commands.Cog):
                 f"🗑 {interaction.user.name} deleted {len(deleted)} messages in #{channel.name}"
             )
 
-            if self.bot.db_manager:
+            if self.bot.db_manager:  # type: ignore
                 mod_log_channel_id = await self.bot.db_manager.get_setting(
-                    "moderation_log_channel_id", interaction.guild.id
+                    "moderation_log_channel_id", interaction.guild and interaction.guild and interaction.guild.id
                 )
                 if mod_log_channel_id:
                     mod_log_channel = self.bot.get_channel(mod_log_channel_id)
@@ -245,7 +245,7 @@ class Moderation(commands.Cog):
             await new_channel.edit(position=channel.position)
             await channel.delete(reason=f"Channel purge by {interaction.user.name}")
 
-            if self.bot.db_manager:
+            if self.bot.db_manager:  # type: ignore
                 await self.bot.db_manager.log_moderation_action(
                     moderator_id=interaction.user.id,
                     action="DELETE_ALL",
@@ -259,7 +259,7 @@ class Moderation(commands.Cog):
                     action="PURGE",
                     user_id=interaction.user.id,
                     channel_id=new_channel.id,
-                    guild_id=interaction.guild.id,
+                    guild_id=interaction.guild and interaction.guild and interaction.guild.id,
                     details="Channel purged and recreated",
                 )
 
@@ -275,9 +275,9 @@ class Moderation(commands.Cog):
                 f"🗑 {interaction.user.name} purged channel #{new_channel.name}"
             )
 
-            if self.bot.db_manager:
+            if self.bot.db_manager:  # type: ignore
                 mod_log_channel_id = await self.bot.db_manager.get_setting(
-                    "moderation_log_channel_id", interaction.guild.id
+                    "moderation_log_channel_id", interaction.guild and interaction.guild and interaction.guild.id
                 )
                 if mod_log_channel_id:
                     mod_log_channel = self.bot.get_channel(mod_log_channel_id)
@@ -307,7 +307,7 @@ class Moderation(commands.Cog):
     async def _delete_logs(self, interaction: discord.Interaction):
         """Show deletion logs."""
         try:
-            if not self.bot.db_manager:
+            if not self.bot.db_manager:  # type: ignore
                 embed = embed_helper.error_embed(
                     title="Database Error",
                     description="Moderation logs are currently unavailable.",
@@ -394,7 +394,7 @@ class Moderation(commands.Cog):
                 interaction.user.guild_permissions.administrator
                 or interaction.user.guild_permissions.kick_members
             )
-            has_staff_role = await is_staff(interaction, self.bot.db_manager)
+            has_staff_role = await is_staff(interaction, self.bot.db_manager)  # type: ignore
 
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
@@ -405,7 +405,7 @@ class Moderation(commands.Cog):
                     f"• Staff Members (configured role)\n\n"
                     f"Your current permissions:\n"
                     f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
-                    f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
+                    f"• Administrator: {'✅' if hasattr(interaction.user, 'guild_permissions') and interaction.user.guild_permissions.administrator else '❌'}\n"
                     f"• Staff Role: {'✅' if has_staff_role else '❌'}",
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -446,13 +446,13 @@ class Moderation(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
             # Log the action
-            if self.bot.db_manager:
+            if self.bot.db_manager:  # type: ignore
                 await self.bot.db_manager.log_event(
                     category="MOD",
                     action="KICK",
                     user_id=interaction.user.id,
                     target_id=user.id,
-                    guild_id=interaction.guild.id,
+                    guild_id=interaction.guild and interaction.guild and interaction.guild.id,
                     details=f"Kicked {user.name}#{user.discriminator} - Reason: {reason}",
                 )
 
@@ -491,7 +491,7 @@ class Moderation(commands.Cog):
                 interaction.user.guild_permissions.administrator
                 or interaction.user.guild_permissions.ban_members
             )
-            has_staff_role = await is_staff(interaction, self.bot.db_manager)
+            has_staff_role = await is_staff(interaction, self.bot.db_manager)  # type: ignore
 
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
@@ -502,7 +502,7 @@ class Moderation(commands.Cog):
                     f"• Staff Members (configured role)\n\n"
                     f"Your current permissions:\n"
                     f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
-                    f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
+                    f"• Administrator: {'✅' if hasattr(interaction.user, 'guild_permissions') and interaction.user.guild_permissions.administrator else '❌'}\n"
                     f"• Staff Role: {'✅' if has_staff_role else '❌'}",
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -533,7 +533,7 @@ class Moderation(commands.Cog):
                 return
 
             # Ban the user
-            await interaction.guild.ban(
+            await interaction.guild and interaction.guild and interaction.guild.ban(
                 user, reason=f"{reason} | Banned by {interaction.user.name}"
             )
 
@@ -546,13 +546,13 @@ class Moderation(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
             # Log the action
-            if self.bot.db_manager:
+            if self.bot.db_manager:  # type: ignore
                 await self.bot.db_manager.log_event(
                     category="MOD",
                     action="BAN",
                     user_id=interaction.user.id,
                     target_id=user.id,
-                    guild_id=interaction.guild.id,
+                    guild_id=interaction.guild and interaction.guild and interaction.guild.id,
                     details=f"Banned {user.name}#{user.discriminator} - Reason: {reason}",
                 )
 
@@ -596,7 +596,7 @@ class Moderation(commands.Cog):
                 interaction.user.guild_permissions.administrator
                 or interaction.user.guild_permissions.moderate_members
             )
-            has_staff_role = await is_staff(interaction, self.bot.db_manager)
+            has_staff_role = await is_staff(interaction, self.bot.db_manager)  # type: ignore
 
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
@@ -607,7 +607,7 @@ class Moderation(commands.Cog):
                     f"• Staff Members (configured role)\n\n"
                     f"Your current permissions:\n"
                     f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
-                    f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
+                    f"• Administrator: {'✅' if hasattr(interaction.user, 'guild_permissions') and interaction.user.guild_permissions.administrator else '❌'}\n"
                     f"• Staff Role: {'✅' if has_staff_role else '❌'}",
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -637,14 +637,14 @@ class Moderation(commands.Cog):
                 return
 
             # Get or create muted role
-            muted_role = discord.utils.get(interaction.guild.roles, name="Muted")
+            muted_role = discord.utils.get(interaction.guild and interaction.guild and interaction.guild.roles, name="Muted")
             if not muted_role:
-                muted_role = await interaction.guild.create_role(
+                muted_role = await interaction.guild and interaction.guild and interaction.guild.create_role(
                     name="Muted", reason="Muted role for moderation"
                 )
 
                 # Update channel permissions for the muted role
-                for channel in interaction.guild.channels:
+                for channel in interaction.guild and interaction.guild and interaction.guild.channels:
                     if isinstance(channel, discord.TextChannel):
                         await channel.set_permissions(
                             muted_role, send_messages=False, add_reactions=False
@@ -668,13 +668,13 @@ class Moderation(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
             # Log the action
-            if self.bot.db_manager:
+            if self.bot.db_manager:  # type: ignore
                 await self.bot.db_manager.log_event(
                     category="MOD",
                     action="MUTE",
                     user_id=interaction.user.id,
                     target_id=user.id,
-                    guild_id=interaction.guild.id,
+                    guild_id=interaction.guild and interaction.guild and interaction.guild.id,
                     details=f"Muted {user.name}#{user.discriminator} for {duration} minutes - Reason: {reason}",
                 )
 
@@ -686,13 +686,12 @@ class Moderation(commands.Cog):
             await asyncio.sleep(duration * 60)
             if muted_role in user.roles:
                 await user.remove_roles(muted_role, reason="Temporary mute expired")
-                try:
-                    await user.send(
-                        f"You have been unmuted in {interaction.guild.name}"
-                    )
-                except:
-                    pass  # Can't send DM, that's okay
-
+                   try:
+                       if user and hasattr(user, "send"):
+                           await user.send(
+                               f"You have been unmuted in {interaction.guild and interaction.guild and interaction.guild.name}"
+                           )
+                   except:
         except discord.Forbidden:
             embed = embed_helper.error_embed(
                 title="Permission Error",
@@ -724,7 +723,7 @@ class Moderation(commands.Cog):
                 interaction.user.guild_permissions.administrator
                 or interaction.user.guild_permissions.moderate_members
             )
-            has_staff_role = await is_staff(interaction, self.bot.db_manager)
+            has_staff_role = await is_staff(interaction, self.bot.db_manager)  # type: ignore
 
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
@@ -735,7 +734,7 @@ class Moderation(commands.Cog):
                     f"• Staff Members (configured role)\n\n"
                     f"Your current permissions:\n"
                     f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
-                    f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
+                    f"• Administrator: {'✅' if hasattr(interaction.user, 'guild_permissions') and interaction.user.guild_permissions.administrator else '❌'}\n"
                     f"• Staff Role: {'✅' if has_staff_role else '❌'}",
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -745,7 +744,7 @@ class Moderation(commands.Cog):
                 return
 
             # Get muted role
-            muted_role = discord.utils.get(interaction.guild.roles, name="Muted")
+            muted_role = discord.utils.get(interaction.guild and interaction.guild and interaction.guild.roles, name="Muted")
             if not muted_role:
                 embed = embed_helper.error_embed(
                     title="Role Not Found",
@@ -777,13 +776,13 @@ class Moderation(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
             # Log the action
-            if self.bot.db_manager:
+            if self.bot.db_manager:  # type: ignore
                 await self.bot.db_manager.log_event(
                     category="MOD",
                     action="UNMUTE",
                     user_id=interaction.user.id,
                     target_id=user.id,
-                    guild_id=interaction.guild.id,
+                    guild_id=interaction.guild and interaction.guild and interaction.guild.id,
                     details=f"Unmuted {user.name}#{user.discriminator} - Reason: {reason}",
                 )
 

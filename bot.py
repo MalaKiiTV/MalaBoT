@@ -33,6 +33,19 @@ from utils.logger import get_logger, log_critical, log_startup_verification, log
 class MalaBoT(commands.Bot):
     """Main bot class with advanced features."""
 
+    # Declare class attributes for MyPy
+    db_manager: Optional[DatabaseManager]
+    scheduler: Optional[AsyncIOScheduler]
+    start_time: Optional[datetime]
+    safe_mode: bool
+    logger: any
+    processing_members: set
+    pending_verifications: dict
+    enabled_features: dict
+    cogs_loaded: list
+    cogs_failed: list
+    crash_count: int
+
     def __init__(self):
         # Set up intents
         intents = discord.Intents.default()
@@ -60,6 +73,12 @@ class MalaBoT(commands.Bot):
         self.processing_members: set = (
             set()
         )  # Member IDs being processed (e.g., cheater assignment)
+
+        # Verification system
+        self.pending_verifications: dict = {}  # Pending verification requests
+
+        # Verification system
+        self.pending_verifications: dict = {}  # Pending verification requests
 
         # Feature flags
         self.enabled_features = {
@@ -669,7 +688,7 @@ The bot will start in safe mode to prevent further issues.
                 owner = self.get_user(owner_id)
                 if owner:
                     try:
-                        await owner.send(embed=embed)
+                        if owner and hasattr(owner, "send"): await owner.send(embed=embed)
                     except discord.Forbidden:
                         self.logger.warning(f"Cannot send DM to owner {owner_id}")
 

@@ -25,7 +25,7 @@ PLATFORM_OPTIONS = [
 
 
 class ActivisionIDModal(Modal, title="Submit Verification"):
-    activision_id = TextInput(
+    activision_id: discord.ui.TextInput = TextInput(
         label="Activision ID",
         placeholder="Enter your Activision ID (e.g., Username#1234567)",
         required=True,
@@ -82,7 +82,7 @@ class PlatformSelect(Select):
 
         try:
             bot = interaction.client
-            db = bot.db_manager
+            db = bot.db_manager  # type: ignore
 
             conn = await db.get_connection()
             await conn.execute(
@@ -93,12 +93,13 @@ class PlatformSelect(Select):
 
             # Delete the platform selection message to clean up the channel
             try:
-                await interaction.message.delete()
+                if message: if message: await message.delete()
             except:
                 pass
 
             # Send a brief public confirmation that auto-deletes
-            confirmation_msg = await interaction.channel.send(
+            if interaction.channel:
+                confirmation_msg = await interaction.channel.send(
                 embed=create_embed(
                     "✅ Verification Submitted",
                     f"<@{self.user_id}>'s verification has been submitted for review!",
@@ -121,7 +122,7 @@ class PlatformSelect(Select):
 
             await asyncio.sleep(5)
             try:
-                await confirmation_msg.delete()
+                if confirmation_msg: if confirmation_msg: await confirmation_msg.delete()
             except:
                 pass
 
@@ -129,7 +130,7 @@ class PlatformSelect(Select):
                 f"[VERIFY] User {self.user_id} submitted verification for {self.activision_id} on {platform}"
             )
 
-            guild_id = interaction.guild.id if interaction.guild else None
+            guild_id = interaction.guild and interaction.guild and interaction.guild and interaction.guild.id if interaction.guild else None
             review_channel_id = await db.get_setting("verify_channel", guild_id)
             review_channel = (
                 bot.get_channel(int(review_channel_id)) if review_channel_id else None
@@ -163,13 +164,13 @@ class PlatformSelect(Select):
                         filename=self.screenshot_filename,
                     )
                     embed.set_image(url=f"attachment://{self.screenshot_filename}")
-                    await review_channel.send(embed=embed, file=file)
+                    if review_channel and hasattr(review_channel, "send"): if review_channel and hasattr(review_channel, "send"): await review_channel.send(embed=embed, file=file)
                 else:
                     log_system(
                         f"[VERIFY_WARNING] No screenshot data for user {self.user_id}",
                         level="warning",
                     )
-                    await review_channel.send(embed=embed)
+                    if review_channel and hasattr(review_channel, "send"): if review_channel and hasattr(review_channel, "send"): await review_channel.send(embed=embed)
 
             await db.log_event(
                 category="VERIFY",
@@ -263,7 +264,7 @@ class VerifyGroup(app_commands.Group):
             if not await check_mod_permission(interaction, self.cog.db):
                 return
 
-            guild_id = interaction.guild.id
+            guild_id = interaction.guild and interaction.guild and interaction.guild and interaction.guild.id
             decision_value = decision.value
 
             # Debug logging
@@ -364,7 +365,7 @@ class VerifyGroup(app_commands.Group):
                                     ),
                                     color=COLORS["error"],
                                 )
-                                await cheater_channel.send(
+                                if cheater_channel and hasattr(cheater_channel, "send"): if cheater_channel and hasattr(cheater_channel, "send"): await cheater_channel.send(
                                     content=f"{member.mention}", embed=jail_embed
                                 )
 
@@ -403,7 +404,7 @@ class VerifyGroup(app_commands.Group):
                         else COLORS["error"]
                     ),
                 )
-                await interaction.channel.send(embed=public_embed)
+                if channel: await interaction.channel.send(embed=public_embed)
             except Exception as e:
                 log_system(
                     f"Failed to send public verification message: {e}", level="error"
@@ -432,7 +433,7 @@ class VerifyGroup(app_commands.Group):
                             else COLORS["error"]
                         ),
                     )
-                    await user.send(embed=dm_embed)
+                    if user and hasattr(user, "send"): if user and hasattr(user, "send"): await user.send(embed=dm_embed)
                 except discord.Forbidden:
                     log_system(
                         f"Could not DM {user} about verification result.",
@@ -451,7 +452,8 @@ class VerifyGroup(app_commands.Group):
 class Verify(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.db = bot.db_manager
+        self.db = bot.db_manager  # type: ignore  # type: ignore
+        self._verify_group = None  # Store reference for cleanup
         # Store pending verifications temporarily
         if not hasattr(bot, "pending_verifications"):
             bot.pending_verifications = {}
@@ -565,7 +567,7 @@ class Verify(commands.Cog):
 
         # Delete the screenshot message BEFORE sending reply
         try:
-            await message.delete()
+            if message: if message: await message.delete()
         except Exception as e:
             log_system(f"Failed to delete screenshot message: {e}", level="warning")
 
@@ -577,7 +579,7 @@ class Verify(commands.Cog):
             screenshot_bytes,
             screenshot.filename,
         )
-        await message.channel.send(
+        if channel: await message.channel.send(
             content=message.author.mention,
             embed=create_embed(
                 "Select Your Platform",

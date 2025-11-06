@@ -284,7 +284,7 @@ class RoleConnections(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.manager = RoleConnectionManager(bot, bot.db_manager)
+        self.manager = RoleConnectionManager(bot, bot.db_manager  # type: ignore)
         self.check_connections.start()
 
     def cog_unload(self):

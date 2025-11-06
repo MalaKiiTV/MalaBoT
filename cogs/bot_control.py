@@ -16,7 +16,7 @@ from utils.logger import log_system
 class SendMessageModal(Modal, title="Send Message as Bot"):
     """Modal for sending a message as the bot"""
 
-    message_content = TextInput(
+    message_content: discord.ui.TextInput = TextInput(
         label="Message Content",
         placeholder="Enter the message you want to send...",
         required=True,
@@ -31,7 +31,7 @@ class SendMessageModal(Modal, title="Send Message as Bot"):
     async def on_submit(self, interaction: discord.Interaction):
         try:
             # Send the message to the selected channel
-            await self.channel.send(self.message_content.value)
+            await self.channel and channel.send(self.message_content.value)
 
             # Confirm to the user
             embed = create_embed(
@@ -76,7 +76,7 @@ class BotControlGroup(app_commands.Group):
         """Autocomplete for channel selection - shows all text channels"""
         channels = [
             app_commands.Choice(name=f"#{channel.name}", value=str(channel.id))
-            for channel in interaction.guild.text_channels
+            for channel in interaction.guild and interaction.guild and interaction.guild.text_channels
             if current.lower() in channel.name.lower()
         ]
         return channels[:25]  # Discord limits to 25 choices
@@ -91,7 +91,7 @@ class BotControlGroup(app_commands.Group):
         """Send a message as the bot to a specific channel"""
 
         # Check server owner permissions
-        if interaction.guild.owner_id != interaction.user.id:
+        if interaction.guild and interaction.guild and interaction.guild.owner_id != interaction.user.id:
             embed = create_embed(
                 "🚫 Permission Denied",
                 "This command is only available to the server owner.",
@@ -101,7 +101,7 @@ class BotControlGroup(app_commands.Group):
             return
 
         # Get the channel object from the ID
-        channel_obj = interaction.guild.get_channel(int(channel))
+        channel_obj = interaction.guild and interaction.guild and interaction.guild.get_channel(int(channel))
         if not channel_obj or not isinstance(channel_obj, discord.TextChannel):
             embed = create_embed(
                 "❌ Error", "Invalid channel selected.", COLORS["error"]

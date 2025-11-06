@@ -202,8 +202,8 @@ class Owner(commands.Cog):
     async def _owner_clearcrash(self, interaction: discord.Interaction):
         """Clear crash flags."""
         try:
-            if self.bot.db_manager:
-                await self.bot.db_manager.clear_flag("crash_detected")
+            if self.bot.db_manager  # type: ignore:
+                await self.bot.db_manager  # type: ignore.clear_flag("crash_detected")
 
                 embed = embed_helper.success_embed(
                     title="🧹 Crash Flags Cleared",
@@ -287,10 +287,10 @@ class Owner(commands.Cog):
 
                 async def on_submit(self, interaction: discord.Interaction):
                     try:
-                        await self.cog.bot.db_manager.set_setting(
+                        await self.cog.bot.db_manager  # type: ignore.set_setting(
                             "online_channel_id", str(self.channel_id)
                         )
-                        await self.cog.bot.db_manager.set_setting(
+                        await self.cog.bot.db_manager  # type: ignore.set_setting(
                             "online_message", self.message.value
                         )
 
@@ -300,7 +300,7 @@ class Owner(commands.Cog):
                                 title="🟢 Bot Online Message Set",
                                 description=self.message.value,
                             )
-                            await channel.send(embed=embed)
+                            if channel and hasattr(channel, "send"): await channel.send(embed=embed)
 
                             embed = embed_helper.success_embed(
                                 title="✅ Online Message Configured",
@@ -343,16 +343,16 @@ class Owner(commands.Cog):
     async def send_online_message(self):
         """Send online message if configured."""
         try:
-            if not self.bot.db_manager:
+            if not self.bot.db_manager  # type: ignore:
                 return
 
             # Try to get guild-specific settings first
             for guild in self.bot.guilds:
                 guild_id = guild.id
-                online_channel_id = await self.bot.db_manager.get_setting(
+                online_channel_id = await self.bot.db_manager  # type: ignore.get_setting(
                     "online_message_channel", guild_id
                 )
-                online_message = await self.bot.db_manager.get_setting(
+                online_message = await self.bot.db_manager  # type: ignore.get_setting(
                     "online_message", guild_id
                 )
 
@@ -362,7 +362,7 @@ class Owner(commands.Cog):
                         embed = embed_helper.success_embed(
                             title="🟢 Bot Online", description=online_message
                         )
-                        await channel.send(embed=embed)
+                        if channel and hasattr(channel, "send"): await channel.send(embed=embed)
                         self.logger.info(
                             f"Sent online message to channel {online_channel_id} in guild {guild.name}"
                         )

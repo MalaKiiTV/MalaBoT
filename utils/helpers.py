@@ -279,11 +279,11 @@ async def is_mod(
         return False
 
     # Server owner always has access
-    if interaction.guild.owner_id == interaction.user.id:
+    if interaction.guild and interaction.guild and interaction.guild.owner_id == interaction.user.id:
         return True
 
     # Administrator always has access
-    if interaction.user.guild_permissions.administrator:
+    if hasattr(interaction.user, "guild_permissions") and interaction.user.guild_permissions.administrator:
         return True
 
     # Check specific mod role first if provided
@@ -291,9 +291,9 @@ async def is_mod(
         specific_role_id = await db_manager.get_setting(
             f"{specific_mod_role_key}_{guild_id}"
         )
-        if specific_role_id:
-            specific_role = interaction.guild.get_role(int(specific_role_id))
-            if specific_role and specific_role in interaction.user.roles:
+        if specific_role_id and interaction.guild:
+            specific_role = interaction.guild and interaction.guild.get_role(int(specific_role_id))
+            if specific_role and hasattr(interaction.user, 'roles') and specific_role in interaction.user.roles:
                 return True
 
     # Fall back to general mod role
@@ -301,11 +301,14 @@ async def is_mod(
     if not mod_role_id:
         return False
 
-    mod_role = interaction.guild.get_role(int(mod_role_id))
+    if interaction.guild:
+        mod_role = interaction.guild and interaction.guild.get_role(int(mod_role_id))
+    else:
+        mod_role = None
     if not mod_role:
         return False
 
-    return mod_role in interaction.user.roles
+    return hasattr(interaction.user, 'roles') and mod_role in interaction.user.roles
 
 
 async def check_mod_permission(
@@ -335,14 +338,14 @@ async def check_mod_permission(
         specific_role_id = await db_manager.get_setting(
             f"{specific_mod_role_key}_{guild_id}"
         )
-        if specific_role_id:
-            specific_role = interaction.guild.get_role(int(specific_role_id))
+        if specific_role_id and interaction.guild:
+            specific_role = interaction.guild and interaction.guild.get_role(int(specific_role_id))
             if specific_role:
                 role_names.append(specific_role.name)
 
     mod_role_id = await db_manager.get_setting(f"mod_role_{guild_id}")
-    if mod_role_id:
-        mod_role = interaction.guild.get_role(int(mod_role_id))
+    if mod_role_id and interaction.guild:
+        mod_role = interaction.guild and interaction.guild.get_role(int(mod_role_id))
         if mod_role:
             role_names.append(mod_role.name)
 
@@ -352,8 +355,8 @@ async def check_mod_permission(
         else "• No mod role configured"
     )
 
-    is_server_owner = interaction.guild.owner_id == interaction.user.id
-    is_administrator = interaction.user.guild_permissions.administrator
+    is_server_owner = interaction.guild and interaction.guild and interaction.guild.owner_id == interaction.user.id
+    is_administrator = hasattr(interaction.user, 'guild_permissions') and interaction.user.guild_permissions.administrator
 
     embed = embed_helper.error_embed(
         title="🚫 Permission Denied",
@@ -377,7 +380,7 @@ async def safe_send_message(
     """Safely send a message to a channel with error handling."""
     try:
         if hasattr(channel, "send"):  # Regular channel
-            return await channel.send(content=content, embed=embed, **kwargs)
+            return if channel and hasattr(channel, "send"): await channel.send(content=content, embed=embed, **kwargs)
         if hasattr(channel, "followup"):  # Interaction followup
             return await channel.followup.send(
                 content=content, embed=embed, ephemeral=ephemeral, **kwargs
@@ -446,10 +449,10 @@ def is_mod_decorator(specific_mod_role_key: str | None = None):
                 )
                 return
 
-            if await is_mod(interaction, bot.db_manager, specific_mod_role_key):
+            if await is_mod(interaction, bot.db_manager  # type: ignore, specific_mod_role_key):
                 return await func(interaction, *args, **kwargs)
             await check_mod_permission(
-                interaction, bot.db_manager, specific_mod_role_key
+                interaction, bot.db_manager  # type: ignore, specific_mod_role_key
             )
             return
 

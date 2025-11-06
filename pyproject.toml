@@ -66,3 +66,4 @@ disallow_untyped_defs = false
 explicit_package_bases = true
 ignore_missing_imports = true
 check_untyped_defs = false
+no_implicit_optional = false

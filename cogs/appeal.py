@@ -8,6 +8,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from discord.ui import Modal, TextInput
+from typing import Optional
 
 from config.constants import COLORS
 from utils.helpers import create_embed, safe_send_message
@@ -24,7 +25,7 @@ class AppealGroup(app_commands.Group):
     @app_commands.command(name="submit", description="Submit an appeal (one-time only)")
     async def submit(self, interaction: discord.Interaction):
         """Submit an appeal - can only be used once"""
-        guild_id = interaction.guild.id
+        guild_id = interaction.guild and interaction.guild and interaction.guild.id
 
         # Get settings in parallel to reduce latency
         import asyncio
@@ -36,7 +37,7 @@ class AppealGroup(app_commands.Group):
 
         # Check if user is in cheater jail
         if cheater_role_id:
-            cheater_role = interaction.guild.get_role(int(cheater_role_id))
+            cheater_role = interaction.guild and interaction.guild and interaction.guild.get_role(int(cheater_role_id))
             if cheater_role and cheater_role not in interaction.user.roles:
                 await interaction.response.send_message(
                     embed=create_embed(
@@ -50,7 +51,7 @@ class AppealGroup(app_commands.Group):
 
         # Check if in cheater jail channel
         if cheater_channel_id and interaction.channel_id != int(cheater_channel_id):
-            cheater_channel = interaction.guild.get_channel(int(cheater_channel_id))
+            cheater_channel = interaction.guild and interaction.guild and interaction.guild.get_channel(int(cheater_channel_id))
             await interaction.response.send_message(
                 embed=create_embed(
                     "Wrong Channel",
@@ -96,7 +97,7 @@ class AppealGroup(app_commands.Group):
             if not await check_staff_permission(interaction, self.cog.db):
                 return
 
-            guild_id = interaction.guild.id
+            guild_id = interaction.guild and interaction.guild and interaction.guild.id
 
             # Check if appeal exists
             conn = await self.cog.db.get_connection()
@@ -125,7 +126,7 @@ class AppealGroup(app_commands.Group):
                 return
 
             decision_value = decision.value
-            member = interaction.guild.get_member(user.id)
+            member = interaction.guild and interaction.guild and interaction.guild.get_member(user.id)
 
             if decision_value == "approve" and member:
                 # Remove cheater role
@@ -133,7 +134,7 @@ class AppealGroup(app_commands.Group):
                     "cheater_role", guild_id
                 )
                 if cheater_role_id:
-                    cheater_role = interaction.guild.get_role(int(cheater_role_id))
+                    cheater_role = interaction.guild and interaction.guild and interaction.guild.get_role(int(cheater_role_id))
                     if cheater_role and cheater_role in member.roles:
                         await member.remove_roles(
                             cheater_role,
@@ -160,7 +161,7 @@ class AppealGroup(app_commands.Group):
                         f"You have been released from cheater jail. Welcome back!",
                         COLORS["success"],
                     )
-                    await user.send(embed=dm_embed)
+                    if user and hasattr(user, "send"): await user.send(embed=dm_embed)
                 except discord.Forbidden:
                     log_system(
                         f"Could not DM {user} about appeal approval.", level="warning"
@@ -187,7 +188,7 @@ class AppealGroup(app_commands.Group):
                         f"You will remain in cheater jail.",
                         COLORS["error"],
                     )
-                    await user.send(embed=dm_embed)
+                    if user and hasattr(user, "send"): await user.send(embed=dm_embed)
                 except discord.Forbidden:
                     log_system(
                         f"Could not DM {user} about appeal denial.", level="warning"
@@ -278,7 +279,7 @@ class AppealModal(Modal, title="Submit Appeal"):
                 "verify_channel", self.guild_id
             )
             if review_channel_id:
-                review_channel = interaction.guild.get_channel(int(review_channel_id))
+                review_channel = interaction.guild and interaction.guild and interaction.guild.get_channel(int(review_channel_id))
                 if review_channel:
                     embed = discord.Embed(
                         title="📝 New Appeal Submitted",
@@ -293,7 +294,7 @@ class AppealModal(Modal, title="Submit Appeal"):
                     embed.set_footer(
                         text=f"Use /appeal review @{interaction.user.name} <approve/deny> [reason]"
                     )
-                    await review_channel.send(embed=embed)
+                    if review_channel and hasattr(review_channel, "send"): await review_channel.send(embed=embed)
 
             log_system(
                 f"[APPEAL] User {user_id} submitted appeal in guild {self.guild_id}"
@@ -321,7 +322,8 @@ class AppealModal(Modal, title="Submit Appeal"):
 class Appeal(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.db = bot.db_manager
+        self.db = bot.db_manager  # type: ignore  # type: ignore  # type: ignore
+        self._appeal_group: Optional[AppealGroup] = None  # Store reference for cleanup
 
     async def cog_unload(self):
         """Remove the command group when cog is unloaded"""
