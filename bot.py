@@ -40,9 +40,6 @@ class MalaBoT(commands.Bot):
         intents.members = True
         intents.guilds = True
         intents.presences = True
-        intents.guild_messages = True  # For message events
-        intents.guild_reactions = True  # For reaction events
-        intents.voice_states = True  # For voice channel events
 
         # Initialize bot
         super().__init__(
