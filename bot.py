@@ -658,9 +658,7 @@ The bot will start in safe mode to prevent further issues.
                 name="⚙️ Errors", value=str(digest_data["errors"]), inline=True
             )
             embed.add_field(name="🔢 Version", value=settings.BOT_VERSION, inline=True)
-            embed.add_field(
-                name="💾 DB Size", value=digest_data["db_size"], inline=True
-            )
+            embed.add_field(name="💾 DB Size", value=digest_data["db_size"], inline=True)
 
             embed.set_footer(
                 text=f"Report generated automatically • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"

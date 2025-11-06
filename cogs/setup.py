@@ -1841,7 +1841,9 @@ class LevelRolesView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="Back to XP Setup", style=ButtonStyle.secondary, emoji="◀️")
+    @discord.ui.button(
+        label="Back to XP Setup", style=ButtonStyle.secondary, emoji="◀️"
+    )
     async def back_button(self, interaction: discord.Interaction, button: Button):
         """Go back to XP setup"""
         await interaction.response.defer(ephemeral=True)
@@ -2023,7 +2025,9 @@ class XPSetupView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="XP Cooldown", style=ButtonStyle.primary, emoji="⏱️", row=1)
+    @discord.ui.button(
+        label="XP Cooldown", style=ButtonStyle.primary, emoji="⏱️", row=1
+    )
     async def set_xp_cooldown(self, interaction: discord.Interaction, button: Button):
         """Set cooldown between XP gains"""
         modal = Modal(title="Set XP Cooldown")

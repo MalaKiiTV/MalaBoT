@@ -864,7 +864,9 @@ class RemoveProtectedRoleSelect(Select):
             role = guild.get_role(role_id)
             if role:
                 options.append(
-                    discord.SelectOption(label=role.name, value=str(role_id), emoji="🛡️")
+                    discord.SelectOption(
+                        label=role.name, value=str(role_id), emoji="🛡️"
+                    )
                 )
 
         super().__init__(
