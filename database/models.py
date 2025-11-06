@@ -231,6 +231,45 @@ class DatabaseManager:
 
     # Add missing methods that the bot needs
 
+    async def create_user(self, user_id: int, username: str, discriminator: str, 
+                         display_name: str = None, avatar_url: str = None, 
+                         guild_id: int = None):
+        """Create a new user in the database with Discord information."""
+        conn = await self.get_connection()
+        
+        # Check if user already exists
+        cursor = await conn.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))
+        if await cursor.fetchone():
+            return  # User already exists
+        
+        # Create new user
+        await conn.execute(
+            """INSERT INTO users 
+               (user_id, username, discriminator, display_name, avatar_url, joined_at, last_seen)
+               VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))""",
+            (user_id, username, discriminator, display_name or username, avatar_url)
+        )
+        await conn.commit()
+
+    async def ensure_user_exists(self, user_id: int, username: str = None, 
+                                discriminator: str = None, display_name: str = None,
+                                avatar_url: str = None):
+        """Ensure user exists in database, create if necessary."""
+        conn = await self.get_connection()
+        
+        # Check if user exists
+        cursor = await conn.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))
+        if not await cursor.fetchone():
+            # Create user with provided info or defaults
+            await conn.execute(
+                """INSERT INTO users 
+                   (user_id, username, discriminator, display_name, avatar_url, last_seen)
+                   VALUES (?, ?, ?, ?, ?, datetime('now'))""",
+                (user_id, username or "Unknown", discriminator or "0000", 
+                 display_name or "Unknown", avatar_url)
+            )
+            await conn.commit()
+
     # REMOVED: Redundant add_user_xp method - use update_user_xp instead
     # This method was functionally identical to update_user_xp and created confusion
     # All XP operations now use update_user_xp which properly handles both XP and level calculation
@@ -266,7 +305,7 @@ class DatabaseManager:
         return amount, new_level
 
     async def update_user_xp(self, user_id: int, xp_change: int):
-        """Update user's XP and recalculate level."""
+        """Update user's XP and recalculate level. Creates user if doesn't exist."""
         from config.constants import XP_TABLE
 
         conn = await self.get_connection()
@@ -288,10 +327,12 @@ class DatabaseManager:
                 break
         new_level = level
 
-        # Update both XP and level in the same transaction
+        # Use INSERT OR REPLACE (upsert) to handle both new and existing users
         await conn.execute(
-            "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
-            (new_xp, new_level, user_id)
+            """INSERT OR REPLACE INTO users 
+               (user_id, username, discriminator, display_name, xp, level, last_seen) 
+               VALUES (?, ?, ?, ?, ?, ?, datetime('now'))""",
+            (user_id, "Unknown", "0000", "Unknown", new_xp, new_level)
         )
         await conn.commit()
 

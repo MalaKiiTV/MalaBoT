@@ -444,6 +444,15 @@ class XP(commands.Cog):
                 if time_diff < XP_COOLDOWN_SECONDS:
                     return
 
+            # Ensure user exists with proper Discord information
+            await self.bot.db_manager.ensure_user_exists(
+                user_id=message.author.id,
+                username=message.author.name,
+                discriminator=message.author.discriminator,
+                display_name=message.author.display_name,
+                avatar_url=message.author.avatar.url if message.author.avatar else None
+            )
+
             # Award XP and get new level
             new_xp, new_level = await self.bot.db_manager.update_user_xp(user_id, XP_PER_MESSAGE)
             self.last_xp_time[user_id] = current_time
@@ -470,6 +479,15 @@ class XP(commands.Cog):
             message = await channel.fetch_message(payload.message_id)
             if not message or message.author.bot:
                 return
+
+            # Ensure user exists with proper Discord information
+            await self.bot.db_manager.ensure_user_exists(
+                user_id=message.author.id,
+                username=message.author.name,
+                discriminator=message.author.discriminator,
+                display_name=message.author.display_name,
+                avatar_url=message.author.avatar.url if message.author.avatar else None
+            )
 
             # Award XP to message author (level up handled automatically)
             await self.bot.db_manager.update_user_xp(message.author.id, XP_PER_REACTION)
@@ -498,6 +516,16 @@ class XP(commands.Cog):
 
                     if minutes > 0:
                         xp_gained = minutes * XP_PER_VOICE_MINUTE
+                        
+                        # Ensure user exists with proper Discord information
+                        await self.bot.db_manager.ensure_user_exists(
+                            user_id=member.id,
+                            username=member.name,
+                            discriminator=member.discriminator,
+                            display_name=member.display_name,
+                            avatar_url=member.avatar.url if member.avatar else None
+                        )
+                        
                         # Award voice XP (level up handled automatically)
                         await self.bot.db_manager.update_user_xp(member.id, xp_gained)
                         # Level up is now handled automatically in update_user_xp
