@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "malabot"
+name = "mala"
 version = "1.0.0"
 description = "Multifunctional Discord Bot with XP, Verification, and Moderation"
 authors = ["MalaKiiTV <contact@malakii.tv>"]
