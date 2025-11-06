@@ -90,6 +90,8 @@ class RoleConnectionManager:
                     )
                     self.connections_cache[guild_id] = []
                     return
+                except Exception:
+                    pass
 
                 self.connections_cache[guild_id] = [
                     RoleConnection(
@@ -121,6 +123,8 @@ class RoleConnectionManager:
                 self.protected_roles_cache[guild_id] = []
         else:
             self.protected_roles_cache[guild_id] = []
+                except Exception:
+                    pass
 
     async def save_connections(self, guild_id: int):
         """Save connections to database"""
@@ -277,6 +281,8 @@ class RoleConnectionManager:
                     f"[ROLE_CONNECTION] Error processing {member.name}: {e}",
                     level="error",
                 )
+                except Exception:
+                    pass
 
 
 class RoleConnections(commands.Cog):
@@ -297,6 +303,8 @@ class RoleConnections(commands.Cog):
             try:
                 await self.manager.load_connections(guild.id)
                 await self.manager.load_protected_roles(guild.id)
+                except Exception:
+                    pass
 
                 for member in guild.members:
                     await self.manager.process_member(member)
@@ -330,7 +338,9 @@ class RoleConnections(commands.Cog):
                     f"[ROLE_CONNECTION] Error processing member update: {e}",
                     level="error",
                 )
+                except Exception:
+                    pass
 
 
 async def setup(bot):
-    await bot.add_cog(RoleConnections(bot))
+    await bot.add_cog(RoleConnections(bot)

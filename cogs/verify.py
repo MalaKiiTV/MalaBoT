@@ -83,6 +83,8 @@ class PlatformSelect(Select):
         try:
             bot = interaction.client
             db = bot.db_manager  # type: ignore
+                except Exception:
+                    pass
 
             conn = await db.get_connection()
             await conn.execute(
@@ -97,6 +99,8 @@ class PlatformSelect(Select):
                     await message.delete()
             except:
                 pass
+                except Exception:
+                    pass
 
             # Send a brief public confirmation that auto-deletes
             if interaction.channel:
@@ -106,7 +110,6 @@ class PlatformSelect(Select):
                     f"<@{self.user_id}>'s verification has been submitted for review!",
                     COLORS["success"],
                 )
-            )
 
             # Also send ephemeral confirmation to user
             await interaction.response.send_message(
@@ -123,9 +126,11 @@ class PlatformSelect(Select):
 
             await asyncio.sleep(5)
             try:
-                if confirmation_msg: if confirmation_msg: await confirmation_msg.delete()
-            except:
+                if confirmation_msg:
+                    await confirmation_msg.delete()
                 pass
+                except Exception:
+                    pass
 
             log_system(
                 f"[VERIFY] User {self.user_id} submitted verification for {self.activision_id} on {platform}"
@@ -134,7 +139,7 @@ class PlatformSelect(Select):
             guild_id = interaction.guild and interaction.guild and interaction.guild and interaction.guild.id if interaction.guild else None
             review_channel_id = await db.get_setting("verify_channel", guild_id)
             review_channel = (
-                bot.get_channel(int(review_channel_id)) if review_channel_id else None
+                bot.get_channel(int(review_channel_id) if review_channel_id else None
             )
 
             if review_channel:
@@ -214,7 +219,6 @@ class PlatformView(View):
                 screenshot_bytes,
                 screenshot_filename,
             )
-        )
 
 
 class VerifyGroup(app_commands.Group):
@@ -258,6 +262,8 @@ class VerifyGroup(app_commands.Group):
         try:
             # Defer immediately to prevent timeout
             await interaction.response.defer(ephemeral=True, thinking=True)
+                except Exception:
+                    pass
 
             # Check staff permission (uses general mod role)
             from utils.helpers import check_mod_permission
@@ -299,7 +305,7 @@ class VerifyGroup(app_commands.Group):
                 )
 
                 if verified_role_id:
-                    verified_role = guild.get_role(int(verified_role_id))
+                    verified_role = guild.get_role(int(verified_role_id)
                     if verified_role:
                         await member.add_roles(verified_role)
                         result_text = f"✅ Verified {member.mention} and assigned {verified_role.mention} role."
@@ -325,14 +331,16 @@ class VerifyGroup(app_commands.Group):
                 )
 
                 if cheater_role_id and cheater_channel_id:
-                    cheater_role = guild.get_role(int(cheater_role_id))
-                    cheater_channel = guild.get_channel(int(cheater_channel_id))
+                    cheater_role = guild.get_role(int(cheater_role_id)
+                    cheater_channel = guild.get_channel(int(cheater_channel_id)
 
                     if cheater_role and cheater_channel:
                         try:
                             # Lock member to prevent role connections from interfering
                             bot = interaction.client
                             bot.processing_members.add(member.id)
+                except Exception:
+                    pass
 
                             try:
                                 # Add cheater role FIRST
@@ -340,6 +348,8 @@ class VerifyGroup(app_commands.Group):
                                     cheater_role,
                                     reason=f"Marked as cheater by {interaction.user}",
                                 )
+                except Exception:
+                    pass
 
                                 # Then remove all other roles except @everyone and cheater
                                 roles_to_remove = [
@@ -410,6 +420,8 @@ class VerifyGroup(app_commands.Group):
                 log_system(
                     f"Failed to send public verification message: {e}", level="error"
                 )
+                except Exception:
+                    pass
 
             log_system(
                 f"[VERIFY_REVIEW] {interaction.user} {decision_value.upper()} {user} ({notes or 'no notes'})"
@@ -440,6 +452,8 @@ class VerifyGroup(app_commands.Group):
                         f"Could not DM {user} about verification result.",
                         level="warning",
                     )
+                except Exception:
+                    pass
 
         except Exception as e:
             log_system(f"Verification review error: {e}", level="error")
@@ -485,7 +499,7 @@ class Verify(commands.Cog):
         if not cheater_role_id:
             return
 
-        cheater_role = after.guild.get_role(int(cheater_role_id))
+        cheater_role = after.guild.get_role(int(cheater_role_id)
         if not cheater_role:
             return
 
@@ -495,6 +509,8 @@ class Verify(commands.Cog):
             try:
                 # Lock member to prevent role connections from interfering
                 self.bot.processing_members.add(after.id)
+                except Exception:
+                    pass
 
                 try:
                     roles_to_remove = [
@@ -513,6 +529,8 @@ class Verify(commands.Cog):
                 finally:
                     # Always release the lock
                     self.bot.processing_members.discard(after.id)
+                except Exception:
+                    pass
 
             except discord.Forbidden:
                 log_system(
@@ -566,9 +584,11 @@ class Verify(commands.Cog):
 
         # Delete the screenshot message BEFORE sending reply
         try:
-            if message: if message: await message.delete()
+            if message: await message.delete()
         except Exception as e:
             log_system(f"Failed to delete screenshot message: {e}", level="warning")
+                except Exception:
+                    pass
 
         # Send platform selection to the channel (not as reply since original message is deleted)
         view = PlatformView(

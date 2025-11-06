@@ -33,6 +33,8 @@ class Welcome(commands.Cog):
         try:
             if not self.bot.db_manager  # type: ignore:
                 return
+                except Exception:
+                    pass
 
             guild_id = member.guild.id
 
@@ -40,7 +42,7 @@ class Welcome(commands.Cog):
             join_role_id = await self.bot.db_manager.get_setting("join_role", guild_id)
             if join_role_id:
                 try:
-                    join_role = member.guild.get_role(int(join_role_id))
+                    join_role = member.guild.get_role(int(join_role_id)
                     if join_role:
                         await member.add_roles(
                             join_role, reason="Auto-assigned join role"
@@ -60,6 +62,8 @@ class Welcome(commands.Cog):
                     self.logger.error(
                         f"Error assigning join role to {member.name}: {e}"
                     )
+                except Exception:
+                    pass
 
             # Get welcome settings
             guild_id = member.guild.id
@@ -80,7 +84,7 @@ class Welcome(commands.Cog):
             if not welcome_channel_id:
                 return
 
-            channel = self.bot.get_channel(int(welcome_channel_id))
+            channel = self.bot.get_channel(int(welcome_channel_id)
             if not channel:
                 self.logger.warning(f"Welcome channel {welcome_channel_id} not found")
                 return
@@ -94,7 +98,7 @@ class Welcome(commands.Cog):
                 "{server.name}", member.guild.name
             )
             formatted_message = formatted_message.replace(
-                "{member.count}", str(len(member.guild.members))
+                "{member.count}", str(len(member.guild.members)
             )
 
             # Create welcome embed
@@ -110,7 +114,6 @@ class Welcome(commands.Cog):
                     if member.display_avatar
                     else member.default_avatar.url
                 )
-            )
             embed.set_footer(text=f"Member #{len(member.guild.members)}")
 
             # Add image if configured
@@ -132,6 +135,8 @@ class Welcome(commands.Cog):
         try:
             if not self.bot.db_manager  # type: ignore:
                 return
+                except Exception:
+                    pass
 
             guild_id = member.guild.id
 
@@ -154,7 +159,7 @@ class Welcome(commands.Cog):
             if not goodbye_channel_id:
                 return
 
-            channel = self.bot.get_channel(int(goodbye_channel_id))
+            channel = self.bot.get_channel(int(goodbye_channel_id)
             if not channel:
                 self.logger.warning(f"Goodbye channel {goodbye_channel_id} not found")
                 return
@@ -168,7 +173,7 @@ class Welcome(commands.Cog):
                 "{server.name}", member.guild.name
             )
             formatted_message = formatted_message.replace(
-                "{member.count}", str(len(member.guild.members))
+                "{member.count}", str(len(member.guild.members)
             )
 
             # Create goodbye embed
@@ -184,7 +189,6 @@ class Welcome(commands.Cog):
                     if member.display_avatar
                     else member.default_avatar.url
                 )
-            )
             embed.set_footer(text=f"Member count: {len(member.guild.members)}")
 
             # Add image if configured
@@ -230,6 +234,8 @@ class Welcome(commands.Cog):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
+                except Exception:
+                    pass
 
             # Route to appropriate handler
             if action == "setchannel":
@@ -256,6 +262,8 @@ class Welcome(commands.Cog):
         try:
             # Get all text channels
             channels = list(interaction.guild and interaction.guild and interaction.guild.text_channels)
+                except Exception:
+                    pass
 
             if not channels:
                 embed = embed_helper.error_embed(
@@ -292,7 +300,6 @@ class Welcome(commands.Cog):
                     # Save to database
                     await self.cog.bot.db_manager.set_setting(
                         "welcome_channel_id", str(self.selected_channel)
-                    )
 
                     channel = self.cog.bot.get_channel(self.selected_channel)
                     embed = embed_helper.success_embed(
@@ -322,12 +329,16 @@ class Welcome(commands.Cog):
                 "You can use {member.name} for the member's name.",
                 ephemeral=True,
             )
+                except Exception:
+                    pass
 
             def check(m):
                 return m.author == interaction.user and m.channel == interaction.channel
 
             try:
                 msg = await self.bot.wait_for("message", check=check, timeout=60.0)
+                except Exception:
+                    pass
 
                 # Save to database
                 await self.bot.db_manager.set_setting("welcome_title", msg.content)
@@ -356,12 +367,16 @@ class Welcome(commands.Cog):
                 "You can use {member.mention}, {member.name}, {server.name}",
                 ephemeral=True,
             )
+                except Exception:
+                    pass
 
             def check(m):
                 return m.author == interaction.user and m.channel == interaction.channel
 
             try:
                 msg = await self.bot.wait_for("message", check=check, timeout=60.0)
+                except Exception:
+                    pass
 
                 # Save to database
                 await self.bot.db_manager.set_setting("welcome_message", msg.content)
@@ -389,12 +404,16 @@ class Welcome(commands.Cog):
                 "Please enter the welcome image URL (or 'none' to remove image):",
                 ephemeral=True,
             )
+                except Exception:
+                    pass
 
             def check(m):
                 return m.author == interaction.user and m.channel == interaction.channel
 
             try:
                 msg = await self.bot.wait_for("message", check=check, timeout=60.0)
+                except Exception:
+                    pass
 
                 if msg.content.lower() == "none":
                     await self.bot.db_manager.set_setting("welcome_image", "")
@@ -432,6 +451,8 @@ class Welcome(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception:
             pass
+                except Exception:
+                    pass
 
 
 async def setup(bot: commands.Bot):

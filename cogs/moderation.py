@@ -46,6 +46,8 @@ class Moderation(commands.Cog):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
+                except Exception:
+                    pass
 
             # Check if user is owner, admin, or staff
             from utils.helpers import is_staff
@@ -75,8 +77,8 @@ class Moderation(commands.Cog):
                 )
                 if not isinstance(interaction.channel, discord.TextChannel):
             if user_data:
-                    title="Invalid Channel",
-                    description="This command can only be used in text channels.",
+                # Process the user data
+                pass
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 if action == "last10":
@@ -104,6 +106,8 @@ class Moderation(commands.Cog):
         """Delete last 10 messages."""
         try:
             channel = interaction.channel
+                except Exception:
+                    pass
 
             await interaction.response.defer(ephemeral=True)
 
@@ -168,6 +172,8 @@ class Moderation(commands.Cog):
         """Delete last 50 messages."""
         try:
             channel = interaction.channel
+                except Exception:
+                    pass
 
             await interaction.response.defer(ephemeral=True)
 
@@ -232,6 +238,8 @@ class Moderation(commands.Cog):
         """Delete all messages by cloning channel."""
         try:
             channel = interaction.channel
+                except Exception:
+                    pass
 
             await interaction.response.defer(ephemeral=True)
 
@@ -299,6 +307,8 @@ class Moderation(commands.Cog):
         except Exception as e:
             self.logger.error(f"Error purging channel: {e}")
             raise
+                except Exception:
+                    pass
 
     async def _delete_logs(self, interaction: discord.Interaction):
         """Show deletion logs."""
@@ -310,6 +320,8 @@ class Moderation(commands.Cog):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
+                except Exception:
+                    pass
 
             logs = await self.bot.db_manager.get_recent_moderation_logs(
                 DELETE_LOG_LIMIT
@@ -345,6 +357,8 @@ class Moderation(commands.Cog):
                     )
                 except:
                     mod_name = f"User {moderator_id}"
+                except Exception:
+                    pass
 
                 channel = self.bot.get_channel(channel_id)
                 channel_name = channel.mention if channel else f"Channel {channel_id}"
@@ -384,6 +398,8 @@ class Moderation(commands.Cog):
         try:
             # Check if user is owner, admin, or staff
             from utils.helpers import is_staff
+                except Exception:
+                    pass
 
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (
@@ -481,6 +497,8 @@ class Moderation(commands.Cog):
         try:
             # Check if user is owner, admin, or staff
             from utils.helpers import is_staff
+                except Exception:
+                    pass
 
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (
@@ -586,6 +604,8 @@ class Moderation(commands.Cog):
         try:
             # Check if user is owner, admin, or staff
             from utils.helpers import is_staff
+                except Exception:
+                    pass
 
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (
@@ -697,6 +717,8 @@ class Moderation(commands.Cog):
         except Exception as e:
             self.logger.error(f"Error in mute command: {e}")
             await self._error_response(interaction, "Failed to mute user")
+                except Exception:
+                    pass
 
     @app_commands.command(
         name="unmute", description="Unmute a user in the server (Server Owner only)"
@@ -713,6 +735,8 @@ class Moderation(commands.Cog):
         try:
             # Check if user is owner, admin, or staff
             from utils.helpers import is_staff
+                except Exception:
+                    pass
 
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (
@@ -807,6 +831,8 @@ class Moderation(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
         except:
             pass
+                except Exception:
+                    pass
 
 
 async def setup(bot: commands.Bot):

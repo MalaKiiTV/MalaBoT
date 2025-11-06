@@ -55,6 +55,8 @@ class Owner(commands.Cog):
         try:
             user_id = interaction.user.id
             owner_ids = settings.OWNER_IDS
+                except Exception:
+                    pass
 
             if user_id not in owner_ids:
                 self.logger.error(
@@ -98,10 +100,12 @@ class Owner(commands.Cog):
         """Show detailed bot status."""
         try:
             sys_info = get_system_info()
+                except Exception:
+                    pass
 
-            start_time = getattr(self.bot, "start_time", time.time())
+            start_time = getattr(self.bot, "start_time", time.time()
             if isinstance(start_time, datetime):
-                uptime_seconds = int(time.time() - start_time.timestamp())
+                uptime_seconds = int(time.time() - start_time.timestamp()
             else:
                 uptime_seconds = int(time.time() - start_time)
             uptime_str = self._format_duration(uptime_seconds)
@@ -164,6 +168,8 @@ class Owner(commands.Cog):
                 title="🔄 Restarting Bot",
                 description="The bot will restart now. This may take up to 60 seconds.",
             )
+                except Exception:
+                    pass
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -175,6 +181,8 @@ class Owner(commands.Cog):
                 subprocess.run(["./update.sh", "manual"], check=True)
             except:
                 os.execv(sys.executable, [sys.executable] + sys.argv)
+                except Exception:
+                    pass
 
         except Exception as e:
             self.logger.error(f"Error in owner restart: {e}")
@@ -186,6 +194,8 @@ class Owner(commands.Cog):
             embed = embed_helper.error_embed(
                 title="🛑 Shutting Down Bot", description="The bot will shutdown now."
             )
+                except Exception:
+                    pass
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -202,8 +212,10 @@ class Owner(commands.Cog):
     async def _owner_clearcrash(self, interaction: discord.Interaction):
         """Clear crash flags."""
         try:
-            if self.bot.db_manager  # type: ignore:
+            if self.bot.db_manager:  # type: ignore:
                 await self.bot.db_manager.clear_flag("crash_detected")
+                except Exception:
+                    pass
 
                 embed = embed_helper.success_embed(
                     title="🧹 Crash Flags Cleared",
@@ -236,6 +248,8 @@ class Owner(commands.Cog):
                             "guild_id": guild.id,
                         }
                     )
+                except Exception:
+                    pass
 
             if not all_channels:
                 embed = embed_helper.error_embed(
@@ -289,10 +303,11 @@ class Owner(commands.Cog):
                     try:
                         await self.cog.bot.db_manager.set_setting(
                             "online_channel_id", str(self.channel_id)
-                        )
                         await self.cog.bot.db_manager.set_setting(
                             "online_message", self.message.value
                         )
+                except Exception:
+                    pass
 
                         channel = self.cog.bot.get_channel(self.channel_id)
                         if channel:
@@ -345,6 +360,8 @@ class Owner(commands.Cog):
         try:
             if not self.bot.db_manager  # type: ignore:
                 return
+                except Exception:
+                    pass
 
             # Try to get guild-specific settings first
             for guild in self.bot.guilds:
@@ -357,7 +374,7 @@ class Owner(commands.Cog):
                 )
 
                 if online_channel_id and online_message:
-                    channel = self.bot.get_channel(int(online_channel_id))
+                    channel = self.bot.get_channel(int(online_channel_id)
                     if channel:
                         embed = embed_helper.success_embed(
                             title="🟢 Bot Online", description=online_message
@@ -399,6 +416,8 @@ class Owner(commands.Cog):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
         except:
             pass
+                except Exception:
+                    pass
 
     @app_commands.command(
         name="clear-commands",
@@ -408,6 +427,8 @@ class Owner(commands.Cog):
         """Clear all slash commands and re-sync them."""
         try:
             await interaction.response.defer(ephemeral=True)
+                except Exception:
+                    pass
 
             # Get debug guild from environment or use first available guild
             import os
@@ -452,6 +473,8 @@ class Owner(commands.Cog):
                     self.logger.info(f"Reloaded {cog_name}")
                 except Exception as e:
                     self.logger.error(f"Failed to reload {cog_name}: {e}")
+                except Exception:
+                    pass
 
             # Now copy commands from cogs to tree
             self.bot.tree.copy_global_to(guild=guild)
