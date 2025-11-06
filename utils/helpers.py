@@ -200,9 +200,9 @@ class SystemHelper:
             "memory_usage": memory_info.rss / 1024 / 1024,  # MB
             "memory_percent": process.memory_percent(),
             "disk_usage": psutil.disk_usage("/"),
-            "boot_time": datetime.fromtimestamp(
-                psutil.boot_time(), tz=UTC
-            ).strftime("%Y-%m-%d %H:%M:%S"),
+            "boot_time": datetime.fromtimestamp(psutil.boot_time(), tz=UTC).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            ),
         }
 
     @staticmethod

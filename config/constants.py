@@ -5,15 +5,15 @@ Contains XP tables, colors, embed settings, and other static data.
 
 # Embed Color Scheme
 COLORS = {
-    "success": 0x00ff00,      # Green
-    "warning": 0xffaa00,      # Orange/Yellow
-    "error": 0xff0000,        # Red
-    "info": 0x0099ff,         # Blue
-    "primary": 0x7289da,      # Discord blurple
-    "roast": 0xff6b35,        # Orange/Red for roast system
-    "birthday": 0xff69b4,     # Pink for birthdays
-    "welcome": 0x00d4aa,      # Teal for welcomes
-    "xp": 0x9b59b6,           # Purple for XP system
+    "success": 0x00FF00,  # Green
+    "warning": 0xFFAA00,  # Orange/Yellow
+    "error": 0xFF0000,  # Red
+    "info": 0x0099FF,  # Blue
+    "primary": 0x7289DA,  # Discord blurple
+    "roast": 0xFF6B35,  # Orange/Red for roast system
+    "birthday": 0xFF69B4,  # Pink for birthdays
+    "welcome": 0x00D4AA,  # Teal for welcomes
+    "xp": 0x9B59B6,  # Purple for XP system
 }
 
 # XP System Configuration
@@ -144,7 +144,7 @@ SUCCESS_MESSAGES = {
 # Level Role Map (server owners should customize these)
 # Format: level: role_name_or_id
 LEVEL_ROLE_MAP = {
-    1: None,          # Starting level, no role
+    1: None,  # Starting level, no role
     5: "Level 5",
     10: "Level 10",
     15: "Level 15",

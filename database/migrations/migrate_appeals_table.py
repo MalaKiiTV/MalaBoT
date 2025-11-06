@@ -44,7 +44,8 @@ async def migrate_appeals_table():
         await conn.execute("DROP TABLE IF EXISTS appeals")
 
         # Create new table without UNIQUE constraint
-        await conn.execute("""
+        await conn.execute(
+            """
             CREATE TABLE appeals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -56,19 +57,21 @@ async def migrate_appeals_table():
                 reviewed_at TIMESTAMP DEFAULT NULL,
                 review_notes TEXT DEFAULT NULL
             )
-        """)
+        """
+        )
 
         # Re-insert data
         if appeals_data:
-            placeholders = ','.join(['?' for _ in column_names])
+            placeholders = ",".join(["?" for _ in column_names])
             await conn.executemany(
                 f"INSERT INTO appeals ({','.join(column_names)}) VALUES ({placeholders})",
-                appeals_data
+                appeals_data,
             )
 
         await conn.commit()
         print(f"✅ Migration complete! Re-inserted {len(appeals_data)} appeals")
         print("Users can now submit new appeals after leaving and rejoining.")
+
 
 if __name__ == "__main__":
     asyncio.run(migrate_appeals_table())

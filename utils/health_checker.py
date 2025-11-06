@@ -7,7 +7,8 @@ import logging
 import os
 from datetime import datetime
 
-logger = logging.getLogger('health_checker')
+logger = logging.getLogger("health_checker")
+
 
 class HealthChecker:
     """
@@ -31,17 +32,17 @@ class HealthChecker:
         results = {}
 
         # Database checks
-        results['database_exists'] = await self._check_database_exists()
-        results['database_accessible'] = await self._check_database_accessible()
-        results['tables_exist'] = await self._check_tables_exist()
+        results["database_exists"] = await self._check_database_exists()
+        results["database_accessible"] = await self._check_database_accessible()
+        results["tables_exist"] = await self._check_tables_exist()
 
         # Data integrity checks
-        results['settings_readable'] = await self._check_settings_readable()
-        results['critical_data_exists'] = await self._check_critical_data()
+        results["settings_readable"] = await self._check_settings_readable()
+        results["critical_data_exists"] = await self._check_critical_data()
 
         # System checks
-        results['cogs_loaded'] = await self._check_cogs_loaded()
-        results['memory_ok'] = await self._check_memory()
+        results["cogs_loaded"] = await self._check_cogs_loaded()
+        results["memory_ok"] = await self._check_memory()
 
         # Log results
         self._log_results(results)
@@ -82,9 +83,17 @@ class HealthChecker:
         """Check if all required tables exist"""
         try:
             required_tables = [
-                'users', 'birthdays', 'settings', 'mod_logs',
-                'roast_xp', 'roast_log', 'audit_log', 'health_logs',
-                'system_flags', 'verifications', 'appeals'
+                "users",
+                "birthdays",
+                "settings",
+                "mod_logs",
+                "roast_xp",
+                "roast_log",
+                "audit_log",
+                "health_logs",
+                "system_flags",
+                "verifications",
+                "appeals",
             ]
 
             conn = await self.bot.db_manager.get_connection()
@@ -157,8 +166,12 @@ class HealthChecker:
         """Check if all cogs are loaded"""
         try:
             required_cogs = [
-                'Setup', 'Verify', 'RoleConnections', 'XP',
-                'Welcome', 'Birthdays'
+                "Setup",
+                "Verify",
+                "RoleConnections",
+                "XP",
+                "Welcome",
+                "Birthdays",
             ]
 
             loaded_cogs = [cog for cog in self.bot.cogs]
@@ -177,6 +190,7 @@ class HealthChecker:
         """Check memory usage"""
         try:
             import psutil
+
             process = psutil.Process()
             memory_mb = process.memory_info().rss / 1024 / 1024
 
@@ -234,7 +248,7 @@ class HealthChecker:
 
             # Verify each connection has required fields
             for conn in connections:
-                required_fields = ['id', 'target_role_id', 'action', 'conditions']
+                required_fields = ["id", "target_role_id", "action", "conditions"]
                 missing = [f for f in required_fields if f not in conn]
                 if missing:
                     return False, f"Connection missing fields: {missing}"

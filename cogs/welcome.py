@@ -57,7 +57,9 @@ class Welcome(commands.Cog):
                         f"Missing permissions to assign join role to {member.name}"
                     )
                 except Exception as e:
-                    self.logger.error(f"Error assigning join role to {member.name}: {e}")
+                    self.logger.error(
+                        f"Error assigning join role to {member.name}: {e}"
+                    )
 
             # Get welcome settings
             guild_id = member.guild.id
@@ -84,7 +86,9 @@ class Welcome(commands.Cog):
                 return
 
             # Format welcome message
-            formatted_message = welcome_message.replace("{member.mention}", member.mention)
+            formatted_message = welcome_message.replace(
+                "{member.mention}", member.mention
+            )
             formatted_message = formatted_message.replace("{member.name}", member.name)
             formatted_message = formatted_message.replace(
                 "{server.name}", member.guild.name
@@ -101,9 +105,11 @@ class Welcome(commands.Cog):
             )
 
             embed.set_thumbnail(
-                url=member.display_avatar.url
-                if member.display_avatar
-                else member.default_avatar.url
+                url=(
+                    member.display_avatar.url
+                    if member.display_avatar
+                    else member.default_avatar.url
+                )
             )
             embed.set_footer(text=f"Member #{len(member.guild.members)}")
 
@@ -154,7 +160,9 @@ class Welcome(commands.Cog):
                 return
 
             # Format goodbye message
-            formatted_message = goodbye_message.replace("{member.mention}", member.mention)
+            formatted_message = goodbye_message.replace(
+                "{member.mention}", member.mention
+            )
             formatted_message = formatted_message.replace("{member.name}", member.name)
             formatted_message = formatted_message.replace(
                 "{server.name}", member.guild.name
@@ -171,9 +179,11 @@ class Welcome(commands.Cog):
             )
 
             embed.set_thumbnail(
-                url=member.display_avatar.url
-                if member.display_avatar
-                else member.default_avatar.url
+                url=(
+                    member.display_avatar.url
+                    if member.display_avatar
+                    else member.default_avatar.url
+                )
             )
             embed.set_footer(text=f"Member count: {len(member.guild.members)}")
 
@@ -298,7 +308,9 @@ class Welcome(commands.Cog):
                 title="📢 Select Welcome Channel",
                 description="Please select the channel where welcome messages should be sent.",
             )
-            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            await interaction.response.send_message(
+                embed=embed, view=view, ephemeral=True
+            )
 
         except Exception as e:
             self.logger.error(f"Error setting welcome channel: {e}")

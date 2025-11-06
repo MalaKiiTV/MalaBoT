@@ -8,8 +8,17 @@ from utils.logger import log_system
 
 class RoleConnection:
     """Represents a single role connection rule"""
-    def __init__(self, connection_id: int, guild_id: int, target_role_id: int,
-                 action: str, conditions: list[dict], logic: str = "AND", enabled: bool = True):
+
+    def __init__(
+        self,
+        connection_id: int,
+        guild_id: int,
+        target_role_id: int,
+        action: str,
+        conditions: list[dict],
+        logic: str = "AND",
+        enabled: bool = True,
+    ):
         self.id = connection_id
         self.guild_id = guild_id
         self.target_role_id = target_role_id
@@ -51,11 +60,13 @@ class RoleConnection:
             "action": self.action,
             "conditions": self.conditions,
             "logic": self.logic,
-            "enabled": self.enabled
+            "enabled": self.enabled,
         }
+
 
 class RoleConnectionManager:
     """Manages role connections for a guild"""
+
     def __init__(self, bot, db_manager):
         self.bot = bot
         self.db = db_manager
@@ -73,7 +84,10 @@ class RoleConnectionManager:
                 elif isinstance(connections_data, list):
                     data = connections_data
                 else:
-                    log_system(f"[ROLE_CONNECTION] Unexpected data type: {type(connections_data)}", level="error")
+                    log_system(
+                        f"[ROLE_CONNECTION] Unexpected data type: {type(connections_data)}",
+                        level="error",
+                    )
                     self.connections_cache[guild_id] = []
                     return
 
@@ -85,12 +99,14 @@ class RoleConnectionManager:
                         action=conn["action"],
                         conditions=conn["conditions"],
                         logic=conn.get("logic", "AND"),
-                        enabled=conn.get("enabled", True)
+                        enabled=conn.get("enabled", True),
                     )
                     for conn in data
                 ]
             except Exception as e:
-                log_system(f"[ROLE_CONNECTION] Error loading connections: {e}", level="error")
+                log_system(
+                    f"[ROLE_CONNECTION] Error loading connections: {e}", level="error"
+                )
                 self.connections_cache[guild_id] = []
         else:
             self.connections_cache[guild_id] = []
@@ -117,8 +133,14 @@ class RoleConnectionManager:
         protected = self.protected_roles_cache.get(guild_id, [])
         await self.db.set_setting("protected_roles", json.dumps(protected), guild_id)
 
-    async def add_connection(self, guild_id: int, target_role_id: int, action: str,
-                           conditions: list[dict], logic: str = "AND") -> int:
+    async def add_connection(
+        self,
+        guild_id: int,
+        target_role_id: int,
+        action: str,
+        conditions: list[dict],
+        logic: str = "AND",
+    ) -> int:
         """Add a new connection"""
         await self.load_connections(guild_id)
         connections = self.connections_cache.get(guild_id, [])
@@ -132,7 +154,7 @@ class RoleConnectionManager:
             target_role_id=target_role_id,
             action=action,
             conditions=conditions,
-            logic=logic
+            logic=logic,
         )
 
         connections.append(new_connection)
@@ -145,7 +167,9 @@ class RoleConnectionManager:
         """Remove a connection"""
         await self.load_connections(guild_id)
         connections = self.connections_cache.get(guild_id, [])
-        self.connections_cache[guild_id] = [c for c in connections if c.id != connection_id]
+        self.connections_cache[guild_id] = [
+            c for c in connections if c.id != connection_id
+        ]
         await self.save_connections(guild_id)
 
     async def toggle_connection(self, guild_id: int, connection_id: int):
@@ -158,14 +182,18 @@ class RoleConnectionManager:
                 break
         await self.save_connections(guild_id)
 
-    async def update_connection_logic(self, guild_id: int, connection_id: int, new_logic: str):
+    async def update_connection_logic(
+        self, guild_id: int, connection_id: int, new_logic: str
+    ):
         """Update the logic (AND/OR) of a connection"""
         await self.load_connections(guild_id)
         connections = self.connections_cache.get(guild_id, [])
         for conn in connections:
             if conn.id == connection_id:
                 conn.logic = new_logic
-                log_system(f"[ROLE_CONNECTION] Updated connection #{connection_id} logic to {new_logic}")
+                log_system(
+                    f"[ROLE_CONNECTION] Updated connection #{connection_id} logic to {new_logic}"
+                )
                 break
         await self.save_connections(guild_id)
 
@@ -221,18 +249,35 @@ class RoleConnectionManager:
             try:
                 if connection.action == "give" and conditions_met and not has_role:
                     await member.add_roles(target_role, reason="Role connection rule")
-                    log_system(f"[ROLE_CONNECTION] Added {target_role.name} to {member.name}")
+                    log_system(
+                        f"[ROLE_CONNECTION] Added {target_role.name} to {member.name}"
+                    )
                 elif connection.action == "remove" and conditions_met and has_role:
-                    await member.remove_roles(target_role, reason="Role connection rule")
-                    log_system(f"[ROLE_CONNECTION] Removed {target_role.name} from {member.name}")
+                    await member.remove_roles(
+                        target_role, reason="Role connection rule"
+                    )
+                    log_system(
+                        f"[ROLE_CONNECTION] Removed {target_role.name} from {member.name}"
+                    )
                 elif connection.action == "give" and not conditions_met and has_role:
                     # Remove role if conditions no longer met
-                    await member.remove_roles(target_role, reason="Role connection conditions no longer met")
-                    log_system(f"[ROLE_CONNECTION] Removed {target_role.name} from {member.name} (conditions not met)")
+                    await member.remove_roles(
+                        target_role, reason="Role connection conditions no longer met"
+                    )
+                    log_system(
+                        f"[ROLE_CONNECTION] Removed {target_role.name} from {member.name} (conditions not met)"
+                    )
             except discord.Forbidden:
-                log_system(f"[ROLE_CONNECTION] Missing permissions to modify {member.name}", level="error")
+                log_system(
+                    f"[ROLE_CONNECTION] Missing permissions to modify {member.name}",
+                    level="error",
+                )
             except Exception as e:
-                log_system(f"[ROLE_CONNECTION] Error processing {member.name}: {e}", level="error")
+                log_system(
+                    f"[ROLE_CONNECTION] Error processing {member.name}: {e}",
+                    level="error",
+                )
+
 
 class RoleConnections(commands.Cog):
     """Role connection system for automatic role management"""
@@ -256,7 +301,10 @@ class RoleConnections(commands.Cog):
                 for member in guild.members:
                     await self.manager.process_member(member)
             except Exception as e:
-                log_system(f"[ROLE_CONNECTION] Error in periodic check for {guild.name}: {e}", level="error")
+                log_system(
+                    f"[ROLE_CONNECTION] Error in periodic check for {guild.name}: {e}",
+                    level="error",
+                )
 
     @check_connections.before_loop
     async def before_check_connections(self):
@@ -268,7 +316,9 @@ class RoleConnections(commands.Cog):
         if before.roles != after.roles:
             # Skip if member is being processed by another system (e.g., cheater assignment)
             if after.id in self.bot.processing_members:
-                log_system(f"[ROLE_CONNECTION] Skipping {after.name} - member is locked for processing")
+                log_system(
+                    f"[ROLE_CONNECTION] Skipping {after.name} - member is locked for processing"
+                )
                 return
 
             try:
@@ -276,7 +326,11 @@ class RoleConnections(commands.Cog):
                 await self.manager.load_protected_roles(after.guild.id)
                 await self.manager.process_member(after)
             except Exception as e:
-                log_system(f"[ROLE_CONNECTION] Error processing member update: {e}", level="error")
+                log_system(
+                    f"[ROLE_CONNECTION] Error processing member update: {e}",
+                    level="error",
+                )
+
 
 async def setup(bot):
     await bot.add_cog(RoleConnections(bot))
