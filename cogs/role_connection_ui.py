@@ -68,7 +68,7 @@ class AddConnectionRoleSelect(Select):
             return
 
         role_id = int(self.values[0])
-        self.parent_view.target_role = interaction.guild and interaction.guild and interaction.guild.get_role(role_id)
+        self.parent_view.target_role = interaction.guild.get_role(role_id)
 
         if not self.parent_view.target_role:
             await interaction.response.send_message(
@@ -274,7 +274,7 @@ class ConditionRoleSelect(Select):
             return
 
         role_id = int(self.values[0])
-        condition_role = interaction.guild and interaction.guild and interaction.guild.get_role(role_id)
+        condition_role = interaction.guild.get_role(role_id)
 
         if not condition_role:
             await interaction.response.send_message(
@@ -821,7 +821,7 @@ class AddProtectedRoleSelect(Select):
             return
 
         role_id = int(self.values[0])
-        role = interaction.guild and interaction.guild and interaction.guild.get_role(role_id)
+        role = interaction.guild.get_role(role_id)
 
         if not role:
             await interaction.response.send_message(
@@ -864,9 +864,7 @@ class RemoveProtectedRoleSelect(Select):
             role = guild.get_role(role_id)
             if role:
                 options.append(
-                    discord.SelectOption(
-                        label=role.name, value=str(role_id), emoji="🛡️"
-                    )
+                    discord.SelectOption(label=role.name, value=str(role_id), emoji="🛡️")
                 )
 
         super().__init__(

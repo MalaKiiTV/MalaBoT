@@ -51,7 +51,7 @@ class XPGroup(app_commands.Group):
 
             # Get rank
             rank = await self.cog.bot.db_manager.get_user_rank(
-                target.id, interaction.guild and interaction.guild and interaction.guild and interaction.guild.id
+                target.id, interaction.guild.id
             )
 
             # Calculate XP for next level using XP_TABLE
@@ -98,7 +98,7 @@ class XPGroup(app_commands.Group):
         """Show XP leaderboard."""
         try:
             # Get top users by XP for this guild only
-            guild_member_ids = [member.id for member in interaction.guild and interaction.guild and interaction.guild and interaction.guild.members]
+            guild_member_ids = [member.id for member in interaction.guild.members]
             if not guild_member_ids:
                 embed = create_embed(
                     title="\ud83c\udfc6 XP Leaderboard",
@@ -139,7 +139,7 @@ class XPGroup(app_commands.Group):
                         level = lvl + 1
                     else:
                         break
-                user = interaction.guild and interaction.guild and interaction.guild and interaction.guild.get_member(user_id)
+                user = interaction.guild.get_member(user_id)
                 if user:
                     medal = ""
                     if i == 1:
@@ -236,7 +236,7 @@ class XPGroup(app_commands.Group):
         self, interaction: discord.Interaction, user: discord.Member, amount: int
     ):
         """Add XP to a user."""
-        if not hasattr(interaction.user, "guild_permissions") and interaction.user.guild_permissions.administrator:
+        if not interaction.user.guild_permissions.administrator:
             embed = embed_helper.error_embed(
                 "Permission Denied",
                 "Only server owners and administrators can use this command.",
@@ -276,7 +276,7 @@ class XPGroup(app_commands.Group):
         self, interaction: discord.Interaction, amount: int, confirm: str
     ):
         """Add XP to all users."""
-        if not hasattr(interaction.user, "guild_permissions") and interaction.user.guild_permissions.administrator:
+        if not interaction.user.guild_permissions.administrator:
             embed = embed_helper.error_embed(
                 "Permission Denied", "Only the server owner can use this command."
             )
@@ -300,7 +300,7 @@ class XPGroup(app_commands.Group):
 
         try:
             # Add XP to all users in the server
-            for member in interaction.guild and interaction.guild and interaction.guild and interaction.guild.members:
+            for member in interaction.guild.members:
                 if not member.bot:
                     await self.cog.bot.db_manager.update_user_xp(member.id, amount)
 
@@ -326,7 +326,7 @@ class XPGroup(app_commands.Group):
         self, interaction: discord.Interaction, user: discord.Member, amount: int
     ):
         """Remove XP from a user."""
-        if not hasattr(interaction.user, "guild_permissions") and interaction.user.guild_permissions.administrator:
+        if not interaction.user.guild_permissions.administrator:
             embed = embed_helper.error_embed(
                 "Permission Denied",
                 "Only server owners and administrators can use this command.",
@@ -363,7 +363,7 @@ class XPGroup(app_commands.Group):
         self, interaction: discord.Interaction, user: discord.Member, amount: int
     ):
         """Set user XP."""
-        if not hasattr(interaction.user, "guild_permissions") and interaction.user.guild_permissions.administrator:
+        if not interaction.user.guild_permissions.administrator:
             embed = embed_helper.error_embed(
                 "Permission Denied",
                 "Only server owners and administrators can use this command.",
@@ -398,7 +398,7 @@ class XPGroup(app_commands.Group):
     @app_commands.checks.has_permissions(administrator=True)
     async def reset(self, interaction: discord.Interaction, user: discord.Member):
         """Reset user XP."""
-        if not hasattr(interaction.user, "guild_permissions") and interaction.user.guild_permissions.administrator:
+        if not interaction.user.guild_permissions.administrator:
             embed = embed_helper.error_embed(
                 "Permission Denied",
                 "Only server owners and administrators can use this command.",
@@ -426,8 +426,7 @@ class XP(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.logger = get_logger("xp")
-        self.last_xp_time: dict = {}  # Track last XP gain time per user
-        self._xp_group: Optional[XPGroup] = None  # Store reference for cleanup
+        self.last_xp_time = {}  # Track last XP gain time per user
 
     async def cog_unload(self):
         """Remove the command group when cog is unloaded."""

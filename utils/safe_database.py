@@ -115,7 +115,7 @@ class SafeDatabase:
             logger.error(f"[JSON SAVE ERROR] {key}: {e}")
             return False
 
-    async def load_json_setting(self, key: str, default: dict = None) -> dict:  # type: ignore
+    async def load_json_setting(self, key: str, default: dict = None) -> dict:
         """
         Load JSON data with error handling
 
@@ -129,7 +129,7 @@ class SafeDatabase:
         try:
             json_str = await self.get_setting(key)
             if json_str:
-                return json.loads(json_str)  # type: ignore  # type: ignore
+                return json.loads(json_str)
             return default or {}
         except json.JSONDecodeError as e:
             logger.error(f"[JSON PARSE ERROR] {key}: {e}")
