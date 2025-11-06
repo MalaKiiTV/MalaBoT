@@ -93,7 +93,8 @@ class PlatformSelect(Select):
 
             # Delete the platform selection message to clean up the channel
             try:
-                if message: if message: await message.delete()
+                if message:
+                    await message.delete()
             except:
                 pass
 
@@ -539,9 +540,7 @@ class Verify(commands.Cog):
 
         # CRITICAL: Only process if message is in the same channel where verification was started
         if message.channel.id != pending.get("channel_id"):
-            return
-
-        if not message.attachments:
+            if not message.attachments:
             return
 
         activision_id = pending["activision_id"]

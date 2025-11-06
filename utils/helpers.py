@@ -375,35 +375,29 @@ async def check_mod_permission(
 
 
 async def safe_send_message(
-    channel, content=None, embed=None, ephemeral=False, **kwargs
-):
-    """Safely send a message to a channel with error handling."""
-    try:
+       channel, content=None, embed=None, ephemeral=False, **kwargs
+   ):
+       """Safely send a message to a channel with error handling."""
+       try:
            if hasattr(channel, "send"):  # Regular channel
                if channel and hasattr(channel, "send"):
                    return await channel.send(content=content, embed=embed, **kwargs)
-                content=content, embed=embed, ephemeral=ephemeral, **kwargs
-            )
-        # Assume it's an interaction
-        if ephemeral:
-            return await channel.response.send_message(
-                content=content, embed=embed, ephemeral=True, **kwargs
-            )
-        return await channel.response.send_message(
-            content=content, embed=embed, **kwargs
-        )
-    except discord.Forbidden:
-        # Bot doesn't have permission to send messages in this channel
-        print(f"Missing permissions to send message in {channel}")
-        return None
-    except discord.HTTPException as e:
-        # Other Discord API errors
-        print(f"Failed to send message: {e}")
-        return None
-    except Exception as e:
-        # Any other errors
-        print(f"Unexpected error when sending message: {e}")
-        return None
+           if hasattr(channel, "followup"):  # Interaction followup
+               return await channel.followup.send(
+                   content=content, embed=embed, ephemeral=ephemeral, **kwargs
+               )
+           # Assume it's an interaction
+           if ephemeral:
+               return await channel.response.send_message(
+                   content=content, embed=embed, ephemeral=True, **kwargs
+               )
+           else:
+               return await channel.response.send_message(
+                   content=content, embed=embed, **kwargs
+               )
+       except Exception as e:
+           # Silently handle send failures
+           pass
 
 
 async def is_staff(interaction: discord.Interaction, db_manager) -> bool:
@@ -448,7 +442,7 @@ def is_mod_decorator(specific_mod_role_key: str | None = None):
                 )
                 return
 
-            if await is_mod(interaction, bot.db_manager  # type: ignore, specific_mod_role_key):
+            if await is_mod(interaction, bot.db_manager, specific_mod_role_key):  # type: ignore
                 return await func(interaction, *args, **kwargs)
             await check_mod_permission(
                 interaction, bot.db_manager  # type: ignore, specific_mod_role_key

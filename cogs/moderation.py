@@ -73,17 +73,13 @@ class Moderation(commands.Cog):
                 self.logger.warning(
                     f"Unauthorized moderation command attempt by {interaction.user.name} ({interaction.user.id})"
                 )
-                return
-
-            if not isinstance(interaction.channel, discord.TextChannel):
-                embed = embed_helper.error_embed(
+                if not isinstance(interaction.channel, discord.TextChannel):
+            if user_data:
                     title="Invalid Channel",
                     description="This command can only be used in text channels.",
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-
-            if action == "last10":
+                if action == "last10":
                 await self._delete_last10(interaction)
             elif action == "last50":
                 await self._delete_last50(interaction)

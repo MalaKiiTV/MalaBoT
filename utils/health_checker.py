@@ -71,7 +71,7 @@ class HealthChecker:
                 return False
 
             # Try a simple query
-            conn = await self.bot.db_manager  # type: ignore.get_connection()
+            conn = await self.bot.db_manager.get_connection()
             cursor = await conn.execute("SELECT 1")
             await cursor.fetchone()
             return True
@@ -96,7 +96,7 @@ class HealthChecker:
                 "appeals",
             ]
 
-            conn = await self.bot.db_manager  # type: ignore.get_connection()
+            conn = await self.bot.db_manager.get_connection()
             cursor = await conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'"
             )
@@ -116,7 +116,7 @@ class HealthChecker:
         """Check if settings table is readable"""
         try:
             # Try to read a setting
-            await self.bot.db_manager  # type: ignore.get_setting("health_check_test")
+            await self.bot.db_manager.get_setting("health_check_test")
             return True
         except Exception as e:
             logger.error(f"❌ Settings not readable: {e}")
@@ -154,7 +154,7 @@ class HealthChecker:
             ]
 
             for setting in settings_to_check:
-                value = await self.bot.db_manager  # type: ignore.get_setting(setting)
+                value = await self.bot.db_manager.get_setting(setting)
                 if value:
                     return True
 

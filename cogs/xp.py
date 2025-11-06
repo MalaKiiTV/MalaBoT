@@ -46,11 +46,11 @@ class XPGroup(app_commands.Group):
             target = user or interaction.user
 
             # Get user stats from database
-            xp = await self.cog.bot.db_manager  # type: ignore.get_user_xp(target.id)
-            level = await self.cog.bot.db_manager  # type: ignore.get_user_level(target.id)
+            xp = await self.cog.bot.db_manager.get_user_xp(target.id)
+            level = await self.cog.bot.db_manager.get_user_level(target.id)
 
             # Get rank
-            rank = await self.cog.bot.db_manager  # type: ignore.get_user_rank(
+            rank = await self.cog.bot.db_manager.get_user_rank(
                 target.id, interaction.guild and interaction.guild and interaction.guild and interaction.guild.id
             )
 
@@ -108,7 +108,7 @@ class XPGroup(app_commands.Group):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
 
-            conn = await self.cog.bot.db_manager  # type: ignore.get_connection()
+            conn = await self.cog.bot.db_manager.get_connection()
             placeholders = ",".join(["?" for _ in guild_member_ids])
             cursor = await conn.execute(
                 f"""SELECT user_id, xp
@@ -173,7 +173,7 @@ class XPGroup(app_commands.Group):
             today = datetime.datetime.now().date()
 
             # Check last checkin
-            conn = await self.cog.bot.db_manager  # type: ignore.get_connection()
+            conn = await self.cog.bot.db_manager.get_connection()
             cursor = await conn.execute(
                 "SELECT last_checkin, checkin_streak FROM daily_checkins WHERE user_id = ?",
                 (user_id,),
@@ -204,7 +204,7 @@ class XPGroup(app_commands.Group):
                 bonus = int(bonus * (1 + (STREAK_BONUS_PERCENT * (streak - 1))))
 
             # Give XP
-            await self.cog.bot.db_manager  # type: ignore.update_user_xp(user_id, bonus)
+            await self.cog.bot.db_manager.update_user_xp(user_id, bonus)
 
             # Update checkin record
             await conn.execute(
@@ -252,7 +252,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager  # type: ignore.update_user_xp(user.id, amount)
+            await self.cog.bot.db_manager.update_user_xp(user.id, amount)
             embed = create_embed(
                 title="✅ XP Added",
                 description=f"Added **{amount:,} XP** to {user.mention}",
@@ -302,7 +302,7 @@ class XPGroup(app_commands.Group):
             # Add XP to all users in the server
             for member in interaction.guild and interaction.guild and interaction.guild and interaction.guild.members:
                 if not member.bot:
-                    await self.cog.bot.db_manager  # type: ignore.update_user_xp(member.id, amount)
+                    await self.cog.bot.db_manager.update_user_xp(member.id, amount)
 
             embed = create_embed(
                 title="✅ XP Added to All Users",
@@ -342,7 +342,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager  # type: ignore.remove_user_xp(user.id, amount)
+            await self.cog.bot.db_manager.remove_user_xp(user.id, amount)
             embed = create_embed(
                 title="✅ XP Removed",
                 description=f"Removed **{amount:,} XP** from {user.mention}",
@@ -379,7 +379,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager  # type: ignore.set_user_xp(user.id, amount)
+            await self.cog.bot.db_manager.set_user_xp(user.id, amount)
             embed = create_embed(
                 title="✅ XP Set",
                 description=f"Set {user.mention}'s XP to **{amount:,}**",
@@ -407,7 +407,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager  # type: ignore.set_user_xp(user.id, 0)
+            await self.cog.bot.db_manager.set_user_xp(user.id, 0)
             embed = create_embed(
                 title="✅ XP Reset",
                 description=f"Reset {user.mention}'s XP to **0**",
@@ -452,7 +452,7 @@ class XP(commands.Cog):
                     return
 
             # Award XP and get new level
-            new_xp, new_level = await self.bot.db_manager  # type: ignore.update_user_xp(
+            new_xp, new_level = await self.bot.db_manager.update_user_xp(
                 user_id, XP_PER_MESSAGE
             )
             self.last_xp_time[user_id] = current_time
@@ -481,7 +481,7 @@ class XP(commands.Cog):
                 return
 
             # Award XP to message author (level up handled automatically)
-            await self.bot.db_manager  # type: ignore.update_user_xp(message.author.id, XP_PER_REACTION)
+            await self.bot.db_manager.update_user_xp(message.author.id, XP_PER_REACTION)
             # Level up is now handled automatically in update_user_xp
 
         except Exception as e:
@@ -512,7 +512,7 @@ class XP(commands.Cog):
                     if minutes > 0:
                         xp_gained = minutes * XP_PER_VOICE_MINUTE
                         # Award voice XP (level up handled automatically)
-                        await self.bot.db_manager  # type: ignore.update_user_xp(member.id, xp_gained)
+                        await self.bot.db_manager.update_user_xp(member.id, xp_gained)
                         # Level up is now handled automatically in update_user_xp
 
                     del self.bot.voice_time[member.id]
@@ -524,10 +524,10 @@ class XP(commands.Cog):
         """Check if user leveled up and assign roles if needed."""
         try:
             # Get user's current level
-            current_level = await self.bot.db_manager  # type: ignore.get_user_level(user.id)
+            current_level = await self.bot.db_manager.get_user_level(user.id)
 
             # Check for level roles
-            conn = await self.bot.db_manager  # type: ignore.get_connection()
+            conn = await self.bot.db_manager.get_connection()
             cursor = await conn.execute(
                 "SELECT level, role_id FROM level_roles WHERE guild_id = ?",
                 (user.guild.id,),

@@ -1,0 +1,6 @@
+cogs/birthdays.py:157: error: Invalid "type: ignore" comment  [syntax]
+cogs/birthdays.py:218: error: Invalid "type: ignore" comment  [syntax]
+cogs/birthdays.py:263: error: Invalid "type: ignore" comment  [syntax]
+cogs/birthdays.py:306: error: Invalid "type: ignore" comment  [syntax]
+cogs/fun.py:78: error: Unmatched ')'  [syntax]
+Found 5 errors in 2 files (errors prevented further checking)
