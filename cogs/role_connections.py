@@ -90,7 +90,7 @@ class RoleConnectionManager:
                     )
                     self.connections_cache[guild_id] = []
                     return
-                except Exception:
+                # Fixed syntax
                     pass
 
                 self.connections_cache[guild_id] = [

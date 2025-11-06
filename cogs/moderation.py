@@ -79,7 +79,7 @@ class Moderation(commands.Cog):
             if user_data:
                 # Process the user data
                 pass
-                )
+                # Fixed parenthesis
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 if action == "last10":
                 await self._delete_last10(interaction)

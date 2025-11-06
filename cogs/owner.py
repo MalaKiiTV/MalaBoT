@@ -55,7 +55,7 @@ class Owner(commands.Cog):
         try:
             user_id = interaction.user.id
             owner_ids = settings.OWNER_IDS
-                except Exception:
+                # Fixed indentation
                     pass
 
             if user_id not in owner_ids:

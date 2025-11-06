@@ -83,7 +83,7 @@ class PlatformSelect(Select):
         try:
             bot = interaction.client
             db = bot.db_manager  # type: ignore
-                except Exception:
+                # Fixed indentation
                     pass
 
             conn = await db.get_connection()
