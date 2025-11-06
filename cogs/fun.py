@@ -68,7 +68,7 @@ class Fun(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
             # Log joke command usage
-            if self.bot.db_manager:  # type: ignore
+            if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
                     category="FUN",
                     action="JOKE_USED",
@@ -114,7 +114,7 @@ class Fun(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
             # Log fact command usage
-            if self.bot.db_manager:  # type: ignore
+            if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
                     category="FUN",
                     action="FACT_USED",
@@ -200,7 +200,7 @@ class Fun(commands.Cog):
             roast_content = random.choice(comeback_roasts)
 
             # Add bot's roast XP gain
-            if self.bot.db_manager:  # type: ignore
+            if self.bot.db_manager:
                 from config.constants import ROAST_XP_MAX, ROAST_XP_MIN
 
                 xp_gained = random.randint(ROAST_XP_MIN, ROAST_XP_MAX)
@@ -237,7 +237,7 @@ class Fun(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
             # Log roast command usage
-            if self.bot.db_manager:  # type: ignore
+            if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
                     category="ROAST",
                     action="BOT_ROASTED",
@@ -281,7 +281,7 @@ class Fun(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
             # Log roast command usage
-            if self.bot.db_manager:  # type: ignore
+            if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
                     category="ROAST",
                     action="USER_ROASTED",
@@ -374,7 +374,7 @@ class Fun(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
             # Log 8ball command usage
-            if self.bot.db_manager:  # type: ignore
+            if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
                     category="FUN",
                     action="8BALL_USED",
@@ -450,7 +450,7 @@ class Fun(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
             # Log roll command usage
-            if self.bot.db_manager:  # type: ignore
+            if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
                     category="FUN",
                     action="ROLL_USED",
@@ -488,7 +488,7 @@ class Fun(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
             # Log coinflip command usage
-            if self.bot.db_manager:  # type: ignore
+            if self.bot.db_manager:
                 await self.bot.db_manager.log_event(
                     category="FUN",
                     action="COINFLIP_USED",

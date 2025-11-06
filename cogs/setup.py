@@ -354,7 +354,7 @@ class OnlineMessageChannelSelect(discord.ui.ChannelSelect):
 class OnlineMessageModal(Modal, title="Set Bot Online Message"):
     """Modal for setting bot online message"""
 
-    message: discord.ui.TextInput = TextInput(
+    message = TextInput(
         label="Online Message",
         placeholder="Message to send when bot comes online",
         required=True,
@@ -383,7 +383,7 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
                 details=f"Set online message in channel {self.channel_id}",
                 guild_id=self.guild_id,
             )
-            channel = interaction.guild and interaction.guild and interaction.guild.get_channel(self.channel_id)
+            channel = interaction.guild.get_channel(self.channel_id)
             channel_name = channel.name if channel else "Unknown"
 
             # Show brief confirmation
@@ -449,7 +449,7 @@ class JoinRoleSelectView(View):
         ]
 
         # Add the select menu
-        select: discord.ui.Select = discord.ui.Select(
+        select = discord.ui.Select(
             placeholder="Choose a role to auto-assign...",
             options=options,
             custom_id="join_role_select",
@@ -658,7 +658,7 @@ class GeneralSettingsView(View):
         mod_role_text = "Not set"
         if mod_role_id:
             try:
-                mod_role = interaction.guild and interaction.guild and interaction.guild and interaction.guild.get_role(int(mod_role_id))
+                mod_role = interaction.guild.get_role(int(mod_role_id))
                 if mod_role:
                     mod_role_text = f"{mod_role.name}"
                 else:
@@ -669,7 +669,7 @@ class GeneralSettingsView(View):
         join_role_text = "Not set"
         if join_role_id:
             try:
-                join_role = interaction.guild and interaction.guild and interaction.guild and interaction.guild.get_role(int(join_role_id))
+                join_role = interaction.guild.get_role(int(join_role_id))
                 if join_role:
                     join_role_text = f"{join_role.name}"
                 else:
@@ -991,7 +991,7 @@ class SetupSelect(Select):
             color=COLORS["welcome"],
         )
 
-        view = WelcomeSetupView(interaction.guild and interaction.guild and interaction.guild and interaction.guild.id, interaction.client.db_manager)
+        view = WelcomeSetupView(interaction.guild.id, interaction.client.db_manager)
         await interaction.response.edit_message(embed=embed, view=view)
 
     async def setup_birthday(self, interaction: discord.Interaction):
@@ -1014,7 +1014,7 @@ class SetupSelect(Select):
             color=COLORS["birthday"],
         )
 
-        view = BirthdaySetupView(interaction.guild and interaction.guild and interaction.guild and interaction.guild.id, interaction.client.db_manager)
+        view = BirthdaySetupView(interaction.guild.id, interaction.client.db_manager)
         await interaction.response.edit_message(embed=embed, view=view)
 
     async def setup_xp(self, interaction: discord.Interaction):
@@ -1037,12 +1037,12 @@ class SetupSelect(Select):
             color=COLORS["xp"],
         )
 
-        view = XPSetupView(interaction.guild and interaction.guild and interaction.guild and interaction.guild.id, interaction.client.db_manager)
+        view = XPSetupView(interaction.guild.id, interaction.client.db_manager)
         await interaction.response.edit_message(embed=embed, view=view)
 
     async def setup_general(self, interaction: discord.Interaction):
         """Setup general settings with interactive configuration"""
-        view = GeneralSettingsView(interaction.client.db_manager, interaction.guild and interaction.guild and interaction.guild and interaction.guild.id)
+        view = GeneralSettingsView(interaction.client.db_manager, interaction.guild.id)
 
         embed = discord.Embed(
             title="⚙️ General Settings",
@@ -1054,8 +1054,8 @@ class SetupSelect(Select):
     async def view_config(self, interaction: discord.Interaction):
         """View current configuration"""
         bot = interaction.client
-        db = bot.db_manager  # type: ignore
-        guild_id = interaction.guild and interaction.guild and interaction.guild and interaction.guild.id
+        db = bot.db_manager
+        guild_id = interaction.guild.id
 
         # Fetch all settings
         verify_channel_id = await db.get_setting("verify_channel", guild_id)
@@ -1082,7 +1082,7 @@ class SetupSelect(Select):
 
         embed = discord.Embed(
             title="📋 Current Bot Configuration",
-            description=f"Configuration for **{interaction.guild and interaction.guild and interaction.guild and interaction.guild.name}**",
+            description=f"Configuration for **{interaction.guild.name}**",
             color=COLORS["info"],
         )
 
@@ -1203,8 +1203,8 @@ class SetupSelect(Select):
             return
 
         manager = role_conn_cog.manager
-        await manager.load_connections(interaction.guild and interaction.guild and interaction.guild and interaction.guild.id)
-        await manager.load_protected_roles(interaction.guild and interaction.guild and interaction.guild and interaction.guild.id)
+        await manager.load_connections(interaction.guild.id)
+        await manager.load_protected_roles(interaction.guild.id)
 
         view = RoleConnectionSetupView(manager, interaction.guild)
 
@@ -1226,11 +1226,11 @@ class SetupSelect(Select):
         )
 
         # Show current connections
-        connections = manager.connections_cache.get(interaction.guild and interaction.guild and interaction.guild and interaction.guild.id, [])
+        connections = manager.connections_cache.get(interaction.guild.id, [])
         if connections:
             conn_text = ""
             for i, conn in enumerate(connections[:10], 1):
-                target_role = interaction.guild and interaction.guild and interaction.guild and interaction.guild.get_role(conn.target_role_id)
+                target_role = interaction.guild.get_role(conn.target_role_id)
                 if target_role:
                     status = "✅" if conn.enabled else "❌"
                     conn_text += (
@@ -1241,7 +1241,7 @@ class SetupSelect(Select):
             )
 
         # Show protected roles
-        protected = manager.protected_roles_cache.get(interaction.guild and interaction.guild and interaction.guild and interaction.guild.id, [])
+        protected = manager.protected_roles_cache.get(interaction.guild.id, [])
         if protected:
             protected_text = " ".join(
                 [f"<@&amp;{role_id}>" for role_id in protected[:10]]
@@ -1299,7 +1299,7 @@ class WelcomeSetupView(View):
             description="Choose the channel where welcome messages will be sent.",
             color=COLORS["primary"],
         )
-        await interaction.followup and followup.send(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="💬")
     async def set_message(self, interaction: discord.Interaction, button: Button):
@@ -1325,7 +1325,7 @@ class WelcomeSetupView(View):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="Set Title", style=ButtonStyle.primary, emoji="📝")
@@ -1352,7 +1352,7 @@ class WelcomeSetupView(View):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="Set Image", style=ButtonStyle.primary, emoji="🖼️")
@@ -1379,7 +1379,7 @@ class WelcomeSetupView(View):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(
@@ -1445,7 +1445,7 @@ class GoodbyeSetupView(View):
             description="Choose the channel where goodbye messages will be sent.",
             color=COLORS["primary"],
         )
-        await interaction.followup and followup.send(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="💬")
     async def set_message(self, interaction: discord.Interaction, button: Button):
@@ -1471,7 +1471,7 @@ class GoodbyeSetupView(View):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="Set Title", style=ButtonStyle.primary, emoji="📝")
@@ -1498,7 +1498,7 @@ class GoodbyeSetupView(View):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="Set Image", style=ButtonStyle.primary, emoji="🖼️")
@@ -1525,7 +1525,7 @@ class GoodbyeSetupView(View):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(
@@ -1592,7 +1592,7 @@ class BirthdaySetupView(View):
             description="Choose the channel where birthday announcements will be sent.",
             color=COLORS["primary"],
         )
-        await interaction.followup and followup.send(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     @discord.ui.button(label="Set Time", style=ButtonStyle.primary, emoji="⏰")
     async def set_time(self, interaction: discord.Interaction, button: Button):
@@ -1633,7 +1633,7 @@ class BirthdaySetupView(View):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="💬")
@@ -1660,7 +1660,7 @@ class BirthdaySetupView(View):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
 
@@ -1704,11 +1704,11 @@ class LevelRolesView(View):
                 role = None
                 try:
                     role_id = int(role_input.value)
-                    role = interaction.guild and interaction.guild and interaction.guild and interaction.guild.get_role(role_id)
+                    role = interaction.guild.get_role(role_id)
                 except ValueError:
                     # Not an ID, search by name
                     role = discord.utils.get(
-                        interaction.guild and interaction.guild and interaction.guild.roles, name=role_input.value
+                        interaction.guild.roles, name=role_input.value
                     )
 
                 if not role:
@@ -1757,7 +1757,7 @@ class LevelRolesView(View):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="Remove Level Role", style=ButtonStyle.danger, emoji="➖")
@@ -1838,12 +1838,10 @@ class LevelRolesView(View):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(
-        label="Back to XP Setup", style=ButtonStyle.secondary, emoji="◀️"
-    )
+    @discord.ui.button(label="Back to XP Setup", style=ButtonStyle.secondary, emoji="◀️")
     async def back_button(self, interaction: discord.Interaction, button: Button):
         """Go back to XP setup"""
         await interaction.response.defer(ephemeral=True)
@@ -1855,7 +1853,7 @@ class LevelRolesView(View):
         )
 
         view = XPSetupView(self.guild_id, self.db_manager)
-        await interaction.followup and followup.send(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
 
 class XPSetupView(View):
@@ -1900,7 +1898,7 @@ class XPSetupView(View):
             description="Choose the channel where level-up announcements will be sent.",
             color=COLORS["primary"],
         )
-        await interaction.followup and followup.send(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     @discord.ui.button(label="Message XP", style=ButtonStyle.primary, emoji="💬")
     async def set_message_xp(self, interaction: discord.Interaction, button: Button):
@@ -1940,7 +1938,7 @@ class XPSetupView(View):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="Reaction XP", style=ButtonStyle.primary, emoji="👍")
@@ -1981,7 +1979,7 @@ class XPSetupView(View):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="Voice XP", style=ButtonStyle.primary, emoji="🎤")
@@ -2022,12 +2020,10 @@ class XPSetupView(View):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(
-        label="XP Cooldown", style=ButtonStyle.primary, emoji="⏱️", row=1
-    )
+    @discord.ui.button(label="XP Cooldown", style=ButtonStyle.primary, emoji="⏱️", row=1)
     async def set_xp_cooldown(self, interaction: discord.Interaction, button: Button):
         """Set cooldown between XP gains"""
         modal = Modal(title="Set XP Cooldown")
@@ -2065,7 +2061,7 @@ class XPSetupView(View):
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(
@@ -2094,7 +2090,7 @@ class XPSetupView(View):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        modal.callback = modal_callback
+        modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(
@@ -2115,7 +2111,7 @@ class XPSetupView(View):
             for role_entry in level_roles.split(","):
                 if ":" in role_entry:
                     level, role_id = role_entry.split(":")
-                    role = interaction.guild and interaction.guild and interaction.guild and interaction.guild.get_role(int(role_id))
+                    role = interaction.guild.get_role(int(role_id))
                     if role:
                         description += f"Level {level}: {role.mention}\n"
         else:
@@ -2130,13 +2126,13 @@ class XPSetupView(View):
         )
 
         view = LevelRolesView(self.guild_id, self.db_manager)
-        await interaction.followup and followup.send(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
 
 class Setup(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.db = bot.db_manager  # type: ignore  # type: ignore
+        self.db = bot.db_manager
 
     @app_commands.command(
         name="setup", description="Configure bot settings (Server Owner only)"
@@ -2144,7 +2140,7 @@ class Setup(commands.Cog):
     async def setup(self, interaction: discord.Interaction):
         """Main setup command with interactive menu"""
         # Check if user is server owner BEFORE any async operations
-        if interaction.guild and interaction.guild and interaction.guild.owner_id != interaction.user.id:
+        if interaction.guild.owner_id != interaction.user.id:
             embed = discord.Embed(
                 title="🚫 Permission Denied",
                 description="This command is only available to the server owner.",

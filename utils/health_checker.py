@@ -67,7 +67,7 @@ class HealthChecker:
     async def _check_database_accessible(self) -> bool:
         """Check if database is accessible"""
         try:
-            if not self.bot.db_manager  # type: ignore:
+            if not self.bot.db_manager:
                 return False
 
             # Try a simple query
@@ -232,7 +232,7 @@ class HealthChecker:
         try:
             from utils.safe_database import RoleConnectionSafeDB
 
-            safe_db = RoleConnectionSafeDB(self.bot.db_manager  # type: ignore)
+            safe_db = RoleConnectionSafeDB(self.bot.db_manager)
 
             # Check if connections exist
             exists = await safe_db.verify_connections_exist(guild_id)

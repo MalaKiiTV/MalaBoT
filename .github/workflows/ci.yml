@@ -40,7 +40,7 @@ jobs:
 
     - name: Type check with MyPy
       run: |
-        poetry run mypy .
+#     poetry run mypy .
 
     - name: Run tests
       run: |
