@@ -379,10 +379,9 @@ async def safe_send_message(
 ):
     """Safely send a message to a channel with error handling."""
     try:
-        if hasattr(channel, "send"):  # Regular channel
-            return if channel and hasattr(channel, "send"): await channel.send(content=content, embed=embed, **kwargs)
-        if hasattr(channel, "followup"):  # Interaction followup
-            return await channel.followup.send(
+           if hasattr(channel, "send"):  # Regular channel
+               if channel and hasattr(channel, "send"):
+                   return await channel.send(content=content, embed=embed, **kwargs)
                 content=content, embed=embed, ephemeral=ephemeral, **kwargs
             )
         # Assume it's an interaction
