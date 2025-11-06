@@ -308,8 +308,8 @@ def log_health_check(check_type: str, status: str, value: float = None, details:
 
 def log_xp(message: str):
     """Log XP-related actions."""
-    logger.info(f"[XP] {message}")
+    logger_manager.get_logger('bot').info(f"[XP] {message}")
 
 def log_birthday(message: str):
     """Log birthday-related actions."""
-    logger.info(f"[BIRTHDAY] {message}")
+    logger_manager.get_logger('bot').info(f"[BIRTHDAY] {message}")

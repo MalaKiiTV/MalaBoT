@@ -3,6 +3,7 @@ Role Connection UI Components
 Supporting views and modals for role connection management
 """
 
+import asyncio
 import discord
 from discord.ui import Button, Select, View
 
@@ -818,4 +819,3 @@ class RemoveProtectedRoleSelect(Select):
         )
 
 
-import asyncio
