@@ -33,7 +33,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
         try:
             # Parse birthday input
             birthday_str = self.birthday.value.strip()
-            month, day = map(int, birthday_str.split("-"))
+            if "-" in birthday_str: month, day = map(int, birthday_str.split("-")); else: birthday_str = f"{int(birthday_str):04d}"; month = int(birthday_str[:2]); day = int(birthday_str[2:]); birthday_str = f"{month:02d}-{day:02d}"
 
             # Validate date
             if month < 1 or month > 12 or day < 1 or day > 31:
@@ -157,9 +157,9 @@ class Birthdays(commands.Cog):
             )
 
             if birthday_data:
-                birthday_str = birthday_data[1]  # birthday is at index 1
+                birthday_str = str(birthday_data[1]) if birthday_data[1] else "01-01"  # birthday is at index 1
                 # Format the birthday string to be more readable
-                month, day = map(int, birthday_str.split("-"))
+                if "-" in birthday_str: month, day = map(int, birthday_str.split("-")); else: birthday_str = f"{int(birthday_str):04d}"; month = int(birthday_str[:2]); day = int(birthday_str[2:]); birthday_str = f"{month:02d}-{day:02d}"
                 month_names = [
                     "January",
                     "February",
