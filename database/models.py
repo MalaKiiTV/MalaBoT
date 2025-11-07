@@ -432,6 +432,19 @@ class DatabaseManager:
         except Exception:
             return False
 
+    async def remove_user_birthday(self, user_id: int) -> bool:
+        """Remove user birthday (returns success status)."""
+        try:
+            conn = await self.get_connection()
+            await conn.execute(
+                "DELETE FROM birthdays WHERE user_id = ?",
+                (user_id,),
+            )
+            await conn.commit()
+            return True
+        except Exception:
+            return False
+
     async def get_birthday(self, user_id: int) -> Optional[tuple]:
         """Get user birthday."""
         conn = await self.get_connection()

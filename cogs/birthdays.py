@@ -158,6 +158,21 @@ class Birthdays(commands.Cog):
 
             if birthday_data:
                 birthday_str = str(birthday_data[1])  # birthday is at index 1, ensure it's a string
+                
+                # Check if birthday data is corrupted (contains Discord ID instead of date)
+                if birthday_str.isdigit() and len(birthday_str) > 10:
+                    # This is a Discord ID, not a date - remove corrupted record and notify user
+                    await self.bot.db_manager.remove_user_birthday(interaction.user.id)  # type: ignore
+                    await interaction.response.send_message(
+                        embed=create_embed(
+                            "🔧 Data Corruption Fixed",
+                            "We found corrupted birthday data and cleaned it up. Please set your birthday again using `/bday set`.",
+                            discord.Color.orange(),
+                        ),
+                        ephemeral=True,
+                    )
+                    return
+                
                 # Format the birthday string to be more readable
                 # Defensive programming: ensure proper MM-DD format
                 if '-' not in birthday_str:
