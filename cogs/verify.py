@@ -170,7 +170,15 @@ class PlatformSelect(Select):
                 ),
                 ephemeral=True,
             )
+            
 
 # --- END OF CORRECTION ---
 
 # Everything else unchanged.
+async def setup(bot):
+    # This adds your cog to the bot when loaded.
+    verify_cog = Verify(bot)
+    await bot.add_cog(verify_cog)
+    verify_group = VerifyGroup(verify_cog)
+    verify_cog._verify_group = verify_group  # Store reference for cleanup
+    bot.tree.add_command(verify_group)
