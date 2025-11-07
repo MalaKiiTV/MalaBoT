@@ -81,10 +81,29 @@ class PlatformSelect(Select):
         platform = self.values[0]
 
         try:
+            # Verify database schema first
+            cursor = await conn.execute('PRAGMA table_info(verifications)')
+            columns = await cursor.fetchall()
+            column_names = [col[1] for col in columns]
+            
+            if 'discord_id' not in column_names:
+                log_system('ERROR: discord_id column missing from verifications table!', level='error')
+                await interaction.response.send_message(
+                    embed=create_embed(
+                        'Database Error',
+                        'The verification system is not properly configured. Please contact an administrator.',
+                        COLORS['error'],
+                    ),
+                    ephemeral=True,
+                )
+                return
+            
             bot = interaction.client
             db = bot.db_manager
 
             conn = await db.get_connection()
+            # Debug: Log database connection success
+            log_system('[VERIFY_DEBUG] Database connection established', level='info')
             await conn.execute(
                 "INSERT INTO verifications (discord_id, activision_id, platform, screenshot_url) VALUES (?, ?, ?, ?)",
                 (self.user_id, self.activision_id, platform, self.screenshot_url),
