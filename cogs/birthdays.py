@@ -157,8 +157,10 @@ class Birthdays(commands.Cog):
             birthday_data = await self.bot.db_manager.get_user_birthday(interaction.user.id)  # type: ignore
 
             if birthday_data:
-                birthday_str = str(birthday_data[1])  # birthday is at index 1, ensure it's a string
-                
+                birthday_str = str(
+                    birthday_data[1]
+                )  # birthday is at index 1, ensure it's a string
+
                 # Check if birthday data is corrupted (contains Discord ID instead of date)
                 if birthday_str.isdigit() and len(birthday_str) > 10:
                     # This is a Discord ID, not a date - remove corrupted record and notify user
@@ -172,16 +174,20 @@ class Birthdays(commands.Cog):
                         ephemeral=True,
                     )
                     return
-                
+
                 # Format the birthday string to be more readable
                 # Defensive programming: ensure proper MM-DD format
-                if '-' not in birthday_str:
-                    raise ValueError(f"Birthday data not in expected MM-DD format: {birthday_str}")
-                
+                if "-" not in birthday_str:
+                    raise ValueError(
+                        f"Birthday data not in expected MM-DD format: {birthday_str}"
+                    )
+
                 parts = birthday_str.split("-")
                 if len(parts) != 2:
-                    raise ValueError(f"Birthday data malformed, expected 2 parts got {len(parts)}: {birthday_str}")
-                
+                    raise ValueError(
+                        f"Birthday data malformed, expected 2 parts got {len(parts)}: {birthday_str}"
+                    )
+
                 month, day = map(int, parts)
                 month_names = [
                     "January",
