@@ -157,7 +157,7 @@ class Birthdays(commands.Cog):
             birthday_data = await self.bot.db_manager.get_user_birthday(interaction.user.id)  # type: ignore
 
             if birthday_data:
-                birthday_str = birthday_data[1]  # birthday is at index 1
+                birthday_str = str(birthday_data[1])  # birthday is at index 1, ensure it's a string
                 # Format the birthday string to be more readable
                 month, day = map(int, birthday_str.split("-"))
                 month_names = [
