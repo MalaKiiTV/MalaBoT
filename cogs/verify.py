@@ -173,7 +173,15 @@ class PlatformSelect(Select):
             
 
 # --- END OF CORRECTION ---
+class Verify(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+        self.db = bot.db_manager
+        # Store pending verifications temporarily
+        if not hasattr(bot, "pending_verifications"):
+            bot.pending_verifications = {}
 
+    # ... any existing listeners, commands, etc ...
 # Everything else unchanged.
 async def setup(bot):
     # This adds your cog to the bot when loaded.
