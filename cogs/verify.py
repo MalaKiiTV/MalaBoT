@@ -1,3 +1,21 @@
+import typing
+from datetime import datetime
+
+import discord
+from discord import app_commands
+from discord.ext import commands
+from discord.ui import Modal, Select, TextInput, View
+
+from config.constants import COLORS
+from utils.helpers import create_embed, safe_send_message
+from utils.logger import log_system
+
+# Platform options for dropdown
+PLATFORM_OPTIONS = [
+    discord.SelectOption(label="Xbox", value="xbox", emoji="🎮"),
+    discord.SelectOption(label="PlayStation", value="playstation", emoji="🎮"),
+    discord.SelectOption(label="Steam", value="steam", emoji="💻"),
+]
 # --- SNIP --- (other code unchanged, starting at PlatformSelect)
 
 class PlatformSelect(Select):
