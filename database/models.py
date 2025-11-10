@@ -301,9 +301,9 @@ class DatabaseManager:
 
         # Calculate the appropriate level for the XP amount
         level = 1
-        for lvl in sorted(XP_TABLE.keys()):
-            if amount >= XP_TABLE[lvl]:
-                level = lvl
+        for lvl, req_xp in enumerate(XP_TABLE):
+            if new_xp >= req_xp:
+                level = lvl + 1
             else:
                 break
 
