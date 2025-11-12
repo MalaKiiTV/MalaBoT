@@ -67,7 +67,9 @@ class XPGroup(app_commands.Group):
             xp_total_needed = next_level_xp - current_level_xp
 
             # Create progress bar
-            progress = int((xp_progress / xp_total_needed) * 20) if xp_total_needed > 0 else 20
+            progress = (
+                int((xp_progress / xp_total_needed) * 20) if xp_total_needed > 0 else 20
+            )
             progress_bar = "█" * progress + "░" * (20 - progress)
 
             embed = create_embed(

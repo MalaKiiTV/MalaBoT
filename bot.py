@@ -793,6 +793,7 @@ The bot will start in safe mode to prevent further issues.
             description="An unexpected error occurred. Please try again later.",
         )
         await safe_send_message(ctx.channel, embed=embed, ephemeral=True)
+
     async def health_check(self) -> dict:
         """Return bot health status for monitoring"""
         from datetime import datetime
@@ -883,4 +884,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
