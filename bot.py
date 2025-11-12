@@ -658,7 +658,9 @@ The bot will start in safe mode to prevent further issues.
                 name="⚙️ Errors", value=str(digest_data["errors"]), inline=True
             )
             embed.add_field(name="🔢 Version", value=settings.BOT_VERSION, inline=True)
-            embed.add_field(name="💾 DB Size", value=digest_data["db_size"], inline=True)
+            embed.add_field(
+                name="💾 DB Size", value=digest_data["db_size"], inline=True
+            )
 
             embed.set_footer(
                 text=f"Report generated automatically • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
@@ -794,23 +796,6 @@ The bot will start in safe mode to prevent further issues.
         )
         await safe_send_message(ctx.channel, embed=embed, ephemeral=True)
 
-    async def health_check(self) -> dict:
-        """Return bot health status for monitoring"""
-        from datetime import datetime
-
-        return {
-            "status": "healthy" if self.is_ready() else "starting",
-            "uptime": (datetime.now() - self.start_time).total_seconds()
-            if self.start_time
-            else 0,
-            "latency_ms": round(self.latency * 1000),
-            "guilds": len(self.guilds),
-            "users": sum(g.member_count for g in self.guilds),
-            "cogs_loaded": len(self.cogs),
-            "database": self.db_manager is not None,
-            "version": settings.BOT_VERSION,
-        }
-
     async def shutdown(self):
         """Graceful shutdown."""
         self.logger.info("Initiating graceful shutdown...")
@@ -884,3 +869,18 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    async def health_check(self) -> dict:
+        """Return bot health status for monitoring"""
+        from datetime import datetime
+        return {
+            "status": "healthy" if self.is_ready() else "starting",
+            "uptime": (datetime.now() - self.start_time).total_seconds() if self.start_time else 0,
+            "latency_ms": round(self.latency * 1000),
+            "guilds": len(self.guilds),
+            "users": sum(g.member_count for g in self.guilds),
+            "cogs_loaded": len(self.cogs),
+            "database": self.db_manager is not None,
+            "version": settings.BOT_VERSION
+        }
+

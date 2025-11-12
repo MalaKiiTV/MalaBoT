@@ -15,13 +15,16 @@ class DatabaseManager:
         self._connection: Optional[aiosqlite.Connection] = None
 
     async def get_connection(self) -> aiosqlite.Connection:
+        """Get database connection."""
         if self._connection is None:
             self._connection = await aiosqlite.connect(self.db_path)
         return self._connection
 
     async def initialize(self) -> None:
+        """Initialize database and create all tables."""
         conn = await self.get_connection()
 
+        # Users table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS users (
@@ -55,9 +58,10 @@ class DatabaseManager:
                 premium_expires TIMESTAMP,
                 is_premium BOOLEAN DEFAULT FALSE
             )
-            """
+        """
         )
 
+        # Birthdays table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS birthdays (
@@ -70,105 +74,627 @@ class DatabaseManager:
                 UNIQUE(user_id),
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             )
+        """
+        )
+
+        # Settings table
+        await conn.execute(
             """
+            CREATE TABLE IF NOT EXISTS settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id INTEGER,
+                setting_key TEXT NOT NULL,
+                value TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(guild_id, setting_key)
+            )
+        """
+        )
+
+        # Mod logs table
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS mod_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id INTEGER NOT NULL,
+                user_id INTEGER,
+                moderator_id INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                reason TEXT,
+                duration INTEGER,
+                channel_id INTEGER,
+                message_count INTEGER,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """
+        )
+
+        # Roast XP table
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS roast_xp (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                action TEXT NOT NULL,
+                base_xp INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """
+        )
+
+        # Roast log table
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS roast_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                target_id INTEGER,
+                action TEXT NOT NULL,
+                xp_gained INTEGER,
+                message_content TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id)
+            )
+        """
+        )
+
+        # Audit log table
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                category TEXT NOT NULL,
+                action TEXT NOT NULL,
+                user_id INTEGER DEFAULT NULL,
+                target_id INTEGER DEFAULT NULL,
+                channel_id INTEGER DEFAULT NULL,
+                details TEXT,
+                guild_id INTEGER DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """
+        )
+
+        # Health logs table - FIXED SCHEMA
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS health_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                component TEXT NOT NULL,
+                status TEXT NOT NULL,
+                value REAL,
+                details TEXT,
+                cpu_usage REAL,
+                memory_usage REAL,
+                disk_usage REAL,
+                uptime INTEGER,
+                guild_count INTEGER,
+                user_count INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """
+        )
+
+        # System flags table
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS system_flags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                flag_name TEXT NOT NULL UNIQUE,
+                flag_value TEXT NOT NULL,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """
+        )
+
+        # Verifications table
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS verifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id INTEGER NOT NULL,
+                activision_id TEXT NOT NULL,
+                platform TEXT NOT NULL,
+                screenshot_url TEXT,
+                status TEXT DEFAULT 'pending',
+                reviewed_by INTEGER,
+                reviewed_at TIMESTAMP,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """
+        )
+
+        # Appeals table
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS appeals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                guild_id INTEGER NOT NULL,
+                appeal_text TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reviewed_by INTEGER DEFAULT NULL,
+                reviewed_at TIMESTAMP DEFAULT NULL,
+                review_notes TEXT DEFAULT NULL
+            )
+        """
+        )
+
+        # Level roles table
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS level_roles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id INTEGER NOT NULL,
+                level INTEGER NOT NULL,
+                role_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(guild_id, level)
+            )
+        """
+        )
+
+        # Daily checkins table - MISSING TABLE ADDED
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS daily_checkins (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL UNIQUE,
+                last_checkin DATE NOT NULL,
+                checkin_streak INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """
         )
 
         await conn.commit()
 
+        # Initialize roast_xp if not exists
+        await self._initialize_roast_xp()
+
+    async def _initialize_roast_xp(self) -> None:
+        """Initialize roast XP table with default values."""
+        conn = await self.get_connection()
+        cursor = await conn.execute("SELECT COUNT(*) FROM roast_xp")
+        count = (await cursor.fetchone())[0]
+
+        if count == 0:
+            await conn.execute(
+                """
+                INSERT INTO roast_xp (action, base_xp) VALUES
+                    ('roast_success', 15),
+                    ('roast_fail', 5),
+                    ('defend_success', 10),
+                    ('defend_fail', 3),
+                    ('compliment', 8)
+            """
+            )
+            await conn.commit()
+
     # === XP METHODS ===
 
-    def calculate_level(self, xp: int) -> int:
-        """Quadratic XP progression: level increases slower at higher XP."""
-        level = 1
-        while xp >= 10 * (level ** 2):
-            level += 1
-        return level
-
     async def get_user_xp(self, user_id: int) -> int:
+        """Get user's current XP."""
         conn = await self.get_connection()
+
+        # Ensure user exists
         await conn.execute(
             "INSERT OR IGNORE INTO users (user_id, username, discriminator) VALUES (?, 'Unknown', '0')",
             (user_id,),
         )
         await conn.commit()
-        cursor = await conn.execute("SELECT xp FROM users WHERE user_id = ?", (user_id,))
+
+        cursor = await conn.execute(
+            "SELECT xp FROM users WHERE user_id = ?", (user_id,)
+        )
         result = await cursor.fetchone()
         return result[0] if result else 0
 
     async def set_user_xp(self, user_id: int, amount: int) -> tuple[int, int]:
-        level = self.calculate_level(amount)
+        """Set user's XP to a specific amount and calculate level."""
+        from config.constants import XP_TABLE
+
+        # Calculate the appropriate level for the XP amount
+        level = 1
+        for lvl, req_xp in enumerate(XP_TABLE):
+            if amount >= req_xp:
+                level = lvl + 1
+            else:
+                break
+
         conn = await self.get_connection()
+
+        # Ensure user exists
         await conn.execute(
             "INSERT OR IGNORE INTO users (user_id, username, discriminator) VALUES (?, 'Unknown', '0')",
             (user_id,),
         )
+
         await conn.execute(
             "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
             (amount, level, user_id),
         )
         await conn.commit()
+
         return amount, level
 
     async def update_user_xp(self, user_id: int, xp_change: int) -> tuple[int, int]:
+        """Update user's XP and recalculate level."""
+        from config.constants import XP_TABLE
+
         conn = await self.get_connection()
+
+        # Ensure user exists
         await conn.execute(
             "INSERT OR IGNORE INTO users (user_id, username, discriminator) VALUES (?, 'Unknown', '0')",
             (user_id,),
         )
         await conn.commit()
-        cursor = await conn.execute("SELECT xp FROM users WHERE user_id = ?", (user_id,))
-        current_xp = (await cursor.fetchone())[0] if await cursor.fetchone() else 0
+
+        # Get current XP
+        cursor = await conn.execute(
+            "SELECT xp FROM users WHERE user_id = ?", (user_id,)
+        )
+        result = await cursor.fetchone()
+        current_xp = result[0] if result else 0
+
+        # Calculate new XP
         new_xp = max(0, current_xp + xp_change)
-        level = self.calculate_level(new_xp)
+
+        # Calculate level
+        level = 1
+        for lvl in sorted(XP_TABLE.keys()):
+            if new_xp >= XP_TABLE[lvl]:
+                level = lvl
+            else:
+                break
+
+        # Update both XP and level
         await conn.execute(
             "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
             (new_xp, level, user_id),
         )
         await conn.commit()
+
         return new_xp, level
 
     async def remove_user_xp(self, user_id: int, amount: int) -> tuple[int, int]:
+        """Remove XP from user (alias for update_user_xp with negative value)."""
         return await self.update_user_xp(user_id, -amount)
 
     async def get_user_level(self, user_id: int) -> int:
+        """Get user's current level."""
         conn = await self.get_connection()
-        cursor = await conn.execute("SELECT level FROM users WHERE user_id = ?", (user_id,))
+        cursor = await conn.execute(
+            "SELECT level FROM users WHERE user_id = ?", (user_id,)
+        )
         result = await cursor.fetchone()
         return result[0] if result else 1
 
+    async def get_user_rank(self, user_id: int, guild_id: int) -> int:
+        """Get user's rank in the guild."""
+        conn = await self.get_connection()
+
+        # Get all guild member IDs and their XP, sorted by XP descending
+        cursor = await conn.execute(
+            "SELECT user_id FROM users WHERE xp > 0 ORDER BY xp DESC"
+        )
+        all_users = await cursor.fetchall()
+
+        # Find user's position (1-indexed)
+        for rank, (uid,) in enumerate(all_users, 1):
+            if uid == user_id:
+                return rank
+
+        return len(all_users) + 1  # User not found or has no XP
+
+    # === USER METHODS ===
+
+    async def get_user(self, user_id: int) -> Optional[dict]:
+        """Get user data."""
+        conn = await self.get_connection()
+        cursor = await conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+        row = await cursor.fetchone()
+
+        if not row:
+            return None
+
+        # Convert to dict
+        columns = [desc[0] for desc in cursor.description]
+        return dict(zip(columns, row, strict=False))
+
     # === BIRTHDAY METHODS ===
 
+    async def set_birthday(
+        self, user_id: int, birthday: str, timezone: str = "UTC"
+    ) -> None:
+        """Set user birthday."""
+        conn = await self.get_connection()
+        await conn.execute(
+            """
+            INSERT OR REPLACE INTO birthdays (user_id, birthday, timezone)
+            VALUES (?, ?, ?)
+        """,
+            (user_id, birthday, timezone),
+        )
+        await conn.commit()
+
     async def set_user_birthday(self, user_id: int, birthday: str) -> bool:
+        """Set user birthday (returns success status)."""
+        try:
+            await self.set_birthday(user_id, birthday)
+            return True
+        except Exception:
+            return False
+
+    async def remove_user_birthday(self, user_id: int) -> bool:
+        """Remove user birthday (returns success status)."""
         try:
             conn = await self.get_connection()
             await conn.execute(
-                "INSERT OR REPLACE INTO birthdays (user_id, birthday) VALUES (?, ?)",
-                (user_id, birthday),
+                "DELETE FROM birthdays WHERE user_id = ?",
+                (user_id,),
             )
             await conn.commit()
             return True
         except Exception:
             return False
 
-    async def get_user_birthday(self, user_id: int) -> Optional[tuple]:
+    async def get_birthday(self, user_id: int) -> Optional[tuple]:
+        """Get user birthday."""
         conn = await self.get_connection()
-        cursor = await conn.execute("SELECT birthday FROM birthdays WHERE user_id = ?", (user_id,))
+        cursor = await conn.execute(
+            "SELECT * FROM birthdays WHERE user_id = ?", (user_id,)
+        )
         return await cursor.fetchone()
 
-    # === LOGGING (restored from original) ===
+    async def get_user_birthday(self, user_id: int) -> Optional[tuple]:
+        """Get user birthday (alias)."""
+        return await self.get_birthday(user_id)
 
-    async def log_event(self, event_type: str, details: Any) -> None:
-        """Log an event to the database (simplified example)."""
+    async def get_all_birthdays(self) -> list:
+        """Get all birthdays."""
+        conn = await self.get_connection()
+        cursor = await conn.execute("SELECT * FROM birthdays ORDER BY birthday")
+        return await cursor.fetchall()
+
+    async def get_today_birthdays(self, today: Optional[str] = None) -> list:
+        """Get today's birthdays in MM-DD format."""
+        conn = await self.get_connection()
+
+        if today:
+            # Use provided date
+            cursor = await conn.execute(
+                "SELECT user_id FROM birthdays WHERE birthday LIKE ?", (f"%{today}%",)
+            )
+        else:
+            # Use current date
+            cursor = await conn.execute(
+                """
+                SELECT user_id FROM birthdays
+                WHERE strftime('%m-%d', birthday) = strftime('%m-%d', 'now')
+            """
+            )
+
+        return await cursor.fetchall()
+
+    # === LOGGING METHODS ===
+
+    async def log_event(
+        self,
+        category: str,
+        action: str,
+        user_id: Optional[int] = None,
+        target_id: Optional[int] = None,
+        channel_id: Optional[int] = None,
+        details: Optional[str] = None,
+        guild_id: Optional[int] = None,
+    ) -> None:
+        """Log an event to the audit log."""
         conn = await self.get_connection()
         await conn.execute(
-            "INSERT INTO events (event_type, details) VALUES (?, ?)",
-            (event_type, str(details)),
+            """
+            INSERT INTO audit_log (category, action, user_id, target_id, channel_id, details, guild_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+            (category, action, user_id, target_id, channel_id, details, guild_id),
         )
         await conn.commit()
+
+    async def log_moderation_action(
+        self,
+        moderator_id: int,
+        action: str,
+        target_id: Optional[int] = None,
+        reason: Optional[str] = None,
+        guild_id: Optional[int] = None,
+        channel_id: Optional[int] = None,
+        message_count: Optional[int] = None,
+    ) -> None:
+        """Log moderation action."""
+        conn = await self.get_connection()
+        await conn.execute(
+            """
+            INSERT INTO mod_logs (moderator_id, user_id, action, reason, guild_id, channel_id, message_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+            (
+                moderator_id,
+                target_id,
+                action,
+                reason,
+                guild_id,
+                channel_id,
+                message_count,
+            ),
+        )
+        await conn.commit()
+
+    async def get_recent_moderation_logs(self, limit: int = 10) -> list[dict]:
+        """Get recent moderation logs."""
+        conn = await self.get_connection()
+        cursor = await conn.execute(
+            """
+            SELECT * FROM mod_logs
+            ORDER BY timestamp DESC
+            LIMIT ?
+        """,
+            (limit,),
+        )
+
+        rows = await cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+
+        return [dict(zip(columns, row, strict=False)) for row in rows]
+
+    async def log_health_check(
+        self,
+        component: str,
+        status: str,
+        value: Optional[float] = None,
+        details: Optional[str] = None,
+    ) -> None:
+        """Log health check results."""
+        conn = await self.get_connection()
+        await conn.execute(
+            """
+            INSERT INTO health_logs (component, status, value, details)
+            VALUES (?, ?, ?, ?)
+        """,
+            (component, status, value, details),
+        )
+        await conn.commit()
+
+    async def log_roast_user(self, user_id: int) -> None:
+        """Log that user roasted the bot."""
+        await self.log_event(
+            category="ROAST",
+            action="USER_ROAST",
+            user_id=user_id,
+            details="User roasted the bot",
+        )
+
+    # === SETTINGS METHODS ===
+
+    async def get_setting(
+        self, key: str, guild_id: Optional[int] = None
+    ) -> Optional[str]:
+        """Get setting value."""
+        conn = await self.get_connection()
+        if guild_id:
+            cursor = await conn.execute(
+                "SELECT value FROM settings WHERE setting_key = ? AND guild_id = ?",
+                (key, guild_id),
+            )
+        else:
+            cursor = await conn.execute(
+                "SELECT value FROM settings WHERE setting_key = ? AND guild_id IS NULL",
+                (key,),
+            )
+        result = await cursor.fetchone()
+        return result[0] if result else None
+
+    async def set_setting(
+        self, key: str, value: str, guild_id: Optional[int] = None
+    ) -> None:
+        """Set setting value."""
+        conn = await self.get_connection()
+        await conn.execute(
+            """
+            INSERT OR REPLACE INTO settings (setting_key, value, guild_id, updated_at)
+            VALUES (?, ?, ?, datetime('now'))
+        """,
+            (key, value, guild_id),
+        )
+        await conn.commit()
+
+    # === SYSTEM FLAGS ===
+
+    async def get_flag(self, flag_name: str) -> Any:
+        """Get system flag value."""
+        conn = await self.get_connection()
+        cursor = await conn.execute(
+            "SELECT flag_value FROM system_flags WHERE flag_name = ?", (flag_name,)
+        )
+        result = await cursor.fetchone()
+        return result[0] if result else None
+
+    async def set_flag(
+        self, flag_name: str, flag_value: Any, description: Optional[str] = None
+    ) -> None:
+        """Set system flag."""
+        conn = await self.get_connection()
+        await conn.execute(
+            """
+            INSERT OR REPLACE INTO system_flags (flag_name, flag_value, description)
+            VALUES (?, ?, ?)
+        """,
+            (flag_name, str(flag_value), description),
+        )
+        await conn.commit()
+
+    async def clear_flag(self, flag_name: str) -> None:
+        """Clear system flag."""
+        conn = await self.get_connection()
+        await conn.execute("DELETE FROM system_flags WHERE flag_name = ?", (flag_name,))
+        await conn.commit()
+
+    # === AUDIT METHODS ===
+
+    async def get_audit_logs(self, limit: int = 100) -> list[dict]:
+        """Get recent audit logs."""
+        conn = await self.get_connection()
+        cursor = await conn.execute(
+            "SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT ?", (limit,)
+        )
+
+        rows = await cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+
+        return [dict(zip(columns, row, strict=False)) for row in rows]
+
+    async def get_daily_digest_stats(self) -> dict:
+        """Get optimized daily digest statistics."""
+        conn = await self.get_connection()
+
+        cursor = await conn.execute(
+            """
+            SELECT
+                COUNT(*) as total_logs,
+                COUNT(CASE WHEN category = 'CRITICAL' THEN 1 END) as critical_events,
+                COUNT(CASE WHEN category = 'WARNING' THEN 1 END) as warnings,
+                COUNT(CASE WHEN action LIKE '%BAN%' OR action LIKE '%KICK%' OR action LIKE '%MUTE%' THEN 1 END) as moderation_actions,
+                COUNT(CASE WHEN action LIKE '%JOIN%' OR action LIKE '%LEAVE%' THEN 1 END) as user_events
+            FROM audit_log
+            WHERE timestamp >= datetime('now', '-1 day')
+        """
+        )
+
+        result = await cursor.fetchone()
+        return {
+            "total_logs": result[0] if result else 0,
+            "critical_events": result[1] if result else 0,
+            "warnings": result[2] if result else 0,
+            "moderation_actions": result[3] if result else 0,
+            "user_events": result[4] if result else 0,
+        }
+
+    # === ROAST METHODS ===
+
+    async def add_roast_xp(self, xp_amount: int) -> dict:
+        """Add roast XP."""
+        # This is a placeholder - implement based on your roast XP system
+        return {"xp_gained": xp_amount, "bot_level": 1}
 
     # === CLEANUP ===
 
     async def close(self) -> None:
+        """Close database connection."""
         if self._connection:
             await self._connection.close()
             self._connection = None

@@ -25,6 +25,36 @@ DAILY_CHECKIN_XP = 50
 STREAK_BONUS_PERCENT = 10
 ROAST_LEADERBOARD_LIMIT = 10
 
+# XP Level Requirements (cumulative XP needed)
+XP_TABLE = {
+    1: 0,
+    2: 100,
+    3: 250,
+    4: 450,
+    5: 700,
+    6: 1000,
+    7: 1400,
+    8: 1900,
+    9: 2500,
+    10: 3200,
+    11: 4000,
+    12: 5000,
+    13: 6200,
+    14: 7600,
+    15: 9200,
+    16: 11000,
+    17: 13000,
+    18: 15000,
+    19: 17000,
+    20: 20000,
+    25: 30000,
+    30: 45000,
+    35: 65000,
+    40: 90000,
+    45: 120000,
+    50: 160000,
+}
+
 # Roast XP Configuration
 ROAST_XP_MIN = 5
 ROAST_XP_MAX = 15
