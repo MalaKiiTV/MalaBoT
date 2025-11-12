@@ -18,7 +18,6 @@ from config.constants import (
     XP_PER_MESSAGE,
     XP_PER_REACTION,
     XP_PER_VOICE_MINUTE,
-    XP_TABLE,
 )
 from utils.helpers import (
     create_embed,
@@ -91,76 +90,72 @@ class XPGroup(app_commands.Group):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="leaderboard", description="Show server XP leaderboard")
-    async def leaderboard(self, interaction: discord.Interaction):
-        """Show XP leaderboard."""
-        try:
-            # Get top users by XP for this guild only
-            guild_member_ids = [member.id for member in interaction.guild.members]
-            if not guild_member_ids:
-                embed = create_embed(
-                    title="\ud83c\udfc6 XP Leaderboard",
-                    description="No guild members found!",
-                    color=COLORS["warning"],
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-
-            conn = await self.cog.bot.db_manager.get_connection()
-            placeholders = ",".join(["?" for _ in guild_member_ids])
-            cursor = await conn.execute(
-                f"""SELECT user_id, xp
-                   FROM users
-                   WHERE user_id IN ({placeholders}) AND xp > 0
-                   ORDER BY xp DESC
-                   LIMIT 10""",
-                guild_member_ids,
-            )
-            rows = await cursor.fetchall()
-
-            if not rows:
-                embed = create_embed(
-                    title="🏆 XP Leaderboard",
-                    description="No users have XP yet!",
-                    color=COLORS["warning"],
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-
-            description = ""
-            for i, (user_id, xp) in enumerate(rows, 1):
-                # Calculate level from XP
-                level = 1
-                total_xp = xp
-                for lvl, req_xp in enumerate(XP_TABLE):
-                    if total_xp >= req_xp:
-                        level = lvl + 1
-                    else:
-                        break
-                user = interaction.guild.get_member(user_id)
-                if user:
-                    medal = ""
-                    if i == 1:
-                        medal = "🥇"
-                    elif i == 2:
-                        medal = "🥈"
-                    elif i == 3:
-                        medal = "🥉"
-                    description += (
-                        f"{medal} **{i}.** {user.mention} - Level {level} ({xp:,} XP)\n"
-                    )
-
+async def leaderboard(self, interaction: discord.Interaction):
+    """Show XP leaderboard."""
+    try:
+        # Get top users by XP for this guild only
+        guild_member_ids = [member.id for member in interaction.guild.members]
+        if not guild_member_ids:
             embed = create_embed(
                 title="🏆 XP Leaderboard",
-                description=description,
-                color=COLORS["primary"],
+                description="No guild members found!",
+                color=COLORS["warning"],
             )
-
             await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
 
-        except Exception as e:
-            self.cog.logger.error(f"Error in leaderboard command: {e}")
-            embed = embed_helper.error_embed("Error", "Failed to fetch leaderboard.")
+        conn = await self.cog.bot.db_manager.get_connection()
+        placeholders = ",".join(["?" for _ in guild_member_ids])
+        cursor = await conn.execute(
+            f"""SELECT user_id, xp
+               FROM users
+               WHERE user_id IN ({placeholders}) AND xp > 0
+               ORDER BY xp DESC
+               LIMIT 10""",
+            guild_member_ids,
+        )
+        rows = await cursor.fetchall()
+
+        if not rows:
+            embed = create_embed(
+                title="🏆 XP Leaderboard",
+                description="No users have XP yet!",
+                color=COLORS["warning"],
+            )
             await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        description = ""
+        for i, (user_id, xp) in enumerate(rows, 1):
+            # Calculate level from XP using your formula
+            level = calculate_level(xp)
+
+            user = interaction.guild.get_member(user_id)
+            if user:
+                medal = ""
+                if i == 1:
+                    medal = "🥇"
+                elif i == 2:
+                    medal = "🥈"
+                elif i == 3:
+                    medal = "🥉"
+                description += (
+                    f"{medal} **{i}.** {user.mention} - Level {level} ({xp:,} XP)\n"
+                )
+
+        embed = create_embed(
+            title="🏆 XP Leaderboard",
+            description=description,
+            color=COLORS["primary"],
+        )
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    except Exception as e:
+        self.cog.logger.error(f"Error in leaderboard command: {e}")
+        embed = embed_helper.error_embed("Error", "Failed to fetch leaderboard.")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
 
     @app_commands.command(name="checkin", description="Claim your daily XP bonus")
     async def checkin(self, interaction: discord.Interaction):
