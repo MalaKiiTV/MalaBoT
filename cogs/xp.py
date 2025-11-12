@@ -54,14 +54,9 @@ class XPGroup(app_commands.Group):
                 target.id, interaction.guild.id
             )
 
-            # Calculate XP for next level using XP_TABLE
-            if level < len(XP_TABLE):
-                next_level_xp = XP_TABLE[min(level + 1, len(XP_TABLE) - 1)]
-                current_level_xp = XP_TABLE[level]
-            else:
-                # For very high levels, use a formula
-                next_level_xp = 1000 * (level + 1) * level
-                current_level_xp = 1000 * level * (level - 1)
+            current_level_xp = 10 * (level - 1) ** 2 if level > 1 else 0
+            next_level_xp = 10 * (level) ** 2
+
             xp_needed = next_level_xp - xp
             xp_progress = xp - current_level_xp
             xp_total_needed = next_level_xp - current_level_xp
@@ -559,11 +554,9 @@ async def setup(bot: commands.Bot):
 
 
 def calculate_level(xp: int) -> int:
-    """Calculate level from total XP."""
+    """Calculate level from total XP using a quadratic progression."""
     level = 1
-    for lvl, req_xp in enumerate(XP_TABLE):
-        if xp >= req_xp:
-            level = lvl + 1
-        else:
-            break
+    while xp >= 10 * (level ** 2):
+        level += 1
     return level
+
