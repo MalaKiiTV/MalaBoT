@@ -441,9 +441,7 @@ class Utility(commands.Cog):
 
             embed.add_field(name="🔧 Library", value="discord.py 2.x", inline=True)
 
-            embed.add_field(
-                name="🌐 Hosting", value="DigitalOcean Droplet", inline=True
-            )
+            embed.add_field(name="🌐 Hosting", value="DigitalOcean Droplet", inline=True)
 
             # System information
             if sys_info:

@@ -1,5 +1,3 @@
-
-
 def test_bot_imports():
     from bot import MalaBoT
 
