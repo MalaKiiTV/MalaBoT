@@ -17,7 +17,7 @@ async def verify_migrations():
         # Check for migration table
         conn = await db.get_connection()
         cursor = await conn.execute("""
-            SELECT name FROM sqlite_master 
+            SELECT name FROM sqlite_master
             WHERE type='table' AND name='migrations'
         """)
         
@@ -36,7 +36,7 @@ async def verify_migrations():
         # List of migrations that should be applied
         required_migrations = [
             "add_component_to_health_logs",
-            "migrate_appeals_table", 
+            "migrate_appeals_table",
             "migrate_settings_table"
         ]
         

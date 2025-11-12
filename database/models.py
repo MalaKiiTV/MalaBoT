@@ -302,7 +302,7 @@ class DatabaseManager:
         # Calculate the appropriate level for the XP amount
         level = 1
         for lvl, req_xp in enumerate(XP_TABLE):
-            if new_xp >= req_xp:
+            if amount >= req_xp:
                 level = lvl + 1
             else:
                 break
@@ -406,7 +406,7 @@ class DatabaseManager:
 
         # Convert to dict
         columns = [desc[0] for desc in cursor.description]
-        return dict(zip(columns, row))
+        return dict(zip(columns, row, strict=False))
 
     # === BIRTHDAY METHODS ===
 
@@ -540,8 +540,8 @@ class DatabaseManager:
         conn = await self.get_connection()
         cursor = await conn.execute(
             """
-            SELECT * FROM mod_logs 
-            ORDER BY timestamp DESC 
+            SELECT * FROM mod_logs
+            ORDER BY timestamp DESC
             LIMIT ?
         """,
             (limit,),
@@ -550,7 +550,7 @@ class DatabaseManager:
         rows = await cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
 
-        return [dict(zip(columns, row)) for row in rows]
+        return [dict(zip(columns, row, strict=False)) for row in rows]
 
     async def log_health_check(
         self,
@@ -606,7 +606,7 @@ class DatabaseManager:
         conn = await self.get_connection()
         await conn.execute(
             """
-            INSERT OR REPLACE INTO settings (setting_key, value, guild_id, updated_at) 
+            INSERT OR REPLACE INTO settings (setting_key, value, guild_id, updated_at)
             VALUES (?, ?, ?, datetime('now'))
         """,
             (key, value, guild_id),
@@ -656,7 +656,7 @@ class DatabaseManager:
         rows = await cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
 
-        return [dict(zip(columns, row)) for row in rows]
+        return [dict(zip(columns, row, strict=False)) for row in rows]
 
     async def get_daily_digest_stats(self) -> dict:
         """Get optimized daily digest statistics."""

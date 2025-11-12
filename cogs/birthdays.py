@@ -178,14 +178,16 @@ class Birthdays(commands.Cog):
                 # Format the birthday string to be more readable
                 # Defensive programming: ensure proper MM-DD format
                 if "-" not in birthday_str:
+                    msg = f"Birthday data not in expected MM-DD format: {birthday_str}"
                     raise ValueError(
-                        f"Birthday data not in expected MM-DD format: {birthday_str}"
+                        msg
                     )
 
                 parts = birthday_str.split("-")
                 if len(parts) != 2:
+                    msg = f"Birthday data malformed, expected 2 parts got {len(parts)}: {birthday_str}"
                     raise ValueError(
-                        f"Birthday data malformed, expected 2 parts got {len(parts)}: {birthday_str}"
+                        msg
                     )
 
                 month, day = map(int, parts)

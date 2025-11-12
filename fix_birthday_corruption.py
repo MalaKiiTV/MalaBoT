@@ -1,5 +1,4 @@
 import sqlite3
-import sys
 
 def fix_birthday_corruption(db_path):
     """Fix birthday table corruption where Discord IDs are stored in birthday column"""
