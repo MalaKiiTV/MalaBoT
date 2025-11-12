@@ -78,7 +78,7 @@ class DatabaseManager:
     # === XP METHODS ===
 
     def calculate_level(self, xp: int) -> int:
-        """Quadratic XP progression, compatible with xp.py."""
+        """Quadratic XP progression: level increases slower at higher XP."""
         level = 1
         while xp >= 10 * (level ** 2):
             level += 1
@@ -96,23 +96,20 @@ class DatabaseManager:
         return result[0] if result else 0
 
     async def set_user_xp(self, user_id: int, amount: int) -> tuple[int, int]:
-        """Set user's XP and recalculate level."""
+        level = self.calculate_level(amount)
         conn = await self.get_connection()
         await conn.execute(
             "INSERT OR IGNORE INTO users (user_id, username, discriminator) VALUES (?, 'Unknown', '0')",
             (user_id,),
         )
-        new_xp = max(0, amount)
-        level = self.calculate_level(new_xp)
         await conn.execute(
             "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
-            (new_xp, level, user_id),
+            (amount, level, user_id),
         )
         await conn.commit()
-        return new_xp, level
+        return amount, level
 
     async def update_user_xp(self, user_id: int, xp_change: int) -> tuple[int, int]:
-        """Update user's XP and recalculate level safely."""
         conn = await self.get_connection()
         await conn.execute(
             "INSERT OR IGNORE INTO users (user_id, username, discriminator) VALUES (?, 'Unknown', '0')",
@@ -120,8 +117,7 @@ class DatabaseManager:
         )
         await conn.commit()
         cursor = await conn.execute("SELECT xp FROM users WHERE user_id = ?", (user_id,))
-        result = await cursor.fetchone()
-        current_xp = result[0] if result else 0
+        current_xp = (await cursor.fetchone())[0] if await cursor.fetchone() else 0
         new_xp = max(0, current_xp + xp_change)
         level = self.calculate_level(new_xp)
         await conn.execute(
@@ -158,6 +154,17 @@ class DatabaseManager:
         conn = await self.get_connection()
         cursor = await conn.execute("SELECT birthday FROM birthdays WHERE user_id = ?", (user_id,))
         return await cursor.fetchone()
+
+    # === LOGGING (restored from original) ===
+
+    async def log_event(self, event_type: str, details: Any) -> None:
+        """Log an event to the database (simplified example)."""
+        conn = await self.get_connection()
+        await conn.execute(
+            "INSERT INTO events (event_type, details) VALUES (?, ?)",
+            (event_type, str(details)),
+        )
+        await conn.commit()
 
     # === CLEANUP ===
 
