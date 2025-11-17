@@ -49,7 +49,7 @@ async def migrate_settings_table():
             required_columns = [
                 "id",
                 "guild_id",
-                "setting_key",
+                "key",
                 "value",
                 "created_at",
                 "updated_at",
@@ -91,11 +91,11 @@ async def create_settings_table(conn):
         CREATE TABLE settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             guild_id INTEGER NOT NULL,
-            setting_key TEXT NOT NULL,
+            key TEXT NOT NULL,
             value TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(guild_id, setting_key)
+            UNIQUE(guild_id, key)
         )
     """
     )
