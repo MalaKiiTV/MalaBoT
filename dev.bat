@@ -600,9 +600,9 @@ if %ERRORLEVEL% NEQ 0 (
 echo [2/5] SSH into droplet and update code...
 ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git fetch origin && git checkout %current_branch% && git reset --hard origin/%current_branch%"
 echo [3/5] Installing/updating dependencies...
-ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && pip3 install -r requirements.txt --quiet"
+ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && source venv/bin/activate && pip install -r requirements.txt --quiet"
 echo [4/5] Restarting bot with PM2...
-ssh %DROPLET_USER%@%DROPLET_IP% "pm2 restart malabot || pm2 start %DROPLET_DIR%/bot.py --name malabot --interpreter python3"
+ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && source venv/bin/activate && pm2 restart malabot || pm2 start bot.py --name malabot --interpreter /home/malabot/MalaBoT/venv/bin/python"
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to restart bot with PM2
     pause
