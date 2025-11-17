@@ -83,11 +83,11 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 guild_id INTEGER,
-                key TEXT NOT NULL,
+                setting_key TEXT NOT NULL,
                 value TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(guild_id, key)
+                UNIQUE(guild_id, setting_key)
             )
         """
         )
@@ -588,12 +588,12 @@ class DatabaseManager:
         conn = await self.get_connection()
         if guild_id:
             cursor = await conn.execute(
-                "SELECT value FROM settings WHERE key = ? AND guild_id = ?",
+                "SELECT value FROM settings WHERE setting_key = ? AND guild_id = ?",
                 (key, guild_id),
             )
         else:
             cursor = await conn.execute(
-                "SELECT value FROM settings WHERE key = ? AND guild_id IS NULL",
+                "SELECT value FROM settings WHERE setting_key = ? AND guild_id IS NULL",
                 (key,),
             )
         result = await cursor.fetchone()
@@ -606,7 +606,7 @@ class DatabaseManager:
         conn = await self.get_connection()
         await conn.execute(
             """
-            INSERT OR REPLACE INTO settings (key, value, guild_id, updated_at)
+            INSERT OR REPLACE INTO settings (setting_key, value, guild_id, updated_at)
             VALUES (?, ?, ?, datetime('now'))
         """,
             (key, value, guild_id),

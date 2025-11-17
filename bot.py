@@ -2,9 +2,6 @@
 MalaBoT - Multifunctional Discord Bot
 Main entry point and core bot framework.
 """
-from dotenv import load_dotenv
-load_dotenv()
-
 
 import asyncio
 import os
