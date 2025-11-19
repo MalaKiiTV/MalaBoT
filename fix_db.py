@@ -21,7 +21,7 @@ CREATE TABLE settings (
 # Copy data from old table
 c.execute("""
 INSERT INTO settings (id, key, value, guild_id, updated_at)
-SELECT id, setting_key, value, guild_id, updated_at FROM tmp_settings
+SELECT id, key, value, guild_id, updated_at FROM tmp_settings
 """)
 
 # Drop old table
