@@ -475,16 +475,24 @@ def xp_helper(xp: int) -> dict:
     """Helper function for XP calculations."""
     from config.constants import XP_TABLE
 
+    # Find current level based on XP
     level = 1
-    for lvl, req_xp in enumerate(XP_TABLE):
-        if xp >= req_xp:
-            level = lvl + 1
+    for lvl in sorted(XP_TABLE.keys()):
+        if xp >= XP_TABLE[lvl]:
+            level = lvl
         else:
             break
 
-    current_level_xp = XP_TABLE[level - 1] if level > 1 else 0
-    next_level_xp = XP_TABLE[level] if level < len(XP_TABLE) else XP_TABLE[-1]
-    xp_needed = next_level_xp - xp
+    # Get XP thresholds
+    current_level_xp = XP_TABLE.get(level, 0)
+    next_level = level + 1
+
+    # Find next level in table
+    while next_level not in XP_TABLE and next_level <= max(XP_TABLE.keys()):
+        next_level += 1
+
+    next_level_xp = XP_TABLE.get(next_level, current_level_xp)
+    xp_needed = max(0, next_level_xp - xp)
     xp_progress = xp - current_level_xp
     xp_total_for_level = next_level_xp - current_level_xp
 
