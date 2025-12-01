@@ -598,19 +598,23 @@ if %ERRORLEVEL% NEQ 0 (
     goto menu
 )
 
-echo [2/6] SSH into droplet and update code...
+echo [2/7] SSH into droplet and update code...
 ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git fetch origin && git checkout %current_branch% && git reset --hard origin/%current_branch%"
 
-echo [3/6] Syncing local database to droplet...
+echo [3/7] Stopping bot on droplet...
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 stop malabot"
+
+echo [4/7] Syncing local database to droplet...
 scp data\bot.db %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/data/bot.db
+
 if %ERRORLEVEL% NEQ 0 (
     echo [WARNING] Database sync failed - droplet will use existing database
 )
 
-echo [4/6] Installing/updating dependencies...
+echo [5/7] Installing/updating dependencies...
 ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && pip3 install -r requirements.txt --quiet"
 
-echo [5/6] Restarting bot with PM2...
+echo [6/7] Restarting bot with PM2...
 ssh %DROPLET_USER%@%DROPLET_IP% "pm2 restart malabot || pm2 start %DROPLET_DIR%/bot.py --name malabot --interpreter python3"
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to restart bot with PM2
@@ -618,7 +622,7 @@ if %ERRORLEVEL% NEQ 0 (
     goto menu
 )
 
-echo [6/6] Checking bot status...
+echo [7/7] Checking bot status...
 ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list && pm2 logs malabot --lines 20 --nostream"
 echo.
 echo [SUCCESS] Remote deploy complete!
