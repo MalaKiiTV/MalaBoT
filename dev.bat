@@ -590,33 +590,45 @@ set DROPLET_USER=malabot
 set DROPLET_IP=165.232.156.230
 set DROPLET_DIR=/home/malabot/MalaBoT
 
-echo [1/5] Pushing local changes to GitHub branch %current_branch%...
+echo [1/6] Pushing local changes to GitHub branch %current_branch%...
 git push origin %current_branch%
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] git push failed. Make sure changes are committed first.
     pause
     goto menu
 )
-echo [2/5] SSH into droplet and update code...
+
+echo [2/6] SSH into droplet and update code...
 ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git fetch origin && git checkout %current_branch% && git reset --hard origin/%current_branch%"
-echo [3/5] Installing/updating dependencies...
+
+echo [3/6] Syncing local database to droplet...
+scp data\bot.db %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/data/bot.db
+if %ERRORLEVEL% NEQ 0 (
+    echo [WARNING] Database sync failed - droplet will use existing database
+)
+
+echo [4/6] Installing/updating dependencies...
 ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && pip3 install -r requirements.txt --quiet"
-echo [4/5] Restarting bot with PM2...
+
+echo [5/6] Restarting bot with PM2...
 ssh %DROPLET_USER%@%DROPLET_IP% "pm2 restart malabot || pm2 start %DROPLET_DIR%/bot.py --name malabot --interpreter python3"
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to restart bot with PM2
     pause
     goto menu
 )
-echo [5/5] Checking bot status...
+
+echo [6/6] Checking bot status...
 ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list && pm2 logs malabot --lines 20 --nostream"
 echo.
 echo [SUCCESS] Remote deploy complete!
 echo Bot is running on droplet with PM2
+echo Database synced from local to droplet
 echo.
 
 pause
 goto menu
+
 
 :backupnow
 echo.
