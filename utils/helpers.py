@@ -470,30 +470,32 @@ def is_staff_decorator():
     """
     return is_mod_decorator()
 
+
 def xp_helper(xp: int) -> dict:
     """Helper function for XP calculations."""
     from config.constants import XP_TABLE
-    
+
     level = 1
     for lvl, req_xp in enumerate(XP_TABLE):
         if xp >= req_xp:
             level = lvl + 1
         else:
             break
-    
+
     current_level_xp = XP_TABLE[level - 1] if level > 1 else 0
     next_level_xp = XP_TABLE[level] if level < len(XP_TABLE) else XP_TABLE[-1]
     xp_needed = next_level_xp - xp
     xp_progress = xp - current_level_xp
     xp_total_for_level = next_level_xp - current_level_xp
-    
-    return {
-        'level': level,
-        'current_level_xp': current_level_xp,
-        'next_level_xp': next_level_xp,
-        'xp_needed': xp_needed,
-        'xp_progress': xp_progress,
-        'xp_total_for_level': xp_total_for_level,
-        'xp_percentage': (xp_progress / xp_total_for_level * 100) if xp_total_for_level > 0 else 100
-    }
 
+    return {
+        "level": level,
+        "current_level_xp": current_level_xp,
+        "next_level_xp": next_level_xp,
+        "xp_needed": xp_needed,
+        "xp_progress": xp_progress,
+        "xp_total_for_level": xp_total_for_level,
+        "xp_percentage": (
+            (xp_progress / xp_total_for_level * 100) if xp_total_for_level > 0 else 100
+        ),
+    }

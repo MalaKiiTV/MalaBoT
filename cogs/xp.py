@@ -555,6 +555,7 @@ async def setup(bot: commands.Bot):
     xp_cog._xp_group = xp_group  # Store reference for cleanup
     bot.tree.add_command(xp_group)
 
+
 def calculate_level(xp: int) -> int:
     """Calculate level from total XP."""
     level = 1
@@ -564,4 +565,3 @@ def calculate_level(xp: int) -> int:
         else:
             break
     return level
-

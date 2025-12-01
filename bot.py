@@ -873,14 +873,18 @@ if __name__ == "__main__":
     async def health_check(self) -> dict:
         """Return bot health status for monitoring"""
         from datetime import datetime
+
         return {
             "status": "healthy" if self.is_ready() else "starting",
-            "uptime": (datetime.now() - self.start_time).total_seconds() if self.start_time else 0,
+            "uptime": (
+                (datetime.now() - self.start_time).total_seconds()
+                if self.start_time
+                else 0
+            ),
             "latency_ms": round(self.latency * 1000),
             "guilds": len(self.guilds),
             "users": sum(g.member_count for g in self.guilds),
             "cogs_loaded": len(self.cogs),
             "database": self.db_manager is not None,
-            "version": settings.BOT_VERSION
+            "version": settings.BOT_VERSION,
         }
-
