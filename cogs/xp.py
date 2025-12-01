@@ -558,10 +558,14 @@ async def setup(bot: commands.Bot):
 
 def calculate_level(xp: int) -> int:
     """Calculate level from total XP."""
+    if xp < 0:
+        return 1
+
     level = 1
-    for lvl in sorted(XP_TABLE.keys()):
+    # Sort levels in descending order and find the highest level we qualify for
+    for lvl in sorted(XP_TABLE.keys(), reverse=True):
         if xp >= XP_TABLE[lvl]:
             level = lvl
-        else:
             break
+
     return level
