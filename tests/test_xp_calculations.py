@@ -2,7 +2,6 @@
 Tests for XP calculation logic.
 """
 
-from unittest.mock import patch
 
 import pytest
 
