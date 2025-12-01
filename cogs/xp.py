@@ -111,7 +111,7 @@ class XPGroup(app_commands.Group):
             conn = await self.cog.bot.db_manager.get_connection()
             placeholders = ",".join(["?" for _ in guild_member_ids])
             cursor = await conn.execute(
-                f"""SELECT user_id, xp
+                f"""SELECT user_id, xp, level
                    FROM users
                    WHERE user_id IN ({placeholders}) AND xp > 0
                    ORDER BY xp DESC
@@ -130,15 +130,7 @@ class XPGroup(app_commands.Group):
                 return
 
             description = ""
-            for i, (user_id, xp) in enumerate(rows, 1):
-                # Calculate level from XP
-                level = 1
-                total_xp = xp
-                for lvl, req_xp in enumerate(XP_TABLE):
-                    if total_xp >= req_xp:
-                        level = lvl + 1
-                    else:
-                        break
+            for i, (user_id, xp, level) in enumerate(rows, 1):
                 user = interaction.guild.get_member(user_id)
                 if user:
                     medal = ""
