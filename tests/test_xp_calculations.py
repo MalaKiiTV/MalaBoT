@@ -2,7 +2,6 @@
 Tests for XP calculation logic.
 """
 
-
 import pytest
 
 
@@ -41,7 +40,7 @@ class TestXPCalculations:
         # xp_helper returns a dict, not an object with methods
         result = xp_helper(100)
         assert isinstance(result, dict)
-        
+
         result = xp_helper(1000)
         assert isinstance(result, dict)
 
