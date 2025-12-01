@@ -2,6 +2,10 @@
 Tests for XP calculation logic.
 """
 
+import warnings
+
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="discord.player")
+
 import pytest
 
 
