@@ -40,13 +40,14 @@ jobs:
 
     - name: Type check with MyPy
       run: |
-#     poetry run mypy .
+        echo "MyPy check skipped"
+        # poetry run mypy .
 
     - name: Run tests
       run: |
         poetry run pytest --cov=cogs --cov-report=xml
 
-        - name: Upload coverage to Codecov
+    - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       continue-on-error: true
       timeout-minutes: 2
@@ -55,7 +56,6 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
-
 
   security:
     runs-on: ubuntu-latest
