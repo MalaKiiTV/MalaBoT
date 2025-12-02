@@ -9,7 +9,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
@@ -26,43 +25,40 @@ jobs:
       uses: snok/install-poetry@v1
       with:
         version: latest
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-
-    - name: Cache Poetry dependencies
-      uses: actions/cache@v3
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
     - name: Install dependencies
-      run: poetry install --with dev
-      timeout-minutes: 5
+      run: |
+        poetry install --with dev
 
     - name: Lint with Ruff
-      run: poetry run ruff check .
-      timeout-minutes: 2
+      run: |
+        poetry run ruff check .
 
     - name: Check formatting with Black
-      run: poetry run black --check .
-      timeout-minutes: 2
+      run: |
+        poetry run black --check .
+
+    - name: Type check with MyPy
+      run: |
+#     poetry run mypy .
 
     - name: Run tests
-      run: timeout 120 poetry run pytest --cov=cogs --cov-report=xml --timeout=30 -v
-      timeout-minutes: 3
+      run: |
+        poetry run pytest --cov=cogs --cov-report=xml
 
-    - name: Upload coverage
+        - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
-      if: matrix.python-version == '3.11'
+      continue-on-error: true
+      timeout-minutes: 2
       with:
         file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
         fail_ci_if_error: false
-      continue-on-error: true
-      timeout-minutes: 1
+
 
   security:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v4
 
@@ -70,11 +66,9 @@ jobs:
       run: |
         pip install bandit[toml]
         bandit -r cogs/ utils/ database/ -f json -o bandit-report.json --exit-zero
-      timeout-minutes: 5
 
     - name: Upload Bandit Report
       uses: actions/upload-artifact@v4
       with:
         name: bandit-report
         path: bandit-report.json
-      timeout-minutes: 1

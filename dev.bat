@@ -81,6 +81,7 @@ echo [ADVANCED OPS]
 echo 22. Backup Now                   - Backup logs and database
 echo 23. Verify Environment           - Check configuration validity
 echo 24. Clear All                    - Clear commands + caches + logs + temp
+echo 25. Sync DB from Droplet        - Download latest database from production
 echo.
 echo [EXIT]
 echo  0. Exit                         - Close development tools
@@ -112,6 +113,7 @@ if "%choice%"=="21" goto testconfig
 if "%choice%"=="22" goto backupnow
 if "%choice%"=="23" goto verifyenv
 if "%choice%"=="24" goto clearall
+if "%choice%"=="25" goto sync_db_from_droplet
 if "%choice%"=="0" goto exit
 
 echo Invalid choice. Please try again.
@@ -840,6 +842,55 @@ goto :eof
 :get_current_branch
 for /f "tokens=*" %%i in ('git rev-parse --abbrev-ref HEAD') do set "current_branch=%%i"
 goto :eof
+
+:sync_db_from_droplet
+echo.
+echo ========================================
+echo Sync Database from Droplet
+echo ========================================
+set DROPLET_USER=malabot
+set DROPLET_IP=165.232.156.230
+set DROPLET_DIR=/home/malabot/MalaBoT
+echo.
+echo [WARNING] This will overwrite your local database!
+echo [INFO] Your current local database will be backed up first.
+echo.
+set /p confirm="Continue? (y/n): "
+if /i not "%confirm%"=="y" (
+    echo [CANCELLED] Database sync cancelled.
+    pause
+    goto menu
+)
+
+echo [1/3] Backing up current local database...
+if exist bot.db (
+    for /f "tokens=2 delims==." %%A in ('wmic os get localdatetime /value 2^>nul') do set "dt=%%A"
+    set "TS=%dt:~0,4%-%dt:~4,2%-%dt:~6,2%_%dt:~8,2%-%dt:~10,2%"
+    if not exist "backups\db" mkdir "backups\db"
+    copy /Y bot.db "backups\db\bot_local_%TS%.db" >nul
+    echo [SUCCESS] Local database backed up to backups\db\bot_local_%TS%.db
+)
+
+echo [2/3] Downloading database from droplet...
+scp %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/bot.db bot.db
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to download database from droplet!
+    pause
+    goto menu
+)
+
+echo [3/3] Verifying database...
+python -c "import sqlite3; conn = sqlite3.connect('bot.db'); cursor = conn.cursor(); cursor.execute('SELECT COUNT(*) FROM settings'); print('[SUCCESS] Database synced! Total settings:', cursor.fetchone()[0]); conn.close()"
+
+echo.
+echo ========================================
+echo [SUCCESS] Database Sync Complete!
+echo ========================================
+echo Your local database now matches production.
+echo.
+pause
+goto menu
+
 
 :exit
 echo.
