@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # ⭐ ADD THIS - Prevents 6-hour hangs
+    timeout-minutes: 15
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
@@ -40,41 +40,47 @@ jobs:
     - name: Install dependencies
       run: |
         poetry install --with dev
-      timeout-minutes: 5  # ⭐ ADD THIS
+      timeout-minutes: 5
 
     - name: Lint with Ruff
       run: |
         poetry run ruff check .
-      timeout-minutes: 2  # ⭐ ADD THIS
+      timeout-minutes: 2
 
     - name: Check formatting with Black
       run: |
         poetry run black --check .
-      timeout-minutes: 2  # ⭐ ADD THIS
+      timeout-minutes: 2
 
     - name: Type check with MyPy
       run: |
         echo "MyPy check skipped"
         # poetry run mypy .
-      timeout-minutes: 1
 
     - name: Run tests
       run: |
-        poetry run pytest --cov=cogs --cov-report=xml
-      timeout-minutes: 5  # ⭐ ADD THIS - Most important!
+        poetry run pytest --cov=cogs --cov-report=xml --timeout=60 -v
+      timeout-minutes: 3
+      env:
+        PYTEST_TIMEOUT: 60
+
+    - name: Verify coverage file exists
+      run: |
+        ls -la coverage.xml || echo "Coverage file not found"
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
-      if: matrix.python-version == '3.11'  # Only upload once
+      if: matrix.python-version == '3.11'
       with:
         file: ./coverage.xml
-        fail_ci_if_error: false  # ⭐ Don't fail if upload fails
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
       timeout-minutes: 2
-      continue-on-error: true  # ⭐ Don't block on codecov issues
+      continue-on-error: true
 
   security:
     runs-on: ubuntu-latest
-    timeout-minutes: 10  # ⭐ ADD THIS
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v4
 
@@ -82,11 +88,11 @@ jobs:
       run: |
         pip install bandit[toml]
         bandit -r cogs/ utils/ database/ -f json -o bandit-report.json --exit-zero
-      timeout-minutes: 5  # ⭐ ADD THIS
+      timeout-minutes: 5
 
     - name: Upload Bandit Report
       uses: actions/upload-artifact@v4
       with:
-        name: bandit-report
+        name: bandit-report-${{ github.sha }}
         path: bandit-report.json
-      timeout-minutes: 2  # ⭐ ADD THIS
+      timeout-minutes: 2
