@@ -196,10 +196,15 @@ class XPGroup(app_commands.Group):
                 bonus = int(bonus * (1 + (STREAK_BONUS_PERCENT * (streak - 1))))
 
             # Give XP
-            await self.cog.bot.db_manager.update_user_xp(user_id, bonus, interaction.guild.id)
+            new_xp, new_level, leveled_up = await self.cog.bot.db_manager.update_user_xp(user_id, bonus, interaction.guild.id)
+
+            # Check for level-up and assign roles
+            if leveled_up:
+                await self.cog._check_level_up(interaction.user)
 
             # Update checkin record
             await conn.execute(
+
                 """INSERT OR REPLACE INTO daily_checkins (user_id, last_checkin, checkin_streak)
                    VALUES (?, ?, ?)""",
                 (user_id, today.isoformat(), streak),
@@ -244,7 +249,9 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager.update_user_xp(user.id, amount, interaction.guild.id)
+            new_xp, new_level, leveled_up = await self.cog.bot.db_manager.update_user_xp(user.id, amount, interaction.guild.id)
+            if leveled_up:
+                await self.cog._check_level_up(user)
             embed = create_embed(
                 title="✅ XP Added",
                 description=f"Added **{amount:,} XP** to {user.mention}",
@@ -294,7 +301,11 @@ class XPGroup(app_commands.Group):
             # Add XP to all users in the server
             for member in interaction.guild.members:
                 if not member.bot:
-                    await self.cog.bot.db_manager.update_user_xp(member.id, amount, interaction.guild.id)
+                    new_xp, new_level, leveled_up = await self.cog.bot.db_manager.update_user_xp(member.id, amount, interaction.guild.id)
+
+                    # Check for level-up and assign roles
+                    if leveled_up:
+                        await self.cog._check_level_up(member)
 
             embed = create_embed(
                 title="✅ XP Added to All Users",
@@ -369,9 +380,15 @@ class XPGroup(app_commands.Group):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
-
         try:
+            old_level = await self.cog.bot.db_manager.get_user_level(user.id)
             await self.cog.bot.db_manager.set_user_xp(user.id, amount)
+            new_level = await self.cog.bot.db_manager.get_user_level(user.id)
+            
+            # Check if leveled up
+            if new_level > old_level:
+                await self.cog._check_level_up(user)
+            
             embed = create_embed(
                 title="✅ XP Set",
                 description=f"Set {user.mention}'s XP to **{amount:,}**",
