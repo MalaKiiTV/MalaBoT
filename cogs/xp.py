@@ -554,6 +554,24 @@ class XP(commands.Cog):
             current_level = await self.bot.db_manager.get_user_level(user.id)
             self.logger.info(f"[LEVEL ROLE DEBUG] User {user.name} is level {current_level}")
 
+            # Send level-up message to XP channel
+            xp_channel_id = await self.bot.db_manager.get_setting("xp_channel", user.guild.id)
+            levelup_message = await self.bot.db_manager.get_setting("xp_levelup_message", user.guild.id)
+
+            if xp_channel_id:
+                channel = user.guild.get_channel(int(xp_channel_id))
+                if channel:
+                    # Format the message
+                    msg = levelup_message or "🎉 {member} reached level {level}!"
+                    msg = msg.replace("{member}", user.mention)
+                    msg = msg.replace("{level}", str(current_level))
+
+                    try:
+                        await channel.send(msg)
+                        self.logger.info(f"Sent level-up message for {user.name} reaching level {current_level}")
+                    except Exception as e:
+                        self.logger.error(f"Failed to send level-up message: {e}")
+
             # Check for level roles
             conn = await self.bot.db_manager.get_connection()
             cursor = await conn.execute(
