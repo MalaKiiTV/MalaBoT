@@ -531,6 +531,7 @@ class XP(commands.Cog):
 
     async def _check_level_up(self, user):
         """Check if user leveled up and assign roles if needed."""
+        self.logger.info(f"[LEVEL ROLE DEBUG] _check_level_up called for user {user.name} (ID: {user.id})")
         try:
             # Get user's current level
             current_level = await self.bot.db_manager.get_user_level(user.id)
