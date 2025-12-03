@@ -1720,29 +1720,23 @@ class LevelRolesView(View):
                     await interaction.response.send_message(embed=embed, ephemeral=True)
                     return
 
-                # Get current level roles
-                level_roles = await self.db_manager.get_setting(
-                    "level_roles", self.guild_id
-                )
+                # Save directly to level_roles table
+                try:
+                    conn = await self.db_manager.get_connection()
+                    print(f"[DEBUG] Saving level role: guild={self.guild_id}, level={level}, role_id={role.id}")
+                    await conn.execute(
+                        """
+                        INSERT OR REPLACE INTO level_roles (guild_id, level, role_id)
+                        VALUES (?, ?, ?)
+                        """,
+                        (self.guild_id, level, role.id)
+                    )
+                    await conn.commit()
+                    print(f"[DEBUG] Level role saved successfully!")
+                except Exception as save_error:
+                    print(f"[ERROR] Failed to save level role: {save_error}")
+                    raise
 
-                # Parse and update
-                roles_dict = {}
-                if level_roles:
-                    for entry in level_roles.split(","):
-                        if ":" in entry:
-                            lvl, rid = entry.split(":")
-                            roles_dict[int(lvl)] = rid
-
-                # Add new role
-                roles_dict[level] = str(role.id)
-
-                # Save back
-                new_level_roles = ",".join(
-                    [f"{lvl}:{rid}" for lvl, rid in sorted(roles_dict.items())]
-                )
-                await self.db_manager.set_setting(
-                    "level_roles", new_level_roles, self.guild_id
-                )
 
                 embed = discord.Embed(
                     title="✅ Level Role Added",
@@ -2065,33 +2059,80 @@ class XPSetupView(View):
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(
-        label="Set Level-up Message", style=ButtonStyle.primary, emoji="💬", row=1
+        label="XP Progression Type", style=ButtonStyle.primary, emoji="⚙️", row=1
     )
-    async def set_message(self, interaction: discord.Interaction, button: Button):
-        """Set level-up message"""
-        modal = Modal(title="Set Level-up Message")
-        message_input = discord.ui.TextInput(
-            label="Level-up Message",
-            default="🎉 {member} reached level {level}!",
-            style=discord.TextStyle.paragraph,
-            required=True,
-            max_length=500,
+    async def set_progression(self, interaction: discord.Interaction, button: Button):
+        """Set XP progression type"""
+        view = View(timeout=60)
+        
+        select = Select(
+            placeholder="Choose XP progression type...",
+            options=[
+                discord.SelectOption(
+                    label="Linear (100 XP per level)",
+                    value="basic",
+                    description="Steady: Level 10=1,000 XP, Level 50=5,000 XP, Level 100=10,000 XP",
+                    emoji="📊"
+                ),
+                discord.SelectOption(
+                    label="Exponential (Gets harder fast)",
+                    value="gradual",
+                    description="Steep: Level 10=5,500 XP, Level 50=127,500 XP, Level 100=505,000 XP",
+                    emoji="📈"
+                ),
+                discord.SelectOption(
+                    label="Hybrid (Linear → Exponential)",
+                    value="custom",
+                    description="Balanced: Easy start, harder later. Level 10=1,900 XP, Level 50=160,000 XP",
+                    emoji="🎯"
+                )
+            ]
         )
-        modal.add_item(message_input)
-
-        async def modal_callback(interaction: discord.Interaction):
-            await self.db_manager.set_setting(
-                "xp_levelup_message", message_input.value, self.guild_id
-            )
+        
+        async def progression_callback(interaction: discord.Interaction):
+            progression_type = select.values[0]
+            await self.db_manager.set_setting("xp_progression_type", progression_type, self.guild_id)
+            
+            type_names = {
+                "basic": "Linear (100 XP per level)",
+                "gradual": "Exponential (Gets harder fast)",
+                "custom": "Hybrid (Linear → Exponential)"
+            }
+            
             embed = discord.Embed(
-                title="✅ Level-up Message Set",
-                description=f"Message: {message_input.value}\n\nAvailable variables: `{{member}}`, `{{level}}`",
-                color=COLORS["success"],
+                title="✅ XP Progression Set",
+                description=f"XP progression type set to: **{type_names[progression_type]}**",
+                color=COLORS["success"]
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
-
-        modal.on_submit = modal_callback
-        await interaction.response.send_modal(modal)
+        
+        select.callback = progression_callback
+        view.add_item(select)
+        
+        embed = discord.Embed(
+            title="⚙️ Select XP Progression Type",
+            description=(
+                "**📊 Linear:** 100 XP per level (predictable, steady growth)\n"
+                "• Level 10 = 1,000 XP\n"
+                "• Level 50 = 5,000 XP\n"
+                "• Level 100 = 10,000 XP\n"
+                "• Best for: Casual servers, easy to understand\n\n"
+                "**📈 Exponential:** Gets much harder each level\n"
+                "• Level 10 = 5,500 XP\n"
+                "• Level 50 = 127,500 XP\n"
+                "• Level 100 = 505,000 XP\n"
+                "• Best for: Competitive servers, long-term engagement\n\n"
+                "**🎯 Hybrid:** Starts easy, becomes exponential\n"
+                "• Level 10 = 1,900 XP (easy early levels)\n"
+                "• Level 20 = 15,000 XP (moderate)\n"
+                "• Level 50 = 160,000 XP (challenging)\n"
+                "• Best for: Balanced progression, rewards dedication\n\n"
+                "Choose the progression that fits your server!"
+            ),
+            color=COLORS["primary"]
+        )
+        
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     @discord.ui.button(
         label="Manage Level Roles", style=ButtonStyle.secondary, emoji="🎭", row=2
@@ -2102,20 +2143,24 @@ class XPSetupView(View):
         """Manage level role rewards"""
         await interaction.response.defer(ephemeral=True)
 
-        # Get current level roles
-        level_roles = await self.db_manager.get_setting("level_roles", self.guild_id)
+        # Get current level roles from database table
+        conn = await self.db_manager.get_connection()
+        cursor = await conn.execute(
+            "SELECT level, role_id FROM level_roles WHERE guild_id = ? ORDER BY level",
+            (self.guild_id,)
+        )
+        rows = await cursor.fetchall()
 
         # Build description
-        if level_roles:
+        if rows:
             description = "**Current Level Roles:**\n\n"
-            for role_entry in level_roles.split(","):
-                if ":" in role_entry:
-                    level, role_id = role_entry.split(":")
-                    role = interaction.guild.get_role(int(role_id))
-                    if role:
-                        description += f"Level {level}: {role.mention}\n"
+            for level, role_id in rows:
+                role = interaction.guild.get_role(int(role_id))
+                if role:
+                    description += f"Level {level}: {role.mention}\n"
         else:
             description = "No level roles configured yet.\n\n"
+
 
         description += "\n**Actions:**\n• Add Level Role - Assign a role at a specific level\n• Remove Level Role - Remove a level role reward\n• Back - Return to XP setup"
 

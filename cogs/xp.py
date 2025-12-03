@@ -196,7 +196,7 @@ class XPGroup(app_commands.Group):
                 bonus = int(bonus * (1 + (STREAK_BONUS_PERCENT * (streak - 1))))
 
             # Give XP
-            await self.cog.bot.db_manager.update_user_xp(user_id, bonus)
+            await self.cog.bot.db_manager.update_user_xp(user_id, bonus, interaction.guild.id)
 
             # Update checkin record
             await conn.execute(
@@ -244,7 +244,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager.update_user_xp(user.id, amount)
+            await self.cog.bot.db_manager.update_user_xp(user.id, amount, interaction.guild.id)
             embed = create_embed(
                 title="✅ XP Added",
                 description=f"Added **{amount:,} XP** to {user.mention}",
@@ -294,7 +294,7 @@ class XPGroup(app_commands.Group):
             # Add XP to all users in the server
             for member in interaction.guild.members:
                 if not member.bot:
-                    await self.cog.bot.db_manager.update_user_xp(member.id, amount)
+                    await self.cog.bot.db_manager.update_user_xp(member.id, amount, interaction.guild.id)
 
             embed = create_embed(
                 title="✅ XP Added to All Users",
@@ -442,14 +442,32 @@ class XP(commands.Cog):
                 if time_diff < XP_COOLDOWN_SECONDS:
                     return
 
-            # Award XP and get new level
-            new_xp, new_level = await self.bot.db_manager.update_user_xp(
-                user_id, XP_PER_MESSAGE
+            # Award XP and check for level up
+            new_xp, new_level, leveled_up = await self.bot.db_manager.update_user_xp(
+                user_id, XP_PER_MESSAGE, message.guild.id
             )
             self.last_xp_time[user_id] = current_time
 
-            # Level up is now handled automatically in update_user_xp
-            # No separate level check needed
+            # Send level-up message if user leveled up
+            if leveled_up:
+                xp_channel_id = await self.bot.db_manager.get_setting("xp_channel", message.guild.id)
+                levelup_message = await self.bot.db_manager.get_setting("xp_levelup_message", message.guild.id)
+
+                if xp_channel_id:
+                    channel = message.guild.get_channel(int(xp_channel_id))
+                    if channel:
+                        # Format the message
+                        msg = levelup_message or "🎉 {member} reached level {level}!"
+                        msg = msg.replace("{member}", message.author.mention)
+                        msg = msg.replace("{level}", str(new_level))
+
+                        try:
+                            await channel.send(msg)
+                        except Exception as e:
+                            self.logger.error(f"Failed to send level-up message: {e}")
+                
+                # Check and assign level roles
+                await self._check_level_up(message.author)
 
         except Exception as e:
             self.logger.error(f"Error awarding message XP: {e}")
@@ -472,7 +490,7 @@ class XP(commands.Cog):
                 return
 
             # Award XP to message author (level up handled automatically)
-            await self.bot.db_manager.update_user_xp(message.author.id, XP_PER_REACTION)
+            await self.bot.db_manager.update_user_xp(message.author.id, XP_PER_REACTION, message.guild.id)
             # Level up is now handled automatically in update_user_xp
 
         except Exception as e:
@@ -503,7 +521,7 @@ class XP(commands.Cog):
                     if minutes > 0:
                         xp_gained = minutes * XP_PER_VOICE_MINUTE
                         # Award voice XP (level up handled automatically)
-                        await self.bot.db_manager.update_user_xp(member.id, xp_gained)
+                        await self.bot.db_manager.update_user_xp(member.id, xp_gained, member.guild.id)
                         # Level up is now handled automatically in update_user_xp
 
                     del self.bot.voice_time[member.id]
@@ -516,6 +534,7 @@ class XP(commands.Cog):
         try:
             # Get user's current level
             current_level = await self.bot.db_manager.get_user_level(user.id)
+            self.logger.info(f"[LEVEL ROLE DEBUG] User {user.name} is level {current_level}")
 
             # Check for level roles
             conn = await self.bot.db_manager.get_connection()
@@ -524,20 +543,27 @@ class XP(commands.Cog):
                 (user.guild.id,),
             )
             rows = await cursor.fetchall()
+            self.logger.info(f"[LEVEL ROLE DEBUG] Found {len(rows)} level roles configured for guild {user.guild.id}")
 
             for level, role_id in rows:
+                self.logger.info(f"[LEVEL ROLE DEBUG] Checking level {level} role (ID: {role_id})")
                 # If user reached this level, assign the role
                 if current_level >= level:
                     role = user.guild.get_role(int(role_id))
+                    self.logger.info(f"[LEVEL ROLE DEBUG] Role object: {role}")
                     if role and role not in user.roles:
+                        self.logger.info(f"[LEVEL ROLE DEBUG] Attempting to assign role {role.name} to {user.name}")
                         await user.add_roles(role, reason=f"Reached level {level}")
                         self.logger.info(
                             f"Assigned role {role.name} to {user.name} for reaching level {level}"
                         )
+                    elif role in user.roles:
+                        self.logger.info(f"[LEVEL ROLE DEBUG] User already has role {role.name}")
+                    else:
+                        self.logger.warning(f"[LEVEL ROLE DEBUG] Role not found or is None")
 
         except Exception as e:
             self.logger.error(f"Error checking level up: {e}")
-
 
 async def setup(bot: commands.Bot):
     """Setup the XP cog."""

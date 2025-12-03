@@ -38,7 +38,7 @@ class DatabaseManager:
                 last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 is_bot BOOLEAN DEFAULT FALSE,
                 xp INTEGER DEFAULT 0,
-                level INTEGER DEFAULT 1,
+                level INTEGER DEFAULT 0,
                 total_messages INTEGER DEFAULT 0,
                 warning_count INTEGER DEFAULT 0,
                 kick_count INTEGER DEFAULT 0,
@@ -323,10 +323,8 @@ class DatabaseManager:
 
         return amount, level
 
-    async def update_user_xp(self, user_id: int, xp_change: int) -> tuple[int, int]:
-        """Update user's XP and recalculate level."""
-        from config.constants import XP_TABLE
-
+    async def update_user_xp(self, user_id: int, xp_change: int, guild_id: int = None) -> tuple[int, int, bool]:
+        """Update user's XP and recalculate level. Returns (new_xp, new_level, leveled_up)."""
         conn = await self.get_connection()
 
         # Ensure user exists
@@ -336,32 +334,89 @@ class DatabaseManager:
         )
         await conn.commit()
 
-        # Get current XP
+        # Get current XP and level
         cursor = await conn.execute(
-            "SELECT xp FROM users WHERE user_id = ?", (user_id,)
+            "SELECT xp, level FROM users WHERE user_id = ?", (user_id,)
         )
         result = await cursor.fetchone()
         current_xp = result[0] if result else 0
+        old_level = result[1] if result else 0
 
         # Calculate new XP
         new_xp = max(0, current_xp + xp_change)
 
-        # Calculate level
-        level = 1
-        for lvl in sorted(XP_TABLE.keys()):
-            if new_xp >= XP_TABLE[lvl]:
-                level = lvl
-            else:
-                break
+        # Get server's XP progression type
+        progression_type = await self.get_setting("xp_progression_type", guild_id) or "custom"
+
+        # Calculate new level based on progression type
+        new_level = await self._calculate_level_from_xp(new_xp, progression_type)
+
+        # Check if leveled up
+        leveled_up = new_level > old_level
 
         # Update both XP and level
         await conn.execute(
             "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
-            (new_xp, level, user_id),
+            (new_xp, new_level, user_id),
         )
         await conn.commit()
 
-        return new_xp, level
+        return new_xp, new_level, leveled_up
+
+    async def _calculate_level_from_xp(self, xp: int, progression_type: str) -> int:
+        """Calculate level from XP based on progression type."""
+        if progression_type == "basic":
+            # Linear: 100 XP per level after level 1
+            # Level 0: 0-49 XP
+            # Level 1: 50-149 XP
+            # Level 2: 150-249 XP, etc.
+            if xp < 50:
+                return 0
+            return ((xp - 50) // 100) + 1
+
+        elif progression_type == "gradual":
+            # Exponential: Gets harder each level
+            # Level 0: 0-49 XP
+            # Level 1: 50-149 XP (100 XP needed)
+            # Level 2: 150-349 XP (200 XP needed)
+            # Level 3: 350-649 XP (300 XP needed), etc.
+            if xp < 50:
+                return 0
+            
+            level = 1
+            total_xp_needed = 50  # Start at 50 for level 1
+            
+            while level < 1000:  # Safety cap
+                # Each level needs: level * 100 XP
+                xp_for_next_level = (level + 1) * 100
+                total_xp_needed += xp_for_next_level
+                
+                if xp < total_xp_needed:
+                    return level
+                level += 1
+            
+            return 1000
+
+        elif progression_type == "custom":
+            # Hybrid: Uses XP_TABLE from constants
+            from config.constants import XP_TABLE
+            
+            # Level 0 if below 50 XP
+            if xp < 50:
+                return 0
+            
+            level = 0
+            for lvl in sorted(XP_TABLE.keys()):
+                if xp >= XP_TABLE[lvl]:
+                    level = lvl
+                else:
+                    break
+            return level
+
+        else:
+            # Default to custom
+            return await self._calculate_level_from_xp(xp, "custom")
+
 
     async def remove_user_xp(self, user_id: int, amount: int) -> tuple[int, int]:
         """Remove XP from user (alias for update_user_xp with negative value)."""
