@@ -592,7 +592,7 @@ set DROPLET_USER=malabot
 set DROPLET_IP=165.232.156.230
 set DROPLET_DIR=/home/malabot/MalaBoT
 
-echo [1/6] Pushing local changes to GitHub branch %current_branch%...
+echo [1/8] Pushing local changes to GitHub branch %current_branch%...
 git push origin %current_branch%
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] git push failed. Make sure changes are committed first.
@@ -600,23 +600,27 @@ if %ERRORLEVEL% NEQ 0 (
     goto menu
 )
 
-echo [2/7] SSH into droplet and update code...
+echo [2/8] SSH into droplet and update code...
 ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git fetch origin && git checkout %current_branch% && git reset --hard origin/%current_branch%"
 
-echo [3/7] Stopping bot on droplet...
+echo [3/8] Stopping bot on droplet...
 ssh %DROPLET_USER%@%DROPLET_IP% "pm2 stop malabot"
 
-echo [4/7] Syncing local database to droplet...
+echo [4/8] Syncing local database to droplet...
 scp bot.db %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/bot.db
 
 if %ERRORLEVEL% NEQ 0 (
     echo [WARNING] Database sync failed - droplet will use existing database
 )
 
-echo [5/7] Installing/updating dependencies...
+echo [5/8] Installing/updating dependencies...
 ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && pip3 install -r requirements.txt --quiet"
 
-echo [6/7] Restarting bot with PM2...
+echo [6/8] Clearing Python cache...
+ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null; find . -type f -name '*.pyc' -delete"
+
+echo [7/8] Restarting bot with PM2...
+
 ssh %DROPLET_USER%@%DROPLET_IP% "pm2 restart malabot || pm2 start %DROPLET_DIR%/bot.py --name malabot --interpreter python3"
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to restart bot with PM2
@@ -624,7 +628,8 @@ if %ERRORLEVEL% NEQ 0 (
     goto menu
 )
 
-echo [7/7] Checking bot status...
+echo [8/8] Checking bot status...
+
 ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list && pm2 logs malabot --lines 20 --nostream"
 echo.
 echo [SUCCESS] Remote deploy complete!
