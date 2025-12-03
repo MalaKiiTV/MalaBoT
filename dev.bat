@@ -607,7 +607,7 @@ echo [3/8] Stopping bot on droplet...
 ssh %DROPLET_USER%@%DROPLET_IP% "pm2 stop malabot"
 
 echo [4/8] Syncing local database to droplet...
-scp bot.db %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/data/bot.db
+scp data\bot.db %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/data/bot.db
 
 if %ERRORLEVEL% NEQ 0 (
     echo [WARNING] Database sync failed - droplet will use existing database
