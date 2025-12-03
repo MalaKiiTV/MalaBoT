@@ -557,9 +557,13 @@ class XP(commands.Cog):
             # Send level-up message to XP channel
             xp_channel_id = await self.bot.db_manager.get_setting("xp_channel", user.guild.id)
             levelup_message = await self.bot.db_manager.get_setting("xp_levelup_message", user.guild.id)
+            
+            self.logger.info(f"[LEVEL ROLE DEBUG] XP channel ID: {xp_channel_id}")
+            self.logger.info(f"[LEVEL ROLE DEBUG] Level-up message template: {levelup_message}")
 
             if xp_channel_id:
                 channel = user.guild.get_channel(int(xp_channel_id))
+                self.logger.info(f"[LEVEL ROLE DEBUG] Channel object: {channel}")
                 if channel:
                     # Format the message
                     msg = levelup_message or "🎉 {member} reached level {level}!"
