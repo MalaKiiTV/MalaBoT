@@ -131,7 +131,7 @@ class Birthdays(commands.Cog):
         action=[
             app_commands.Choice(name="Set Birthday", value="set"),
             app_commands.Choice(name="View Birthday", value="view"),
-            app_commands.Choice(name="List Today's Birthdays", value="list"),
+            app_commands.Choice(name="List All Birthdays", value="list"),
             app_commands.Choice(name="Remove Birthday", value="remove"),
         ]
     )
@@ -239,37 +239,106 @@ class Birthdays(commands.Cog):
             )
 
     async def _list_birthdays(self, interaction: discord.Interaction):
-        """List today's birthdays."""
+        """List all birthdays sorted by who's next."""
         try:
-            today = datetime.now().strftime("%m-%d")
-            today_birthdays = await self.bot.db_manager.get_today_birthdays(today)  # type: ignore
+            # Get all birthdays from database
+            all_birthdays = await self.bot.db_manager.get_all_birthdays()  # type: ignore
 
-            if today_birthdays:
-                # Format the list
-                birthday_list = []
-                for user_data in today_birthdays:
-                    user_id = user_data[0]
-                    try:
-                        user = await self.bot.fetch_user(user_id)
-                        if user:
-                            # Get user's display name
-                            display_name = user.display_name
-                            birthday_list.append(f"🎉 {display_name}")
-                    except:
-                        birthday_list.append(f"🎉 User {user_id}")
-
+            if not all_birthdays:
                 embed = create_embed(
-                    "🎂 Today's Birthdays!",
-                    "\n".join(birthday_list),
-                    discord.Color.magenta(),
-                )
-                embed.set_footer(text="🎊 Wish them a happy birthday!")
-            else:
-                embed = create_embed(
-                    "🎂 Today's Birthdays",
-                    "No birthdays today! 🎈",
+                    "🎂 No Birthdays Set",
+                    "No one has set their birthday yet! 🎈\n\nUse `/bday set` to add yours!",
                     discord.Color.blue(),
                 )
+                await interaction.response.send_message(embed=embed)
+                return
+
+            # Get current date
+            from datetime import datetime
+            now = datetime.now()
+
+            # Parse and sort birthdays by days until next occurrence
+            birthday_data = []
+            for bday_row in all_birthdays:
+                # bday_row = (id, user_id, birthday, timezone, announced_year, created_at)
+                user_id = bday_row[1]
+                birthday_str = str(bday_row[2])
+
+                # Skip corrupted data
+                if "-" not in birthday_str:
+                    continue
+
+                try:
+                    month, day = map(int, birthday_str.split("-"))
+                    
+                    # Calculate days until next birthday
+                    # Create datetime for this year's birthday
+                    this_year_bday = datetime(now.year, month, day)
+                    
+                    # If birthday already passed this year, use next year
+                    if this_year_bday.date() < now.date():
+                        next_bday = datetime(now.year + 1, month, day)
+                    else:
+                        next_bday = this_year_bday
+                    
+                    days_until = (next_bday.date() - now.date()).days
+                    
+                    # Fetch user info
+                    try:
+                        user = await self.bot.fetch_user(user_id)
+                        display_name = user.display_name if user else f"User {user_id}"
+                    except:
+                        display_name = f"User {user_id}"
+                    
+                    # Format date
+                    month_names = [
+                        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+                    ]
+                    formatted_date = f"{month_names[month-1]} {day}"
+                    
+                    birthday_data.append({
+                        "name": display_name,
+                        "date": formatted_date,
+                        "days_until": days_until,
+                    })
+                    
+                except (ValueError, IndexError):
+                    continue
+
+            # Sort by days until birthday
+            birthday_data.sort(key=lambda x: x["days_until"])
+
+            # Build leaderboard-style list
+            birthday_list = []
+            for i, bday in enumerate(birthday_data[:25], 1):
+                days = bday["days_until"]
+                
+                if days == 0:
+                    status = "🎉 **TODAY!**"
+                elif days == 1:
+                    status = "Tomorrow"
+                elif days <= 7:
+                    status = f"In {days} days"
+                else:
+                    status = f"In {days} days"
+                
+                # Format: #1 • Name • Date • Status
+                birthday_list.append(f"`#{i:2d}` • **{bday['name']}** • {bday['date']} • {status}")
+            
+            # Build embed with list
+            description = "\n".join(birthday_list)
+            
+            embed = create_embed(
+                "🎂 Upcoming Birthdays",
+                description,
+                discord.Color.magenta(),
+            )
+
+            if len(birthday_data) > 25:
+                embed.set_footer(text=f"Showing first 25 of {len(birthday_data)} birthdays")
+            else:
+                embed.set_footer(text=f"Total: {len(birthday_data)} birthday{'s' if len(birthday_data) != 1 else ''} • Use /bday set to add yours!")
 
             await interaction.response.send_message(embed=embed)
 
@@ -278,45 +347,12 @@ class Birthdays(commands.Cog):
             await interaction.response.send_message(
                 embed=create_embed(
                     "❌ Error",
-                    "There was an error retrieving today's birthdays. Please try again.",
+                    "There was an error retrieving birthdays. Please try again.",
                     discord.Color.red(),
                 ),
                 ephemeral=True,
             )
 
-    async def _remove_birthday(self, interaction: discord.Interaction):
-        """Remove your birthday."""
-        try:
-            success = await self.bot.db_manager.remove_user_birthday(interaction.user.id)  # type: ignore
-
-            if success:
-                embed = create_embed(
-                    "🗑️ Birthday Removed",
-                    "Your birthday has been removed from the system.\n"
-                    "You can set it again anytime with `/bday set`.",
-                    discord.Color.orange(),
-                )
-            else:
-                embed = create_embed(
-                    "❌ No Birthday Found",
-                    "You don't have a birthday set in the system.",
-                    discord.Color.red(),
-                )
-
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-
-        except Exception as e:
-            self.logger.error(
-                f"Error removing birthday for user {interaction.user.id}: {e}"
-            )
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "❌ Error",
-                    "There was an error removing your birthday. Please try again.",
-                    discord.Color.red(),
-                ),
-                ephemeral=True,
-            )
 
     def _get_ordinal_suffix(self, day: int) -> str:
         """Get ordinal suffix for day (1st, 2nd, 3rd, 4th, etc.)."""

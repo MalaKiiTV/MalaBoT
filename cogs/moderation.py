@@ -32,7 +32,6 @@ class Moderation(commands.Cog):
             app_commands.Choice(name="last10", value="last10"),
             app_commands.Choice(name="last50", value="last50"),
             app_commands.Choice(name="all", value="all"),
-            app_commands.Choice(name="logs", value="logs"),
         ]
     )
     async def delete(self, interaction: discord.Interaction, action: str):
@@ -89,8 +88,6 @@ class Moderation(commands.Cog):
                 await self._delete_last50(interaction)
             elif action == "all":
                 await self._delete_all(interaction)
-            elif action == "logs":
-                await self._delete_logs(interaction)
             else:
                 embed = embed_helper.error_embed(
                     title="Unknown Action",
@@ -309,75 +306,6 @@ class Moderation(commands.Cog):
                 pass
         except Exception as e:
             self.logger.error(f"Error purging channel: {e}")
-            raise
-
-    async def _delete_logs(self, interaction: discord.Interaction):
-        """Show deletion logs."""
-        try:
-            if not self.bot.db_manager:
-                embed = embed_helper.error_embed(
-                    title="Database Error",
-                    description="Moderation logs are currently unavailable.",
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-
-            logs = await self.bot.db_manager.get_recent_moderation_logs(
-                DELETE_LOG_LIMIT
-            )
-
-            if not logs:
-                embed = embed_helper.info_embed(
-                    title="📋 Moderation Logs",
-                    description="No moderation actions have been logged yet.",
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                return
-
-            embed = create_embed(
-                title="📋 Recent Moderation Logs",
-                description=f"Showing last {len(logs)} moderation actions",
-                color=COLORS["info"],
-            )
-
-            for log in logs[:10]:
-                moderator_id = log["moderator_id"]
-                action = log["action"]
-                channel_id = log["channel_id"]
-                message_count = log["message_count"]
-                timestamp = log["timestamp"]
-
-                try:
-                    moderator = self.bot.get_user(
-                        moderator_id
-                    ) or await self.bot.fetch_user(moderator_id)
-                    mod_name = (
-                        moderator.display_name if moderator else f"User {moderator_id}"
-                    )
-                except:
-                    mod_name = f"User {moderator_id}"
-
-                channel = self.bot.get_channel(channel_id)
-                channel_name = channel.mention if channel else f"Channel {channel_id}"
-
-                action_text = action.replace("_", " ").title()
-
-                field_value = f"**Moderator:** {mod_name}\n"
-                field_value += f"**Channel:** {channel_name}\n"
-                if message_count:
-                    field_value += f"**Messages:** {message_count}\n"
-                field_value += f"**Time:** {timestamp}"
-
-                embed.add_field(
-                    name=f"🔸 {action_text}", value=field_value, inline=False
-                )
-
-            embed.set_footer(text="Moderation logs are stored permanently")
-
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-
-        except Exception as e:
-            self.logger.error(f"Error showing moderation logs: {e}")
             raise
 
     @app_commands.command(

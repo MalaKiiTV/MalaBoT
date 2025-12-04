@@ -266,7 +266,7 @@ class VerifyGroup(app_commands.Group):
     @app_commands.describe(
         user="The user to review",
         decision="verified, cheater, or unverified",
-        notes="Optional notes about the decision (reason for decision)",
+        notes="Notes about the decision (reason for decision)",
     )
     @app_commands.choices(
         decision=[
@@ -280,7 +280,7 @@ class VerifyGroup(app_commands.Group):
         interaction: discord.Interaction,
         user: discord.User,
         decision: app_commands.Choice[str],
-        notes: typing.Optional[str] = None,
+        notes: str = "",
     ):
         try:
             # Defer immediately to prevent timeout
