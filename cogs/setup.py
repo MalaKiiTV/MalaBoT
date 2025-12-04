@@ -2161,7 +2161,6 @@ class XPSetupView(View):
         else:
             description = "No level roles configured yet.\n\n"
 
-
         description += "\n**Actions:**\n• Add Level Role - Assign a role at a specific level\n• Remove Level Role - Remove a level role reward\n• Back - Return to XP setup"
 
         embed = discord.Embed(
@@ -2172,6 +2171,72 @@ class XPSetupView(View):
 
         view = LevelRolesView(self.guild_id, self.db_manager)
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+
+    @discord.ui.button(
+        label="Toggle Message XP", style=ButtonStyle.secondary, emoji="💬", row=1
+    )
+    async def toggle_message_xp(self, interaction: discord.Interaction, button: Button):
+        """Toggle message XP on/off"""
+        current = await self.db_manager.get_setting("xp_message_enabled", self.guild_id)
+        
+        if current == "false":
+            new_state = "true"
+        else:
+            new_state = "false"
+            
+        await self.db_manager.set_setting("xp_message_enabled", new_state, self.guild_id)
+        
+        status = "✅ Enabled" if new_state == "true" else "❌ Disabled"
+        embed = discord.Embed(
+            title=f"Message XP {status}",
+            description=f"Message XP is now **{status.split()[1]}**",
+            color=COLORS["success"] if new_state == "true" else COLORS["error"],
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @discord.ui.button(
+        label="Toggle Reaction XP", style=ButtonStyle.secondary, emoji="👍", row=1
+    )
+    async def toggle_reaction_xp(self, interaction: discord.Interaction, button: Button):
+        """Toggle reaction XP on/off"""
+        current = await self.db_manager.get_setting("xp_reaction_enabled", self.guild_id)
+        
+        if current == "false":
+            new_state = "true"
+        else:
+            new_state = "false"
+            
+        await self.db_manager.set_setting("xp_reaction_enabled", new_state, self.guild_id)
+        
+        status = "✅ Enabled" if new_state == "true" else "❌ Disabled"
+        embed = discord.Embed(
+            title=f"Reaction XP {status}",
+            description=f"Reaction XP is now **{status.split()[1]}**",
+            color=COLORS["success"] if new_state == "true" else COLORS["error"],
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @discord.ui.button(
+        label="Toggle Voice XP", style=ButtonStyle.secondary, emoji="🎙️", row=2
+    )
+    async def toggle_voice_xp(self, interaction: discord.Interaction, button: Button):
+        """Toggle voice XP on/off"""
+        current = await self.db_manager.get_setting("xp_voice_enabled", self.guild_id)
+        
+        if current == "false":
+            new_state = "true"
+        else:
+            new_state = "false"
+            
+        await self.db_manager.set_setting("xp_voice_enabled", new_state, self.guild_id)
+        
+        status = "✅ Enabled" if new_state == "true" else "❌ Disabled"
+        embed = discord.Embed(
+            title=f"Voice XP {status}",
+            description=f"Voice XP is now **{status.split()[1]}**",
+            color=COLORS["success"] if new_state == "true" else COLORS["error"],
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 class Setup(commands.Cog):

@@ -82,9 +82,12 @@ echo 22. Backup Now                   - Backup logs and database
 echo 23. Verify Environment           - Check configuration validity
 echo 24. Clear All                    - Clear commands + caches + logs + temp
 echo 25. Sync DB from Droplet        - Download latest database from production
+echo 26. Sync DB to Droplet          - Upload local database to production
+echo 27. Quick Deploy                 - Commit + Push + Deploy to Droplet (all-in-one)
 echo.
 echo [EXIT]
 echo  0. Exit                         - Close development tools
+
 echo.
 echo ================================================================================
 set /p choice="Enter your choice: "
@@ -114,7 +117,10 @@ if "%choice%"=="22" goto backupnow
 if "%choice%"=="23" goto verifyenv
 if "%choice%"=="24" goto clearall
 if "%choice%"=="25" goto sync_db_from_droplet
+if "%choice%"=="26" goto sync_db_to_droplet
+if "%choice%"=="27" goto quick_deploy
 if "%choice%"=="0" goto exit
+
 
 echo Invalid choice. Please try again.
 timeout /T 2 /NOBREAK >NUL
@@ -896,6 +902,130 @@ echo.
 pause
 goto menu
 
+:sync_db_to_droplet
+echo.
+echo ========================================
+echo Sync Database TO Droplet
+echo ========================================
+set DROPLET_USER=malabot
+set DROPLET_IP=165.232.156.230
+set DROPLET_DIR=/home/malabot/MalaBoT
+echo.
+echo [WARNING] This will overwrite the production database!
+echo [INFO] The droplet's current database will be backed up first.
+echo.
+set /p confirm="Continue? (y/n): "
+if /i not "%confirm%"=="y" (
+    echo [CANCELLED] Database sync cancelled.
+    pause
+    goto menu
+)
+
+echo [1/3] Backing up droplet database...
+ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && mkdir -p backups/db && cp bot.db backups/db/bot_backup_$(date +%%Y-%%m-%%d_%%H-%%M-%%S).db"
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to backup droplet database!
+    pause
+    goto menu
+)
+
+echo [2/3] Uploading local database to droplet...
+scp bot.db %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/bot.db
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to upload database to droplet!
+    pause
+    goto menu
+)
+
+echo [3/3] Restarting bot on droplet...
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 restart malabot"
+
+echo.
+echo ========================================
+echo [SUCCESS] Database Synced to Droplet!
+echo ========================================
+echo Production database now matches your local database.
+echo.
+pause
+goto menu
+
+:quick_deploy
+echo.
+echo ========================================
+echo Quick Deploy (All-in-One)
+echo ========================================
+echo.
+echo This will:
+echo   1. Stage all changes
+echo   2. Commit with your message
+echo   3. Push to GitHub
+echo   4. Deploy to droplet
+echo   5. Sync database to droplet
+echo   6. Restart bot on droplet
+echo.
+set /p confirm="Continue? (y/n): "
+if /i not "%confirm%"=="y" (
+    echo [CANCELLED] Quick deploy cancelled.
+    pause
+    goto menu
+)
+
+call :get_current_branch
+if not defined current_branch (
+    echo [ERROR] Could not determine the current Git branch.
+    pause
+    goto menu
+)
+
+echo [1/7] Staging all changes...
+git add .
+
+echo [2/7] Enter commit message:
+set /p message="Commit message: "
+if "%message%"=="" (
+    echo [ERROR] Commit message cannot be empty!
+    pause
+    goto menu
+)
+
+echo [3/7] Committing changes...
+git commit -m "%message%"
+if %ERRORLEVEL% NEQ 0 (
+    echo [WARNING] No changes to commit or commit failed
+)
+
+echo [4/7] Pushing to GitHub branch: %current_branch%...
+git push origin %current_branch%
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to push to GitHub!
+    pause
+    goto menu
+)
+
+echo [5/7] Deploying to droplet...
+set DROPLET_USER=malabot
+set DROPLET_IP=165.232.156.230
+set DROPLET_DIR=/home/malabot/MalaBoT
+
+ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git fetch origin && git checkout %current_branch% && git reset --hard origin/%current_branch%"
+
+echo [6/7] Syncing database to droplet...
+scp bot.db %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/bot.db
+
+echo [7/7] Restarting bot on droplet...
+ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && pip3 install -r requirements.txt --quiet && pm2 restart malabot"
+
+echo.
+echo ========================================
+echo [SUCCESS] Quick Deploy Complete!
+echo ========================================
+echo.
+echo Your changes are now live on the droplet!
+echo.
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list && pm2 logs malabot --lines 10 --nostream"
+echo.
+pause
+goto menu
 
 :exit
 echo.

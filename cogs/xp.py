@@ -2,7 +2,7 @@
 XP and leveling system cog for MalaBoT.
 Handles user XP gains, level progression, and XP administration.
 """
-
+# Test comment - verifying deployment workflow
 import datetime
 from typing import Optional
 
@@ -428,6 +428,110 @@ class XPGroup(app_commands.Group):
             embed = embed_helper.error_embed("Error", "Failed to reset XP.")
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
+    @app_commands.command(
+        name="reset-all", description="Reset ALL users' XP to 0 (Server Owner only)"
+    )
+    async def reset_all(self, interaction: discord.Interaction):
+        """Reset all users' XP to 0."""
+        # Check if user is server owner
+        if interaction.user.id != interaction.guild.owner_id:
+            embed = embed_helper.error_embed(
+                "Permission Denied",
+                "Only the server owner can use this command.",
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        try:
+            # Defer the response since this might take a while
+            await interaction.response.defer(ephemeral=True)
+
+            # Reset XP for all users in the database
+            conn = await self.cog.bot.db_manager.get_connection()
+            await conn.execute("UPDATE users SET xp = 0, level = 0")
+            await conn.commit()
+
+            # Get count of affected users
+            cursor = await conn.execute("SELECT COUNT(*) FROM users")
+            count = (await cursor.fetchone())[0]
+
+            embed = create_embed(
+                title="✅ All XP Reset",
+                description=f"Successfully reset XP to 0 for **{count}** users in the database.",
+                color=COLORS["success"],
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+            # Log the action
+            await self.cog.bot.db_manager.log_event(
+                category="XP",
+                action="RESET_ALL_XP",
+                user_id=interaction.user.id,
+                guild_id=interaction.guild.id,
+                details=f"Reset all users' XP to 0",
+            )
+
+        except Exception as e:
+            self.cog.logger.error(f"Error in reset_all command: {e}")
+            embed = embed_helper.error_embed("Error", "Failed to reset all users' XP.")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+    @app_commands.command(
+        name="reset-checkins",
+        description="Reset ALL users' daily check-in streaks (Server Owner only)",
+    )
+    async def reset_checkins(self, interaction: discord.Interaction):
+        """Reset all users' check-in streaks."""
+        # Check if user is server owner
+        if interaction.user.id != interaction.guild.owner_id:
+            embed = embed_helper.error_embed(
+                "Permission Denied",
+                "Only the server owner can use this command.",
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        try:
+            # Defer the response since this might take a while
+            await interaction.response.defer(ephemeral=True)
+
+            # Reset all check-in streaks
+            conn = await self.cog.bot.db_manager.get_connection()
+            
+            # Get count before deletion
+            cursor = await conn.execute("SELECT COUNT(*) FROM daily_checkins")
+            count = (await cursor.fetchone())[0]
+            
+            # Delete all check-in records
+            await conn.execute("DELETE FROM daily_checkins")
+            await conn.commit()
+
+            embed = create_embed(
+                title="✅ All Check-ins Reset",
+                description=f"Successfully reset check-in streaks for **{count}** users.\nAll users can now check in again and start fresh streaks.",
+                color=COLORS["success"],
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+            # Log the action
+            await self.cog.bot.db_manager.log_event(
+                category="XP",
+                action="RESET_ALL_CHECKINS",
+                user_id=interaction.user.id,
+                guild_id=interaction.guild.id,
+                details=f"Reset all users' check-in streaks",
+            )
+
+        except Exception as e:
+            self.cog.logger.error(f"Error in reset_checkins command: {e}")
+            embed = embed_helper.error_embed(
+                "Error", "Failed to reset all check-in streaks."
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+
+
 
 class XP(commands.Cog):
     """XP and leveling system."""
@@ -459,9 +563,21 @@ class XP(commands.Cog):
                 if time_diff < XP_COOLDOWN_SECONDS:
                     return
 
+            # Check if message XP is enabled
+            message_xp_enabled = await self.bot.db_manager.get_setting("xp_message_enabled", message.guild.id)
+            if message_xp_enabled == "false":
+                return
+            
+            # Get XP amount from database or use default
+            xp_amount_str = await self.bot.db_manager.get_setting("xp_per_message", message.guild.id)
+            xp_amount = int(xp_amount_str) if xp_amount_str else XP_PER_MESSAGE
+            
+            if xp_amount <= 0:
+                return
+
             # Award XP and check for level up
             new_xp, new_level, leveled_up = await self.bot.db_manager.update_user_xp(
-                user_id, XP_PER_MESSAGE, message.guild.id
+                user_id, xp_amount, message.guild.id
             )
             self.last_xp_time[user_id] = current_time
 
@@ -489,8 +605,20 @@ class XP(commands.Cog):
             if not message or message.author.bot:
                 return
 
+            # Check if reaction XP is enabled
+            reaction_xp_enabled = await self.bot.db_manager.get_setting("xp_reaction_enabled", message.guild.id)
+            if reaction_xp_enabled == "false":
+                return
+            
+            # Get XP amount from database or use default
+            xp_amount_str = await self.bot.db_manager.get_setting("xp_per_reaction", message.guild.id)
+            xp_amount = int(xp_amount_str) if xp_amount_str else XP_PER_REACTION
+            
+            if xp_amount <= 0:
+                return
+
             # Award XP to message author
-            new_xp, new_level, leveled_up = await self.bot.db_manager.update_user_xp(message.author.id, XP_PER_REACTION, message.guild.id)
+            new_xp, new_level, leveled_up = await self.bot.db_manager.update_user_xp(message.author.id, xp_amount, message.guild.id)
             
             # Check for level-up
             if leveled_up:
@@ -522,7 +650,21 @@ class XP(commands.Cog):
                     minutes = int(time_spent.total_seconds() / 60)
 
                     if minutes > 0:
-                        xp_gained = minutes * XP_PER_VOICE_MINUTE
+                        # Check if voice XP is enabled
+                        voice_xp_enabled = await self.bot.db_manager.get_setting("xp_voice_enabled", member.guild.id)
+                        if voice_xp_enabled == "false":
+                            del self.bot.voice_time[member.id]
+                            return
+                        
+                        # Get XP amount from database or use default
+                        xp_per_minute_str = await self.bot.db_manager.get_setting("xp_per_voice_minute", member.guild.id)
+                        xp_per_minute = int(xp_per_minute_str) if xp_per_minute_str else XP_PER_VOICE_MINUTE
+                        
+                        if xp_per_minute <= 0:
+                            del self.bot.voice_time[member.id]
+                            return
+                        
+                        xp_gained = minutes * xp_per_minute
                         # Award voice XP
                         new_xp, new_level, leveled_up = await self.bot.db_manager.update_user_xp(member.id, xp_gained, member.guild.id)
                         
