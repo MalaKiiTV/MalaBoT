@@ -43,6 +43,9 @@ class XPGroup(app_commands.Group):
     ):
         """Check XP rank."""
         try:
+            # Defer immediately to prevent timeout
+            await interaction.response.defer(ephemeral=True)
+            
             target = user or interaction.user
 
             # Get user stats from database
@@ -78,25 +81,23 @@ class XPGroup(app_commands.Group):
 
             embed.set_thumbnail(url=target.display_avatar.url)
 
-            if interaction.response.is_done():
-                await interaction.followup.send(embed=embed, ephemeral=True)
-            else:
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
 
         except Exception as e:
             self.cog.logger.error(f"Error in rank command: {e}")
             embed = embed_helper.error_embed(
                 "Error", "Failed to fetch rank information."
             )
-            if interaction.response.is_done():
-                await interaction.followup.send(embed=embed, ephemeral=True)
-            else:
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
     @app_commands.command(name="leaderboard", description="Show server XP leaderboard")
     async def leaderboard(self, interaction: discord.Interaction):
         """Show XP leaderboard."""
         try:
+            # Defer immediately to prevent timeout
+            await interaction.response.defer(ephemeral=True)
+            
             # Get top users by XP for this guild only
             guild_member_ids = [member.id for member in interaction.guild.members]
             if not guild_member_ids:
@@ -105,7 +106,8 @@ class XPGroup(app_commands.Group):
                     description="No guild members found!",
                     color=COLORS["warning"],
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
+
                 return
 
             conn = await self.cog.bot.db_manager.get_connection()
@@ -126,7 +128,7 @@ class XPGroup(app_commands.Group):
                     description="No users have XP yet!",
                     color=COLORS["warning"],
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.followup.send(embed=embed, ephemeral=True)
                 return
 
             description = ""
@@ -150,12 +152,12 @@ class XPGroup(app_commands.Group):
                 color=COLORS["primary"],
             )
 
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
         except Exception as e:
             self.cog.logger.error(f"Error in leaderboard command: {e}")
             embed = embed_helper.error_embed("Error", "Failed to fetch leaderboard.")
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
     @app_commands.command(name="checkin", description="Claim your daily XP bonus")
     async def checkin(self, interaction: discord.Interaction):
@@ -540,6 +542,7 @@ class XP(commands.Cog):
         self.bot = bot
         self.logger = get_logger("xp")
         self.last_xp_time = {}  # Track last XP gain time per user
+        self.level_up_sent = {}  # Track level-up messages sent (user_id: level)
 
     async def cog_unload(self):
         """Remove the command group when cog is unloaded."""
@@ -687,29 +690,37 @@ class XP(commands.Cog):
             current_level = await self.bot.db_manager.get_user_level(user.id)
             self.logger.info(f"[LEVEL ROLE DEBUG] User {user.name} is level {current_level}")
 
-            # Send level-up message to XP channel
-            xp_channel_id = await self.bot.db_manager.get_setting("xp_channel", user.guild.id)
-            levelup_message = await self.bot.db_manager.get_setting("xp_levelup_message", user.guild.id)
-            
-            self.logger.info(f"[LEVEL ROLE DEBUG] XP channel ID: {xp_channel_id}")
-            self.logger.info(f"[LEVEL ROLE DEBUG] Level-up message template: {levelup_message}")
+            # Check if we already sent a level-up message for this level
+            level_key = f"{user.id}_{current_level}"
+            if level_key in self.level_up_sent:
+                self.logger.info(f"[LEVEL ROLE DEBUG] Already sent level-up message for {user.name} level {current_level}, skipping")
+            else:
+                # Mark this level as sent
+                self.level_up_sent[level_key] = True
+                
+                # Send level-up message to XP channel
+                xp_channel_id = await self.bot.db_manager.get_setting("xp_channel", user.guild.id)
+                levelup_message = await self.bot.db_manager.get_setting("xp_levelup_message", user.guild.id)
+                
+                self.logger.info(f"[LEVEL ROLE DEBUG] XP channel ID: {xp_channel_id}")
+                self.logger.info(f"[LEVEL ROLE DEBUG] Level-up message template: {levelup_message}")
 
-            if xp_channel_id:
-                channel = user.guild.get_channel(int(xp_channel_id))
-                self.logger.info(f"[LEVEL ROLE DEBUG] Channel object: {channel}")
-                if channel:
-                    # Format the message
-                    msg = levelup_message or "🎉 {member} reached level {level}!"
-                    msg = msg.replace("{member}", user.mention)
-                    msg = msg.replace("{level}", str(current_level))
+                if xp_channel_id:
+                    channel = user.guild.get_channel(int(xp_channel_id))
+                    self.logger.info(f"[LEVEL ROLE DEBUG] Channel object: {channel}")
+                    if channel:
+                        # Format the message
+                        msg = levelup_message or "🎉 {member} reached level {level}!"
+                        msg = msg.replace("{member}", user.mention)
+                        msg = msg.replace("{level}", str(current_level))
 
-                    try:
-                        await channel.send(msg)
-                        self.logger.info(f"Sent level-up message for {user.name} reaching level {current_level}")
-                    except Exception as e:
-                        self.logger.error(f"Failed to send level-up message: {e}")
+                        try:
+                            await channel.send(msg)
+                            self.logger.info(f"Sent level-up message for {user.name} reaching level {current_level}")
+                        except Exception as e:
+                            self.logger.error(f"Failed to send level-up message: {e}")
 
-            # Check for level roles
+            # Check for level roles (always check, even if message was already sent)
             conn = await self.bot.db_manager.get_connection()
             cursor = await conn.execute(
                 "SELECT level, role_id FROM level_roles WHERE guild_id = ?",

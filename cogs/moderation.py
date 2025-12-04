@@ -106,21 +106,20 @@ class Moderation(commands.Cog):
 
     async def _delete_last10(self, interaction: discord.Interaction):
         """Delete last 10 messages."""
+        channel = interaction.channel
+        
         try:
-            channel = interaction.channel
-
+            # Try to defer immediately
             await interaction.response.defer(ephemeral=True)
-
+        except (discord.errors.NotFound, discord.errors.HTTPException):
+            # Interaction already expired, just delete messages anyway
+            pass
+        
+        try:
             deleted = await channel.purge(limit=10)
 
             if self.bot.db_manager:
-                await self.bot.db_manager.log_moderation_action(
-                    moderator_id=interaction.user.id,
-                    action="DELETE_LAST10",
-                    channel_id=channel.id,
-                    message_count=len(deleted),
-                    details=f"Deleted {len(deleted)} messages",
-                )
+
 
                 await self.bot.db_manager.log_event(
                     category="MOD",
@@ -136,7 +135,15 @@ class Moderation(commands.Cog):
                 description=f"Successfully deleted {len(deleted)} messages.",
             )
 
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            try:
+                if interaction.response.is_done():
+                    await interaction.followup.send(embed=embed, ephemeral=True)
+                else:
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+            except:
+                # If we can't respond, at least the messages were deleted
+                pass
+
 
             log_moderation(
                 f"🗑 {interaction.user.name} deleted {len(deleted)} messages in #{channel.name}"
@@ -170,21 +177,20 @@ class Moderation(commands.Cog):
 
     async def _delete_last50(self, interaction: discord.Interaction):
         """Delete last 50 messages."""
+        channel = interaction.channel
+        
         try:
-            channel = interaction.channel
-
+            # Try to defer immediately
             await interaction.response.defer(ephemeral=True)
-
+        except (discord.errors.NotFound, discord.errors.HTTPException):
+            # Interaction already expired, just delete messages anyway
+            pass
+        
+        try:
             deleted = await channel.purge(limit=50)
 
             if self.bot.db_manager:
-                await self.bot.db_manager.log_moderation_action(
-                    moderator_id=interaction.user.id,
-                    action="DELETE_LAST50",
-                    channel_id=channel.id,
-                    message_count=len(deleted),
-                    details=f"Deleted {len(deleted)} messages",
-                )
+
 
                 await self.bot.db_manager.log_event(
                     category="MOD",
@@ -200,7 +206,15 @@ class Moderation(commands.Cog):
                 description=f"Successfully deleted {len(deleted)} messages.",
             )
 
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            try:
+                if interaction.response.is_done():
+                    await interaction.followup.send(embed=embed, ephemeral=True)
+                else:
+                    await interaction.response.send_message(embed=embed, ephemeral=True)
+            except:
+                # If we can't respond, at least the messages were deleted
+                pass
+
 
             log_moderation(
                 f"🗑 {interaction.user.name} deleted {len(deleted)} messages in #{channel.name}"
@@ -246,13 +260,6 @@ class Moderation(commands.Cog):
             await channel.delete(reason=f"Channel purge by {interaction.user.name}")
 
             if self.bot.db_manager:
-                await self.bot.db_manager.log_moderation_action(
-                    moderator_id=interaction.user.id,
-                    action="DELETE_ALL",
-                    channel_id=new_channel.id,
-                    message_count=None,
-                    details="Channel purged and recreated",
-                )
 
                 await self.bot.db_manager.log_event(
                     category="MOD",

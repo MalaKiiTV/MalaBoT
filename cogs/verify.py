@@ -31,7 +31,7 @@ class ActivisionIDModal(Modal, title="Submit Verification"):
         required=True,
         max_length=100,
     )
-
+    
     def __init__(self, bot):
         super().__init__()
         self.bot = bot
@@ -79,14 +79,19 @@ class PlatformSelect(Select):
 
     async def callback(self, interaction: discord.Interaction):
         platform = self.values[0]
+        log_system(f"[VERIFY_DEBUG] Platform callback called for user {self.user_id}, platform: {platform}")
 
         try:
+            # Defer immediately to prevent timeout
+            await interaction.response.defer(ephemeral=True)
+            log_system(f"[VERIFY_DEBUG] Deferred successfully")
+            
             bot = interaction.client
             db = bot.db_manager
 
             conn = await db.get_connection()
             await conn.execute(
-                "INSERT INTO verifications (discord_id, activision_id, platform, screenshot_url) VALUES (?, ?, ?, ?)",
+                "INSERT INTO verifications (user_id, activision_id, platform, screenshot_url) VALUES (?, ?, ?, ?)",
                 (self.user_id, self.activision_id, platform, self.screenshot_url),
             )
             await conn.commit()
@@ -107,7 +112,7 @@ class PlatformSelect(Select):
             )
 
             # Also send ephemeral confirmation to user
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Verification Submitted ✅",
                     "Your verification has been sent for mod review. You'll be notified once it's approved or rejected.",
@@ -181,17 +186,34 @@ class PlatformSelect(Select):
             # Clean up pending verification
             if self.user_id in bot.pending_verifications:
                 del bot.pending_verifications[self.user_id]
+            # Also clean up processing flag
+            if f"processing_{self.user_id}" in bot.pending_verifications:
+                del bot.pending_verifications[f"processing_{self.user_id}"]
+
 
         except Exception as e:
-            log_system(f"Platform selection callback error: {e}", level="error")
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "Error",
-                    "Something went wrong processing your selection. Please try again.",
-                    COLORS["error"],
-                ),
-                ephemeral=True,
-            )
+            import traceback
+            error_details = traceback.format_exc()
+            log_system(f"Platform selection callback error: {e}\n{error_details}", level="error")
+            
+            if interaction.response.is_done():
+                await interaction.followup.send(
+                    embed=create_embed(
+                        "Error",
+                        "Something went wrong processing your selection. Please try again.",
+                        COLORS["error"],
+                    ),
+                    ephemeral=True,
+                )
+            else:
+                await interaction.response.send_message(
+                    embed=create_embed(
+                        "Error",
+                        "Something went wrong processing your selection. Please try again.",
+                        COLORS["error"],
+                    ),
+                    ephemeral=True,
+                )
 
 
 class PlatformView(View):
@@ -228,8 +250,15 @@ class VerifyGroup(app_commands.Group):
     )
     async def activision(self, interaction: discord.Interaction):
         """Submit verification - opens modal for Activision ID, then asks for screenshot."""
-        modal = ActivisionIDModal(self.cog.bot)
-        await interaction.response.send_modal(modal)
+        try:
+            if interaction.response.is_done():
+                # Already responded somehow, ignore
+                return
+            modal = ActivisionIDModal(self.cog.bot)
+            await interaction.response.send_modal(modal)
+        except (discord.errors.HTTPException, discord.errors.NotFound):
+            # Interaction expired or already acknowledged - ignore silently
+            pass
 
     @app_commands.command(
         name="review", description="Review a pending verification (mod only)"
@@ -281,7 +310,7 @@ class VerifyGroup(app_commands.Group):
 
             conn = await self.cog.db.get_connection()
             await conn.execute(
-                "UPDATE verifications SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, notes = ? WHERE discord_id = ?",
+                "UPDATE verifications SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, notes = ? WHERE user_id = ?",
                 (decision_value, interaction.user.id, notes, user.id),
             )
             await conn.commit()
@@ -529,14 +558,26 @@ class Verify(commands.Cog):
             return
 
         user_id = message.author.id
+        
+        # Check if already processing this user's verification
+        if f"processing_{user_id}" in self.bot.pending_verifications:
+            return  # Already processing
+        
         if user_id not in self.bot.pending_verifications:
             return
+
+        # Mark as processing IMMEDIATELY to prevent duplicates
+        self.bot.pending_verifications[f"processing_{user_id}"] = True
 
         # Get pending verification data
         pending = self.bot.pending_verifications[user_id]
 
         # CRITICAL: Only process if message is in the same channel where verification was started
         if message.channel.id != pending.get("channel_id"):
+            log_system(f"[VERIFY_DEBUG] Channel mismatch for user {user_id}")
+            # Clean up processing flag
+            if f"processing_{user_id}" in self.bot.pending_verifications:
+                del self.bot.pending_verifications[f"processing_{user_id}"]
             return
 
         if not message.attachments:
@@ -567,7 +608,8 @@ class Verify(commands.Cog):
         try:
             await message.delete()
         except Exception as e:
-            log_system(f"Failed to delete screenshot message: {e}", level="warning")
+            # Message already deleted or doesn't exist - ignore
+            pass
 
         # Send platform selection to the channel (not as reply since original message is deleted)
         view = PlatformView(

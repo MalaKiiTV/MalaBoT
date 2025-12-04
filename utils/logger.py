@@ -50,6 +50,17 @@ class MalaBotLogger:
         # Configure root logger
         root_logger = logging.getLogger()
         root_logger.setLevel(getattr(logging, settings.LOG_LEVEL.upper()))
+        
+                # Clear all existing handlers from root logger (including Discord.py's default handler)
+        root_logger.handlers.clear()
+
+                # Completely disable Discord.py's internal logging setup
+        logging.getLogger("discord").handlers = []
+        logging.getLogger("discord.client").handlers = []
+        logging.getLogger("discord.gateway").handlers = []
+        logging.getLogger("discord.http").handlers = []
+
+
 
         # Console handler with colors
         console_handler = colorlog.StreamHandler(sys.stdout)
@@ -111,13 +122,21 @@ class MalaBotLogger:
         latest_logger.setLevel(logging.DEBUG)
         self.loggers["latest"] = latest_logger
 
-        # Also add latest handler to root logger for complete capture
-        root_logger.addHandler(latest_handler)
-
-        # Suppress noisy third-party loggers
-        logging.getLogger("discord").setLevel(logging.WARNING)
+        # Suppress Discord.py duplicate logging
+        discord_logger = logging.getLogger("discord")
+        discord_logger.handlers = [logging.NullHandler()]
+        discord_logger.setLevel(logging.WARNING)
+        discord_logger.propagate = False
+        
+        # Also suppress discord.client specifically
+        client_logger = logging.getLogger("discord.client")
+        client_logger.handlers = [logging.NullHandler()]
+        client_logger.setLevel(logging.WARNING)
+        client_logger.propagate = False
+        
         logging.getLogger("websockets").setLevel(logging.WARNING)
         logging.getLogger("asyncio").setLevel(logging.WARNING)
+
 
     def get_logger(self, name: str = "bot") -> logging.Logger:
         """Get a logger instance with the specified name."""

@@ -14,6 +14,13 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from discord.ext import commands
 
+# Clear Discord.py's default handlers before our logger initializes
+import logging
+logging.getLogger("discord").handlers.clear()
+logging.getLogger("discord.gateway").handlers.clear()
+logging.getLogger("discord.client").handlers.clear()
+
+
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 

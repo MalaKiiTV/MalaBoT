@@ -74,12 +74,16 @@ class BotControlGroup(app_commands.Group):
         current: str,
     ) -> list[app_commands.Choice[str]]:
         """Autocomplete for channel selection - shows all text channels"""
-        channels = [
-            app_commands.Choice(name=f"#{channel.name}", value=str(channel.id))
-            for channel in interaction.guild.text_channels
-            if current.lower() in channel.name.lower()
-        ]
-        return channels[:25]  # Discord limits to 25 choices
+        try:
+            channels = [
+                app_commands.Choice(name=f"#{channel.name}", value=str(channel.id))
+                for channel in interaction.guild.text_channels
+                if current.lower() in channel.name.lower()
+            ]
+            return channels[:25]  # Discord limits to 25 choices
+        except Exception:
+            # If autocomplete fails (e.g., interaction already acknowledged), return empty list
+            return []
 
     @app_commands.command(
         name="send",
@@ -97,21 +101,40 @@ class BotControlGroup(app_commands.Group):
                 "This command is only available to the server owner.",
                 COLORS["error"],
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # Check if already responded (from autocomplete)
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed, ephemeral=True)
+            else:
+                await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
         # Get the channel object from the ID
-        channel_obj = interaction.guild.get_channel(int(channel))
+        try:
+            channel_obj = interaction.guild.get_channel(int(channel))
+        except ValueError:
+            embed = create_embed(
+                "❌ Error", "Invalid channel ID.", COLORS["error"]
+            )
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed, ephemeral=True)
+            else:
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+            
         if not channel_obj or not isinstance(channel_obj, discord.TextChannel):
             embed = create_embed(
                 "❌ Error", "Invalid channel selected.", COLORS["error"]
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed, ephemeral=True)
+            else:
+                await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
-        # Open modal for message input
+        # Open modal for message input (only if not already responded)
         modal = SendMessageModal(channel_obj)
-        await interaction.response.send_modal(modal)
+        if not interaction.response.is_done():
+            await interaction.response.send_modal(modal)
 
 
 class BotControl(commands.Cog):

@@ -171,39 +171,30 @@ goto menu
 
 :stop
 echo.
-echo [INFO] Stopping MalaBoT...
+echo [INFO] Stopping ALL MalaBoT processes...
 
-REM Method 1: Try to close by window title
-echo [1/3] Attempting to stop via window title...
-taskkill /FI "WINDOWTITLE eq MalaBoT Console" /F >nul 2>&1
-if %ERRORLEVEL% EQU 0 (
-    echo [SUCCESS] Bot stopped via window title
-    goto stop_done
-)
-
-REM Method 2: Try to find and kill python processes running bot.py
-echo [2/3] Attempting to stop via process detection...
-tasklist /FI "IMAGENAME eq python.exe" /FO CSV | findstr /I "bot.py" >nul 2>&1
-if %ERRORLEVEL% EQU 0 (
-    for /f "tokens=2 delims=," %%P in ('tasklist /FI "IMAGENAME eq python.exe" /FO CSV ^| findstr /I "bot.py"') do (
-        taskkill /PID %%P /F >nul 2>&1
-    )
-    echo [SUCCESS] Bot stopped via process detection
-    goto stop_done
-)
-
-REM Method 3: Fallback - try all python processes
-echo [3/3] Attempting fallback termination...
+REM Kill ALL python.exe processes (including ghosts)
+echo [1/2] Terminating all Python processes...
 taskkill /IM python.exe /F >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    echo [SUCCESS] Bot stopped via fallback method
-    goto stop_done
+    echo [SUCCESS] All Python processes terminated
+) else (
+    echo [INFO] No Python processes found
 )
 
-echo [WARNING] Could not find running bot process
-:stop_done
+REM Double-check and kill any remaining bot processes
+echo [2/2] Verifying cleanup...
+timeout /T 1 /NOBREAK >nul
+tasklist /FI "IMAGENAME eq python.exe" >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [WARNING] Some Python processes still running, forcing termination...
+    taskkill /F /IM python.exe /T >nul 2>&1
+)
+
+echo [SUCCESS] All bot processes stopped
 timeout /T 2 /NOBREAK >nul
 goto menu
+
 
 :restart
 echo.
