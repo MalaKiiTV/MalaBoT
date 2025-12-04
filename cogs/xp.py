@@ -193,7 +193,7 @@ class XPGroup(app_commands.Group):
             # Calculate bonus with streak
             bonus = DAILY_CHECKIN_XP
             if streak > 1:
-                bonus = int(bonus * (1 + (STREAK_BONUS_PERCENT * (streak - 1))))
+                bonus = int(bonus * (1 + (STREAK_BONUS_PERCENT / 100 * (streak - 1))))
 
             # Give XP
             new_xp, new_level, leveled_up = await self.cog.bot.db_manager.update_user_xp(user_id, bonus, interaction.guild.id)
