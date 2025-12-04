@@ -883,7 +883,8 @@ if exist bot.db (
 )
 
 echo [2/3] Downloading database from droplet...
-scp %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/bot.db bot.db
+scp %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/data/bot.db data\bot.db
+
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to download database from droplet!
     pause
@@ -891,7 +892,8 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo [3/3] Verifying database...
-python -c "import sqlite3; conn = sqlite3.connect('bot.db'); cursor = conn.cursor(); cursor.execute('SELECT COUNT(*) FROM settings'); print('[SUCCESS] Database synced! Total settings:', cursor.fetchone()[0]); conn.close()"
+python -c "import sqlite3; conn = sqlite3.connect('data/bot.db'); cursor = conn.cursor(); cursor.execute('SELECT COUNT(*) FROM settings'); print('[SUCCESS] Database synced! Total settings:', cursor.fetchone()[0]); conn.close()"
+
 
 echo.
 echo ========================================
@@ -931,6 +933,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo [2/3] Uploading local database to droplet...
 scp data\bot.db %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/data/bot.db
+
 
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to upload database to droplet!
