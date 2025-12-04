@@ -930,7 +930,8 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo [2/3] Uploading local database to droplet...
-scp bot.db %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/bot.db
+scp data\bot.db %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/data/bot.db
+
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to upload database to droplet!
     pause
@@ -1010,7 +1011,8 @@ set DROPLET_DIR=/home/malabot/MalaBoT
 ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git fetch origin && git checkout %current_branch% && git reset --hard origin/%current_branch%"
 
 echo [6/7] Syncing database to droplet...
-scp bot.db %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/bot.db
+scp data\bot.db %DROPLET_USER%@%DROPLET_IP%:%DROPLET_DIR%/data/bot.db
+
 
 echo [7/7] Restarting bot on droplet...
 ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && pip3 install -r requirements.txt --quiet && pm2 restart malabot"
