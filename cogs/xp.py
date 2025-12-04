@@ -465,25 +465,8 @@ class XP(commands.Cog):
             )
             self.last_xp_time[user_id] = current_time
 
-            # Send level-up message if user leveled up
+            # Check and assign level roles
             if leveled_up:
-                xp_channel_id = await self.bot.db_manager.get_setting("xp_channel", message.guild.id)
-                levelup_message = await self.bot.db_manager.get_setting("xp_levelup_message", message.guild.id)
-
-                if xp_channel_id:
-                    channel = message.guild.get_channel(int(xp_channel_id))
-                    if channel:
-                        # Format the message
-                        msg = levelup_message or "🎉 {member} reached level {level}!"
-                        msg = msg.replace("{member}", message.author.mention)
-                        msg = msg.replace("{level}", str(new_level))
-
-                        try:
-                            await channel.send(msg)
-                        except Exception as e:
-                            self.logger.error(f"Failed to send level-up message: {e}")
-                
-                # Check and assign level roles
                 await self._check_level_up(message.author)
 
         except Exception as e:
