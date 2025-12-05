@@ -224,7 +224,7 @@ class XPGroup(app_commands.Group):
         except Exception as e:
             self.cog.logger.error(f"Error in checkin command: {e}")
             embed = embed_helper.error_embed("Error", "Failed to process checkin.")
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
     @app_commands.command(
         name="add", description="Add XP to a user (Server Owner only)"
