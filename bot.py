@@ -119,9 +119,8 @@ class MalaBoT(commands.Bot):
         try:
             self.start_time = datetime.now()
 
-            # Run startup verification if enabled
-            if settings.ENABLE_STARTUP_VERIFICATION:
-                await self._startup_verification()
+            # Run startup verification
+            await self._startup_verification()
 
             # Initialize database
             await self._initialize_database()
