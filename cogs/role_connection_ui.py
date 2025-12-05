@@ -396,6 +396,9 @@ class FinalizeConnectionView(View):
         label="Save Connection", style=discord.ButtonStyle.green, emoji="💾"
     )
     async def save_connection(self, interaction: discord.Interaction, button: Button):
+        # Defer immediately
+        await interaction.response.defer()
+        
         try:
             # Save to database
             await self.manager.add_connection(
@@ -423,7 +426,7 @@ class FinalizeConnectionView(View):
                 COLORS["success"],
             )
 
-            await interaction.response.edit_message(embed=embed, view=None)
+            await interaction.edit_original_response(embed=embed, view=None)
 
             # Auto-return to role connections menu after 2 seconds
             await asyncio.sleep(2)
@@ -464,11 +467,11 @@ class FinalizeConnectionView(View):
                     name="Active Connections", value=conn_text or "None", inline=False
                 )
 
-            await interaction.message.edit(embed=embed, view=view)
+            await interaction.edit_original_response(embed=embed, view=view)
 
         except Exception as e:
             log_system(f"[ROLE_CONNECTION] Error saving connection: {e}", level="error")
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "Error", f"Failed to save connection: {str(e)}", COLORS["error"]
                 ),

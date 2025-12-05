@@ -418,10 +418,8 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
                 ),
                 ephemeral=True,
             )
-
-
-class JoinRoleSelectView(View):
-    """View for selecting join role from dropdown"""
+class OnboardingRoleSelectView(View):
+    """View for selecting onboarding role from dropdown"""
 
     def __init__(self, db_manager, guild_id: int, guild: discord.Guild):
         super().__init__(timeout=300)
@@ -432,9 +430,6 @@ class JoinRoleSelectView(View):
         # Get all roles except @everyone and sort by position (highest first)
         roles = [r for r in guild.roles if r.name != "@everyone"]
         roles.sort(key=lambda r: r.position, reverse=True)
-
-        # Discord has a limit of 25 options per select menu
-        # We'll take the top 25 roles by position
         roles = roles[:25]
 
         # Create select menu options
@@ -443,16 +438,16 @@ class JoinRoleSelectView(View):
                 label=role.name,
                 value=str(role.id),
                 description=f"Position: {role.position}",
-                emoji="🎭",
+                emoji="📋",
             )
             for role in roles
         ]
 
         # Add the select menu
         select = discord.ui.Select(
-            placeholder="Choose a role to auto-assign...",
+            placeholder="Choose onboarding role...",
             options=options,
-            custom_id="join_role_select",
+            custom_id="onboarding_role_select",
         )
         select.callback = self.role_selected
         self.add_item(select)
@@ -477,9 +472,7 @@ class JoinRoleSelectView(View):
             )
             await interaction.response.edit_message(embed=embed, view=None)
 
-            # Wait 3 seconds then return to general settings
             import asyncio
-
             await asyncio.sleep(3)
 
             general_view = GeneralSettingsView(self.db, self.guild_id)
@@ -492,19 +485,18 @@ class JoinRoleSelectView(View):
             return
 
         # Save the role
-        await self.db.set_setting("join_role", str(role.id), self.guild_id)
+        await self.db.set_setting("onboarding_role", str(role.id), self.guild_id)
 
         # Show confirmation
         embed = discord.Embed(
-            title="✅ Join Role Set",
-            description=f"New members will automatically receive {role.mention}",
+            title="✅ Onboarding Role Set",
+            description=f"Members will receive {role.mention} until they complete onboarding",
             color=COLORS["success"],
         )
         await interaction.response.edit_message(embed=embed, view=None)
 
         # Wait 2 seconds then return to general settings
         import asyncio
-
         await asyncio.sleep(2)
 
         general_view = GeneralSettingsView(self.db, self.guild_id)
@@ -524,7 +516,6 @@ class JoinRoleSelectView(View):
             color=COLORS["primary"],
         )
         await interaction.response.edit_message(embed=embed, view=general_view)
-
 
 class GeneralSettingsView(View):
     """View for general settings setup"""
@@ -626,23 +617,6 @@ class GeneralSettingsView(View):
         await interaction.response.edit_message(embed=embed, view=view)
 
     @discord.ui.button(
-        label="Set Join Role", style=discord.ButtonStyle.primary, emoji="👋"
-    )
-    async def set_join_role(self, interaction: discord.Interaction, button: Button):
-        """Set role to auto-assign to new members"""
-        # Create a view with role selection dropdown
-        view = JoinRoleSelectView(self.db, self.guild_id, interaction.guild)
-
-        embed = discord.Embed(
-            title="👋 Set Join Role",
-            description="Select a role from the dropdown below to auto-assign to new members.\n\n"
-            "**Note:** The role must be below the bot's highest role in the role hierarchy.",
-            color=COLORS["primary"],
-        )
-
-        await interaction.response.edit_message(embed=embed, view=view)
-
-    @discord.ui.button(
         label="View Current Config", style=discord.ButtonStyle.secondary, emoji="👁️"
     )
     async def view_config(self, interaction: discord.Interaction, button: Button):
@@ -653,8 +627,6 @@ class GeneralSettingsView(View):
             "online_message_channel", self.guild_id
         )
         mod_role_id = await self.db.get_setting("mod_role", self.guild_id)
-        join_role_id = await self.db.get_setting("join_role", self.guild_id)
-
         mod_role_text = "Not set"
         if mod_role_id:
             try:
@@ -666,22 +638,24 @@ class GeneralSettingsView(View):
             except:
                 mod_role_text = f"<@&{mod_role_id}>"
 
-        join_role_text = "Not set"
-        if join_role_id:
-            try:
-                join_role = interaction.guild.get_role(int(join_role_id))
-                if join_role:
-                    join_role_text = f"{join_role.name}"
-                else:
-                    join_role_text = f"<@&{join_role_id}>"
-            except:
-                join_role_text = f"<@&{join_role_id}>"
-
         online_channel_text = "Not set"
         if online_channel_id:
             online_channel_text = f"<#{online_channel_id}>"
 
-        config_text = f"**Timezone:** {timezone}\n**Online Message:** {online_message}\n**Online Channel:** {online_channel_text}\n**Mod Role:** {mod_role_text}\n**Join Role:** {join_role_text}"
+        # Get onboarding role
+        onboarding_role_id = await self.db.get_setting("onboarding_role", self.guild_id)
+        onboarding_role_text = "Not set"
+        if onboarding_role_id:
+            try:
+                onboarding_role = interaction.guild.get_role(int(onboarding_role_id))
+                if onboarding_role:
+                    onboarding_role_text = f"{onboarding_role.name}"
+                else:
+                    onboarding_role_text = f"<@&{onboarding_role_id}>"
+            except:
+                onboarding_role_text = f"<@&{onboarding_role_id}>"
+
+        config_text = f"**Timezone:** {timezone}\n**Online Message:** {online_message}\n**Online Channel:** {online_channel_text}\n**Mod Role:** {mod_role_text}\n**Onboarding Role:** {onboarding_role_text}"
 
         embed = discord.Embed(
             title="Current General Settings",
@@ -690,6 +664,21 @@ class GeneralSettingsView(View):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+    @discord.ui.button(
+        label="Set Onboarding Role", style=discord.ButtonStyle.primary, emoji="📋", row=1
+    )
+    async def set_onboarding_role(self, interaction: discord.Interaction, button: Button):
+        """Set role to auto-assign to members completing onboarding"""
+        view = OnboardingRoleSelectView(self.db, self.guild_id, interaction.guild)
+
+        embed = discord.Embed(
+            title="📋 Set Onboarding Role",
+            description="Select a role from the dropdown below to auto-assign to members who haven't completed onboarding.\n\n"
+            "**Note:** This role will be removed once they complete onboarding.",
+            color=COLORS["primary"],
+        )
+
+        await interaction.response.edit_message(embed=embed, view=view)
 
 # ============================================================
 # ROLE CONNECTION SYSTEM COMPONENTS
@@ -1154,14 +1143,14 @@ class SetupSelect(Select):
 
         # General settings
         online_channel_id = await db.get_setting("online_message_channel", guild_id)
-        join_role_id = await db.get_setting("join_role", guild_id)
+        onboarding_role_id = await db.get_setting("onboarding_role", guild_id)
         general_text = f"Timezone: {timezone}\nOnline Message: {online_message}"
         if online_channel_id:
             general_text += f"\nOnline Channel: <#{online_channel_id}>"
         if mod_role_id:
             general_text += f"\nMod Role: <@&{mod_role_id}>"
-        if join_role_id:
-            general_text += f"\nJoin Role: <@&{join_role_id}>"
+        if onboarding_role_id:
+            general_text += f"\nOnboarding Role: <@&{onboarding_role_id}>"
         embed.add_field(name="⚙️ General", value=general_text, inline=False)
 
         # Role Connections settings
@@ -2278,6 +2267,84 @@ class Setup(commands.Cog):
 
         view = SetupView()
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+    @app_commands.command(
+        name="sync_onboarding",
+        description="Assign onboarding role to all pending members (Server Owner only)"
+    )
+    async def sync_onboarding(self, interaction: discord.Interaction):
+        """Sync onboarding role to all pending members"""
+        if interaction.guild.owner_id != interaction.user.id:
+            embed = discord.Embed(
+                title="🚫 Permission Denied",
+                description="This command is only available to the server owner.",
+                color=COLORS["error"],
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        onboarding_role_id = await self.db.get_setting("onboarding_role", interaction.guild.id)
+        
+        if not onboarding_role_id:
+            embed = discord.Embed(
+                title="❌ No Onboarding Role Set",
+                description="Please set an onboarding role first using `/setup` → General Settings → Set Onboarding Role",
+                color=COLORS["error"],
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        onboarding_role = interaction.guild.get_role(int(onboarding_role_id))
+        
+        if not onboarding_role:
+            embed = discord.Embed(
+                title="❌ Onboarding Role Not Found",
+                description=f"The configured onboarding role (ID: {onboarding_role_id}) no longer exists.",
+                color=COLORS["error"],
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        # Find all pending members
+        pending_members = [m for m in interaction.guild.members if m.pending and not m.bot]
+        
+        if not pending_members:
+            embed = discord.Embed(
+                title="✅ No Pending Members",
+                description="There are no members currently completing onboarding.",
+                color=COLORS["success"],
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+
+        # Assign role to pending members
+        success_count = 0
+        fail_count = 0
+        
+        for member in pending_members:
+            if onboarding_role not in member.roles:
+                try:
+                    await member.add_roles(onboarding_role, reason="Onboarding sync")
+                    success_count += 1
+                except discord.Forbidden:
+                    fail_count += 1
+                except Exception as e:
+                    log_system(f"Error assigning onboarding role to {member.name}: {e}", level="error")
+                    fail_count += 1
+
+        embed = discord.Embed(
+            title="✅ Onboarding Sync Complete",
+            description=(
+                f"**Assigned {onboarding_role.mention} to {success_count} pending member(s)**\n\n"
+                f"✅ Success: {success_count}\n"
+                f"❌ Failed: {fail_count}\n\n"
+                f"Total pending members: {len(pending_members)}"
+            ),
+            color=COLORS["success"],
+        )
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):

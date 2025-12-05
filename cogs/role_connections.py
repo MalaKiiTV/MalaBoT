@@ -313,6 +313,20 @@ class RoleConnections(commands.Cog):
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         """Process role connections when member roles change"""
+        # Check if member completed onboarding (pending changed from True to False)
+        if before.pending and not after.pending:
+            log_system(f"[ROLE_CONNECTION] {after.name} completed onboarding!")
+            # Remove "Onboarding" role
+            onboarding_role_id = await self.bot.db_manager.get_setting("onboarding_role", after.guild.id)
+            if onboarding_role_id:
+                onboarding_role = discord.utils.get(after.guild.roles, id=int(onboarding_role_id))
+                if onboarding_role and onboarding_role in after.roles:
+                    try:
+                        await after.remove_roles(onboarding_role, reason="Completed onboarding")
+                        log_system(f"[ROLE_CONNECTION] Removed Onboarding role from {after.name}")
+                    except discord.Forbidden:
+                        log_system(f"[ROLE_CONNECTION] Missing permissions to remove Onboarding role from {after.name}", level="error")
+        
         if before.roles != after.roles:
             # Skip if member is being processed by another system (e.g., cheater assignment)
             if after.id in self.bot.processing_members:

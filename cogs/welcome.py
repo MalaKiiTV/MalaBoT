@@ -36,38 +36,28 @@ class Welcome(commands.Cog):
 
             guild_id = member.guild.id
 
-            # Assign join role if configured
-            join_role_id = await self.bot.db_manager.get_setting("join_role", guild_id)
-            if join_role_id:
-                try:
-                    join_role = member.guild.get_role(int(join_role_id))
-                    if join_role:
-                        await member.add_roles(
-                            join_role, reason="Auto-assigned join role"
-                        )
-                        self.logger.info(
-                            f"Assigned join role {join_role.name} to {member.name}"
-                        )
+            # Assign "Onboarding" role to pending members
+            if member.pending:
+                onboarding_role_id = await self.bot.db_manager.get_setting("onboarding_role", guild_id)
+                if onboarding_role_id:
+                    onboarding_role = discord.utils.get(member.guild.roles, id=int(onboarding_role_id))
+                    if onboarding_role:
+                        try:
+                            await member.add_roles(onboarding_role, reason="Member is completing onboarding")
+                            self.logger.info(f"Assigned Onboarding role to {member.name}")
+                        except discord.Forbidden:
+                            self.logger.error(f"Missing permissions to assign Onboarding role to {member.name}")
                     else:
-                        self.logger.warning(
-                            f"Join role {join_role_id} not found in {member.guild.name}"
-                        )
-                except discord.Forbidden:
-                    self.logger.error(
-                        f"Missing permissions to assign join role to {member.name}"
-                    )
-                except Exception as e:
-                    self.logger.error(
-                        f"Error assigning join role to {member.name}: {e}"
-                    )
+                        self.logger.warning(f"Onboarding role ID {onboarding_role_id} not found in guild")
 
             # Get welcome settings
             guild_id = member.guild.id
             welcome_channel_id = await self.bot.db_manager.get_setting(
                 "welcome_channel", guild_id
             )
-            welcome_title = await self.bot.db_manager.get_setting(
-                "welcome_title", DEFAULT_WELCOME_TITLE, guild_id
+            welcome_title = (
+                await self.bot.db_manager.get_setting("welcome_title", guild_id)
+                or DEFAULT_WELCOME_TITLE
             )
             welcome_message = (
                 await self.bot.db_manager.get_setting("welcome_message", guild_id)
