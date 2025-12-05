@@ -865,11 +865,11 @@ if /i not "%confirm%"=="y" (
 )
 
 echo [1/3] Backing up current local database...
-if exist bot.db (
+if exist data\bot.db (
     for /f "tokens=2 delims==." %%A in ('wmic os get localdatetime /value 2^>nul') do set "dt=%%A"
     set "TS=%dt:~0,4%-%dt:~4,2%-%dt:~6,2%_%dt:~8,2%-%dt:~10,2%"
     if not exist "backups\db" mkdir "backups\db"
-    copy /Y bot.db "backups\db\bot_local_%TS%.db" >nul
+    copy /Y data\bot.db "backups\db\bot_local_%TS%.db" >nul
     echo [SUCCESS] Local database backed up to backups\db\bot_local_%TS%.db
 )
 
@@ -915,7 +915,8 @@ if /i not "%confirm%"=="y" (
 )
 
 echo [1/3] Backing up droplet database...
-ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && mkdir -p backups/db && cp bot.db backups/db/bot_backup_$(date +%%Y-%%m-%%d_%%H-%%M-%%S).db"
+ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && mkdir -p data/backups && cp data/bot.db data/backups/bot_backup_$(date +%%Y-%%m-%%d_%%H-%%M-%%S).db"
+
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Failed to backup droplet database!
     pause
