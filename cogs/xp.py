@@ -162,6 +162,8 @@ class XPGroup(app_commands.Group):
     @app_commands.command(name="checkin", description="Claim your daily XP bonus")
     async def checkin(self, interaction: discord.Interaction):
         """Daily checkin for XP bonus."""
+        await interaction.response.defer(ephemeral=True)
+
         try:
             user_id = interaction.user.id
             today = datetime.datetime.now().date()
@@ -182,7 +184,7 @@ class XPGroup(app_commands.Group):
                         description="You've already claimed your daily bonus today!",
                         color=COLORS["warning"],
                     )
-                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    await interaction.followup.send(embed=embed, ephemeral=True)
                     return
 
                 # Calculate streak
@@ -219,7 +221,7 @@ class XPGroup(app_commands.Group):
                 color=COLORS["success"],
             )
 
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
         except Exception as e:
             self.cog.logger.error(f"Error in checkin command: {e}")
