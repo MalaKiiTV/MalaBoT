@@ -3,11 +3,11 @@ Birthday system cog for MalaBoT.
 Handles user birthday tracking and celebrations.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from utils.helpers import create_embed
 from utils.logger import get_logger
@@ -49,9 +49,8 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
 
             # Check for February 30th, April 31st, etc.
             invalid_dates = [
-                (2, 29),
                 (2, 30),
-                (2, 31),  # February
+                (2, 31),  # February (29 is valid for leap years)
                 (4, 31),
                 (6, 31),
                 (9, 31),
@@ -59,17 +58,16 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
             ]
 
             if (month, day) in invalid_dates:
-                # Special case for Feb 29 - allow it but handle leap years
-                if not (month == 2 and day == 29):
-                    await interaction.response.send_message(
-                        embed=create_embed(
-                            "❌ Invalid Date",
-                            "That date doesn't exist. Please enter a valid date.",
-                            discord.Color.red(),
-                        ),
-                        ephemeral=True,
-                    )
-                    return
+                await interaction.response.send_message(
+                    embed=create_embed(
+                        "❌ Invalid Date",
+                        "That date doesn't exist. Please enter a valid date.",
+                        discord.Color.red(),
+                    ),
+                    ephemeral=True,
+                )
+                return
+
 
             # Store in database
             success = await self.bot.db_manager.set_user_birthday(  # type: ignore
@@ -105,7 +103,8 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                 ),
                 ephemeral=True,
             )
-        except Exception:
+        except Exception as e:
+            self.bot.logger.error(f"Unexpected error in birthday modal: {e}", exc_info=True)
             await interaction.response.send_message(
                 embed=create_embed(
                     "❌ Error",
@@ -187,6 +186,21 @@ class Birthdays(commands.Cog):
                     raise ValueError(msg)
 
                 month, day = map(int, parts)
+                
+                # Validate month range before indexing
+                if not (1 <= month <= 12):
+                    self.logger.error(f"Invalid month {month} for user {interaction.user.id}")
+                    await self.bot.db_manager.remove_user_birthday(interaction.user.id)  # type: ignore
+                    await interaction.response.send_message(
+                        embed=create_embed(
+                            "🔧 Data Corruption Fixed",
+                            "We found corrupted birthday data and cleaned it up. Please set your birthday again using `/bday set`.",
+                            discord.Color.orange(),
+                        ),
+                        ephemeral=True,
+                    )
+                    return
+                
                 month_names = [
                     "January",
                     "February",
@@ -210,6 +224,7 @@ class Birthdays(commands.Cog):
                     f"Your birthday is set to **{formatted_date}** ({birthday_str})",
                     discord.Color.blue(),
                 )
+
                 embed.add_field(
                     name="Want to change it?",
                     value="Use `/bday set` to update your birthday.",
@@ -360,50 +375,150 @@ class Birthdays(commands.Cog):
             return "th"
         return {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
 
+    async def _remove_birthday(self, interaction: discord.Interaction):
+        """Remove your birthday."""
+        try:
+            success = await self.bot.db_manager.remove_user_birthday(interaction.user.id)  # type: ignore
+            
+            if success:
+                await interaction.response.send_message(
+                    embed=create_embed(
+                        "✅ Birthday Removed",
+                        "Your birthday has been removed from the system.",
+                        discord.Color.green(),
+                    ),
+                    ephemeral=True,
+                )
+            else:
+                await interaction.response.send_message(
+                    embed=create_embed(
+                        "❌ No Birthday Set",
+                        "You don't have a birthday set.",
+                        discord.Color.red(),
+                    ),
+                    ephemeral=True,
+                )
+        except Exception as e:
+            self.logger.error(f"Error removing birthday for user {interaction.user.id}: {e}")
+            await interaction.response.send_message(
+                embed=create_embed(
+                    "❌ Error",
+                    "There was an error removing your birthday. Please try again.",
+                    discord.Color.red(),
+                ),
+                ephemeral=True,
+            )
+
     # Daily birthday check task
+
+
+    @tasks.loop(hours=24)
     async def check_birthdays(self):
         """Check for today's birthdays and send celebration messages."""
         try:
-            # Get today's date in MM-DD format
-            today = datetime.now().strftime("%m-%d")
-            today_birthdays = await self.bot.db_manager.get_today_birthdays(today)  # type: ignore
-
-            for user_data in today_birthdays:
-                user_id = user_data[0]
-                try:
-                    # Try to fetch user
-                    user = await self.bot.fetch_user(user_id)
-                    if user:
+            now = datetime.now()
+            
+            # Check each guild's birthday settings
+            for guild in self.bot.guilds:
+                guild_id = guild.id
+                
+                # Get birthday settings
+                birthday_channel_id = await self.bot.db_manager.get_setting("birthday_channel", guild_id)
+                birthday_time = await self.bot.db_manager.get_setting("birthday_time", guild_id)
+                birthday_message = await self.bot.db_manager.get_setting("birthday_message", guild_id)
+                
+                if not birthday_channel_id:
+                    continue
+                
+                # Get birthday channel
+                channel = guild.get_channel(int(birthday_channel_id))
+                if not channel:
+                    self.logger.warning(f"Birthday channel {birthday_channel_id} not found in guild {guild_id}")
+                    continue
+                
+                # Get today's date in MM-DD format
+                today = now.strftime("%m-%d")
+                today_birthdays = await self.bot.db_manager.get_today_birthdays(today)
+                
+                if not today_birthdays:
+                    continue
+                
+                for user_data in today_birthdays:
+                    user_id = user_data[0]
+                    
+                    try:
+                        # Check if already announced this year
+                        announced_year = user_data[4] if len(user_data) > 4 else None
+                        if announced_year == now.year:
+                            self.logger.info(f"Birthday for user {user_id} already announced this year")
+                            continue
+                        
+                        # Get member from guild
+                        member = guild.get_member(user_id)
+                        if not member:
+                            continue
+                        
+                        # Format message
+                        message = birthday_message or "🎂 Happy Birthday {member}! Have a great day!"
+                        message = message.replace("{member}", member.mention)
+                        
                         # Send birthday message
                         embed = create_embed(
-                            "🎂 Happy Birthday! 🎉",
-                            f"Happy birthday to **{user.display_name}**! 🎊\n\n"
-                            "Hope you have an amazing day filled with joy and celebration! 🎈",
+                            "🎉 Happy Birthday! 🎂",
+                            message,
                             discord.Color.magenta(),
                         )
-                        embed.set_thumbnail(
-                            url=user.display_avatar.url if user.display_avatar else None
-                        )
-
-                        # Try to send to a configured birthday channel or DM
-                        # For now, we'll try to DM the user
-                        try:
-                            await user and user.send(embed=embed)
-                            self.logger.info(f"Sent birthday message to user {user_id}")
-                        except discord.Forbidden:
-                            self.logger.warning(
-                                f"Could not DM user {user_id} for birthday"
-                            )
-
-                except discord.NotFound:
-                    self.logger.warning(f"User {user_id} not found for birthday check")
-                except Exception as e:
-                    self.logger.error(
-                        f"Error processing birthday for user {user_id}: {e}"
-                    )
-
+                        embed.set_thumbnail(url=member.display_avatar.url if member.display_avatar else None)
+                        
+                        await channel.send(embed=embed)
+                        
+                        # Mark as announced for this year
+                        await self.bot.db_manager.mark_birthday_announced(user_id, now.year)
+                        
+                        self.logger.info(f"Sent birthday message for user {user_id} in guild {guild_id}")
+                        
+                    except Exception as e:
+                        self.logger.error(f"Error processing birthday for user {user_id}: {e}")
+                
         except Exception as e:
             self.logger.error(f"Error in birthday check: {e}")
+
+    @check_birthdays.before_loop
+    async def before_check_birthdays(self):
+        """Wait until bot is ready and schedule for configured time."""
+        await self.bot.wait_until_ready()
+        
+        # Get the first guild's birthday time setting (or use 09:00 as default)
+        birthday_time = "09:00"
+        if self.bot.guilds:
+            guild_id = self.bot.guilds[0].id
+            stored_time = await self.bot.db_manager.get_setting("birthday_time", guild_id)
+            if stored_time:
+                birthday_time = stored_time
+        
+        # Parse the time
+        hour, minute = map(int, birthday_time.split(":"))
+        
+        # Calculate next occurrence of that time
+        now = datetime.now()
+        target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        
+        # If target time already passed today, schedule for tomorrow
+        if target_time <= now:
+            target_time += timedelta(days=1)
+        
+        self.logger.info(f"Birthday check scheduled for {target_time}")
+        
+        # Sleep until target time
+        await discord.utils.sleep_until(target_time)
+
+    async def cog_load(self):
+        """Start the birthday check task when cog loads."""
+        self.check_birthdays.start()
+
+    async def cog_unload(self):
+        """Stop the birthday check task when cog unloads."""
+        self.check_birthdays.cancel()
 
 
 async def setup(bot: commands.Bot):
