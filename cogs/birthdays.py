@@ -540,6 +540,66 @@ class Birthdays(commands.Cog):
     async def cog_unload(self):
         """Stop the birthday check task when cog unloads."""
         self.check_birthdays.cancel()
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        """Check if the joining member has a birthday today that hasn't been announced."""
+        try:
+            # Get guild timezone
+            guild_tz = await self.bot.db_manager.get_guild_timezone(member.guild.id)
+            tz = pytz.timezone(guild_tz)
+            now = datetime.now(tz)
+            
+            # Check if this user has an unannounced birthday today
+            unannounced = await self.bot.db_manager.get_unannounced_birthdays(now.year)
+            
+            # Check if this specific user is in the list
+            user_has_birthday = any(user_id == member.id for user_id, _ in unannounced)
+            
+            if not user_has_birthday:
+                return
+            
+            # Get birthday channel
+            birthday_channel_id = await self.bot.db_manager.get_guild_setting(
+                member.guild.id, "birthday_channel"
+            )
+            
+            if not birthday_channel_id:
+                self.logger.debug(
+                    f"Birthday channel not configured for guild {member.guild.id}"
+                )
+                return
+            
+            birthday_channel = member.guild.get_channel(int(birthday_channel_id))
+            if not birthday_channel:
+                self.logger.warning(
+                    f"Birthday channel {birthday_channel_id} not found in guild {member.guild.id}"
+                )
+                return
+            
+            # Send birthday announcement
+            embed = discord.Embed(
+                title="🎉 Happy Birthday! 🎂",
+                description=f"Everyone wish {member.mention} a happy birthday!",
+                color=discord.Color.gold(),
+            )
+            embed.set_thumbnail(url=member.display_avatar.url)
+            embed.set_footer(text="🎈 Welcome back to the server on your special day!")
+            
+            await birthday_channel.send(
+                content=member.mention,
+                embed=embed
+            )
+            
+            # Mark as announced so they don't get another announcement
+            await self.bot.db_manager.mark_birthday_announced(member.id, now.year)
+            
+            self.logger.info(
+                f"Birthday announced for {member.name} (joined late) in guild {member.guild.id}"
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Error checking birthday on member join: {e}")
+
 
 
 async def setup(bot: commands.Bot):
