@@ -538,6 +538,32 @@ class DatabaseManager:
 
         return await cursor.fetchall()
 
+    async def get_unannounced_birthdays(self, current_year: int) -> list:
+        """Get birthdays that haven't been announced this year."""
+        conn = await self.get_connection()
+        cursor = await conn.execute(
+            """
+            SELECT user_id, birthday FROM birthdays
+            WHERE strftime('%m-%d', birthday) = strftime('%m-%d', 'now')
+            AND (announced_year IS NULL OR announced_year < ?)
+        """,
+            (current_year,),
+        )
+        return await cursor.fetchall()
+
+    async def mark_birthday_announced(self, user_id: int, year: int) -> None:
+        """Mark that a birthday has been announced for a specific year."""
+        conn = await self.get_connection()
+        await conn.execute(
+            """
+            UPDATE birthdays
+            SET announced_year = ?
+            WHERE user_id = ?
+        """,
+            (year, user_id),
+        )
+        await conn.commit()
+
     # === LOGGING METHODS ===
 
     async def log_event(
