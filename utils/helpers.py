@@ -392,15 +392,15 @@ async def safe_send_message(
         )
     except discord.Forbidden:
         # Bot doesn't have permission to send messages in this channel
-        print(f"Missing permissions to send message in {channel}")
+        logger.warning(f"Missing permissions to send message in {channel}")
         return None
     except discord.HTTPException as e:
         # Other Discord API errors
-        print(f"Failed to send message: {e}")
+        logger.error(f"Failed to send message: {e}")
         return None
     except Exception as e:
         # Any other errors
-        print(f"Unexpected error when sending message: {e}")
+        logger.exception(f"Unexpected error when sending message: {e}")
         return None
 
 

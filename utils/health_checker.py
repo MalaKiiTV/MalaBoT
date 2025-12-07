@@ -159,7 +159,8 @@ class HealthChecker:
                     return True
 
             return False
-        except:
+        except Exception as e:
+            logger.error(f"Failed to check bot configuration: {e}")
             return False
 
     async def _check_cogs_loaded(self) -> bool:

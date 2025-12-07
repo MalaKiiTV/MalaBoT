@@ -137,9 +137,9 @@ class Moderation(commands.Cog):
                     await interaction.followup.send(embed=embed, ephemeral=True)
                 else:
                     await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except (discord.HTTPException, discord.NotFound) as e:
                 # If we can't respond, at least the messages were deleted
-                pass
+                self.logger.warning(f"Failed to send delete confirmation: {e}")
 
 
             log_moderation(
@@ -302,8 +302,8 @@ class Moderation(commands.Cog):
             )
             try:
                 await interaction.followup.send(embed=embed, ephemeral=True)
-            except:
-                pass
+            except (discord.HTTPException, discord.NotFound) as e:
+                self.logger.warning(f"Failed to send followup message: {e}")
         except Exception as e:
             self.logger.error(f"Error purging channel: {e}")
             raise
@@ -625,7 +625,7 @@ class Moderation(commands.Cog):
                     await user.send(
                         f"You have been unmuted in {interaction.guild.name}"
                     )
-                except:
+                except (discord.Forbidden, discord.HTTPException):
                     pass  # Can't send DM, that's okay
 
         except discord.Forbidden:
@@ -745,8 +745,8 @@ class Moderation(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-        except:
-            pass
+        except (discord.HTTPException, discord.NotFound) as e:
+            self.logger.warning(f"Failed to send response: {e}")
 
 
 async def setup(bot: commands.Bot):

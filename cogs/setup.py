@@ -635,7 +635,7 @@ class GeneralSettingsView(View):
                     mod_role_text = f"{mod_role.name}"
                 else:
                     mod_role_text = f"<@&{mod_role_id}>"
-            except:
+            except (ValueError, AttributeError):
                 mod_role_text = f"<@&{mod_role_id}>"
 
         online_channel_text = "Not set"
@@ -652,7 +652,7 @@ class GeneralSettingsView(View):
                     onboarding_role_text = f"{onboarding_role.name}"
                 else:
                     onboarding_role_text = f"<@&{onboarding_role_id}>"
-            except:
+            except (ValueError, AttributeError):
                 onboarding_role_text = f"<@&{onboarding_role_id}>"
 
         config_text = f"**Timezone:** {timezone}\n**Online Message:** {online_message}\n**Online Channel:** {online_channel_text}\n**Mod Role:** {mod_role_text}\n**Onboarding Role:** {onboarding_role_text}"
@@ -1614,7 +1614,7 @@ class BirthdaySetupView(View):
                     color=COLORS["success"],
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except ValueError:
                 embed = discord.Embed(
                     title="❌ Invalid Time Format",
                     description="Please use 24-hour format (HH:MM), e.g., 08:00 or 14:30",
@@ -1712,7 +1712,7 @@ class LevelRolesView(View):
                 # Save directly to level_roles table
                 try:
                     conn = await self.db_manager.get_connection()
-                    print(f"[DEBUG] Saving level role: guild={self.guild_id}, level={level}, role_id={role.id}")
+                    log_system(f"Saving level role: guild={self.guild_id}, level={level}, role_id={role.id}")
                     await conn.execute(
                         """
                         INSERT OR REPLACE INTO level_roles (guild_id, level, role_id)
@@ -1721,9 +1721,9 @@ class LevelRolesView(View):
                         (self.guild_id, level, role.id)
                     )
                     await conn.commit()
-                    print(f"[DEBUG] Level role saved successfully!")
+                    log_system(f"Level role saved successfully!")
                 except Exception as save_error:
-                    print(f"[ERROR] Failed to save level role: {save_error}")
+                    log_system(f"Failed to save level role: {save_error}", level="error")
                     raise
 
 
@@ -1913,7 +1913,7 @@ class XPSetupView(View):
                     color=COLORS["success"],
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except ValueError:
                 embed = discord.Embed(
                     title="❌ Invalid Value",
                     description="Please enter a valid number (minimum 1).",
@@ -1954,7 +1954,7 @@ class XPSetupView(View):
                     color=COLORS["success"],
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except ValueError:
                 embed = discord.Embed(
                     title="❌ Invalid Value",
                     description="Please enter a valid number (0 or higher).",
@@ -1995,7 +1995,7 @@ class XPSetupView(View):
                     color=COLORS["success"],
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except ValueError:
                 embed = discord.Embed(
                     title="❌ Invalid Value",
                     description="Please enter a valid number (0 or higher).",
@@ -2036,7 +2036,7 @@ class XPSetupView(View):
                     color=COLORS["success"],
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except ValueError:
                 embed = discord.Embed(
                     title="❌ Invalid Value",
                     description="Please enter a valid number (0 or higher).",

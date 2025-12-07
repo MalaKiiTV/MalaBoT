@@ -684,8 +684,8 @@ class XP(commands.Cog):
 
     async def _check_level_up(self, user):
         """Check if user leveled up and assign roles if needed."""
-        print(f"[DEBUG] _check_level_up called for {user.name}")  # <-- ADD THIS LINE
-        self.logger.info(f"[LEVEL ROLE DEBUG] _check_level_up called for user {user.name} (ID: {user.id})")
+        self.logger.debug(f"_check_level_up called for {user.name}")
+        self.logger.info(f"[LEVEL ROLE] _check_level_up called for user {user.name} (ID: {user.id})")
 
         try:
             # Get user's current level
