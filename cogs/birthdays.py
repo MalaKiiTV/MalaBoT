@@ -447,9 +447,8 @@ class Birthdays(commands.Cog):
                     self.logger.error(f"Invalid timezone {timezone_str} for guild {guild_id}: {e}")
                     now = datetime.now(pytz.UTC)
                 
-                # Get today's date in MM-DD format (in the guild's timezone)
-                today = now.strftime("%m-%d")
-                today_birthdays = await self.bot.db_manager.get_today_birthdays(today)
+                # Get today's unannounced birthdays (in the guild's timezone)
+                today_birthdays = await self.bot.db_manager.get_unannounced_birthdays(now.year)
                 
                 if not today_birthdays:
                     continue
@@ -458,12 +457,6 @@ class Birthdays(commands.Cog):
                     user_id = user_data[0]
                     
                     try:
-                        # Check if already announced this year
-                        announced_year = user_data[4] if len(user_data) > 4 else None
-                        if announced_year == now.year:
-                            self.logger.info(f"Birthday for user {user_id} already announced this year")
-                            continue
-                        
                         # Get member from guild
                         member = guild.get_member(user_id)
                         if not member:
