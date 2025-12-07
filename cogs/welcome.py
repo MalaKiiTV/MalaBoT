@@ -50,8 +50,30 @@ class Welcome(commands.Cog):
                     else:
                         self.logger.warning(f"Onboarding role ID {onboarding_role_id} not found in guild")
 
-            # Get welcome settings
+            # Assign "Birthday Pending" role to all new members (if system enabled)
+            birthday_pending_enabled = await self.bot.db_manager.get_setting("birthday_pending_enabled", guild_id)
+            if birthday_pending_enabled == "true":
+                birthday_pending_role_id = await self.bot.db_manager.get_setting("birthday_pending_role", guild_id)
+                if birthday_pending_role_id:
+                    birthday_pending_role = discord.utils.get(member.guild.roles, id=int(birthday_pending_role_id))
+                    if birthday_pending_role:
+                        try:
+                            await member.add_roles(birthday_pending_role, reason="New member - birthday not set")
+                            self.logger.info(f"Assigned Birthday Pending role to {member.name}")
+                        except discord.Forbidden:
+                            self.logger.error(f"Missing permissions to assign Birthday Pending role to {member.name}")
+                    else:
+                        self.logger.warning(f"Birthday Pending role ID {birthday_pending_role_id} not found in guild")
+
+            # Check if welcome system is enabled
             guild_id = member.guild.id
+            welcome_enabled = await self.bot.db_manager.get_setting("welcome_enabled", guild_id)
+            
+            # Skip if disabled (default to enabled if not set)
+            if welcome_enabled == "false":
+                return
+            
+            # Get welcome settings
             welcome_channel_id = await self.bot.db_manager.get_setting(
                 "welcome_channel", guild_id
             )
@@ -124,6 +146,13 @@ class Welcome(commands.Cog):
                 return
 
             guild_id = member.guild.id
+
+            # Check if goodbye system is enabled
+            goodbye_enabled = await self.bot.db_manager.get_setting("goodbye_enabled", guild_id)
+            
+            # Skip if disabled (default to enabled if not set)
+            if goodbye_enabled == "false":
+                return
 
             # Get goodbye settings
             goodbye_channel_id = await self.bot.db_manager.get_setting(

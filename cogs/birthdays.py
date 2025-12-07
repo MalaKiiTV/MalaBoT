@@ -14,6 +14,19 @@ from utils.helpers import create_embed
 from utils.logger import get_logger
 
 
+class BirthdayReminderView(discord.ui.View):
+    """Persistent view for birthday reminder button"""
+    
+    def __init__(self):
+        super().__init__(timeout=None)
+    
+    @discord.ui.button(label="Set Your Birthday", style=discord.ButtonStyle.primary, emoji="🎂", custom_id="birthday_reminder_button")
+    async def set_birthday_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Handle birthday button click"""
+        modal = BirthdayModal(interaction.client)
+        await interaction.response.send_modal(modal)
+
+
 class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
     """Modal for users to set their birthday."""
 
@@ -76,6 +89,19 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
             )
 
             if success:
+                # Remove Birthday Pending role if user has it
+                guild_id = interaction.guild.id if interaction.guild else None
+                if guild_id:
+                    birthday_pending_role_id = await self.bot.db_manager.get_setting("birthday_pending_role", guild_id)
+                    if birthday_pending_role_id:
+                        birthday_pending_role = discord.utils.get(interaction.guild.roles, id=int(birthday_pending_role_id))
+                        if birthday_pending_role and birthday_pending_role in interaction.user.roles:
+                            try:
+                                await interaction.user.remove_roles(birthday_pending_role, reason="Birthday set")
+                                self.bot.logger.info(f"Removed Birthday Pending role from {interaction.user.name}")
+                            except discord.Forbidden:
+                                self.bot.logger.error(f"Missing permissions to remove Birthday Pending role from {interaction.user.name}")
+                
                 await interaction.response.send_message(
                     embed=create_embed(
                         "🎂 Birthday Set!",
@@ -421,6 +447,13 @@ class Birthdays(commands.Cog):
             for guild in self.bot.guilds:
                 guild_id = guild.id
                 
+                # Check if birthday announcements are enabled
+                announcements_enabled = await self.bot.db_manager.get_setting("birthday_announcements_enabled", guild_id)
+                
+                # Skip if disabled (default to enabled if not set)
+                if announcements_enabled == "false":
+                    continue
+                
                 # Get birthday settings
                 birthday_channel_id = await self.bot.db_manager.get_setting("birthday_channel", guild_id)
                 birthday_time = await self.bot.db_manager.get_setting("birthday_time", guild_id)
@@ -536,70 +569,43 @@ class Birthdays(commands.Cog):
     async def cog_load(self):
         """Start the birthday check task when cog loads."""
         self.check_birthdays.start()
+        # Register persistent view for birthday reminders
+        self.bot.add_view(BirthdayReminderView())
 
     async def cog_unload(self):
         """Stop the birthday check task when cog unloads."""
         self.check_birthdays.cancel()
-    @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member):
-        """Check if the joining member has a birthday today that hasn't been announced."""
+    
+    async def setup_birthday_reminder_message(self, guild_id: int, channel: discord.TextChannel):
+        """Setup persistent birthday reminder message in channel"""
         try:
-            # Get guild timezone
-            guild_tz = await self.bot.db_manager.get_guild_timezone(member.guild.id)
-            tz = pytz.timezone(guild_tz)
-            now = datetime.now(tz)
-            
-            # Check if this user has an unannounced birthday today
-            unannounced = await self.bot.db_manager.get_unannounced_birthdays(now.year)
-            
-            # Check if this specific user is in the list
-            user_has_birthday = any(user_id == member.id for user_id, _ in unannounced)
-            
-            if not user_has_birthday:
-                return
-            
-            # Get birthday channel
-            birthday_channel_id = await self.bot.db_manager.get_guild_setting(
-                member.guild.id, "birthday_channel"
-            )
-            
-            if not birthday_channel_id:
-                self.logger.debug(
-                    f"Birthday channel not configured for guild {member.guild.id}"
-                )
-                return
-            
-            birthday_channel = member.guild.get_channel(int(birthday_channel_id))
-            if not birthday_channel:
-                self.logger.warning(
-                    f"Birthday channel {birthday_channel_id} not found in guild {member.guild.id}"
-                )
-                return
-            
-            # Send birthday announcement
+            # Create embed
             embed = discord.Embed(
-                title="🎉 Happy Birthday! 🎂",
-                description=f"Everyone wish {member.mention} a happy birthday!",
+                title="🎂 Set Your Birthday!",
+                description=(
+                    "Click the button below to set your birthday!\n\n"
+                    "**Why set your birthday?**\n"
+                    "• Get a special birthday announcement\n"
+                    "• Receive birthday wishes from the community\n"
+                    "• Unlock full server access\n\n"
+                    "**Privacy:** Only the month and day are stored, not your birth year."
+                ),
                 color=discord.Color.gold(),
             )
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.set_footer(text="🎈 Welcome back to the server on your special day!")
+            embed.set_footer(text="Your birthday will be celebrated on your special day!")
             
-            await birthday_channel.send(
-                content=member.mention,
-                embed=embed
-            )
+            # Send message with persistent view
+            view = BirthdayReminderView()
+            message = await channel.send(embed=embed, view=view)
             
-            # Mark as announced so they don't get another announcement
-            await self.bot.db_manager.mark_birthday_announced(member.id, now.year)
+            # Store message ID
+            await self.bot.db_manager.set_setting("birthday_reminder_message_id", str(message.id), guild_id)
             
-            self.logger.info(
-                f"Birthday announced for {member.name} (joined late) in guild {member.guild.id}"
-            )
+            self.logger.info(f"Birthday reminder message setup in channel {channel.id} for guild {guild_id}")
             
         except Exception as e:
-            self.logger.error(f"Error checking birthday on member join: {e}")
-
+            self.logger.error(f"Error setting up birthday reminder message: {e}")
+            raise
 
 
 async def setup(bot: commands.Bot):
