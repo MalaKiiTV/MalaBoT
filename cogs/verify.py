@@ -99,8 +99,8 @@ class PlatformSelect(Select):
             # Delete the platform selection message to clean up the channel
             try:
                 await interaction.message.delete()
-            except:
-                pass
+            except (discord.HTTPException, discord.NotFound):
+                pass  # Message already deleted or can't be deleted
 
             # Send a brief public confirmation that auto-deletes
             confirmation_msg = await interaction.channel.send(
@@ -127,8 +127,8 @@ class PlatformSelect(Select):
             await asyncio.sleep(5)
             try:
                 await confirmation_msg.delete()
-            except:
-                pass
+            except (discord.HTTPException, discord.NotFound):
+                pass  # Message already deleted or can't be deleted
 
             log_system(
                 f"[VERIFY] User {self.user_id} submitted verification for {self.activision_id} on {platform}"
@@ -341,12 +341,12 @@ class VerifyGroup(app_commands.Group):
                 )
 
             elif decision_value == "cheater" and member:
-                print(f"DEBUG: Processing cheater for {member.name}")
+                log_system(f"Processing cheater for {member.name}")
                 # Get cheater role and channel from settings
                 cheater_role_id = await self.cog.db.get_setting(
                     "cheater_role", guild_id
                 )
-                print(f"DEBUG: Cheater role ID: {cheater_role_id}")
+                log_system(f"Cheater role ID: {cheater_role_id}")
                 cheater_channel_id = await self.cog.db.get_setting(
                     "cheater_jail_channel", guild_id
                 )

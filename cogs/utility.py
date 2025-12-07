@@ -482,8 +482,8 @@ class Utility(commands.Cog):
                         f"System healthy: ✅",
                         inline=True,
                     )
-                except:
-                    pass
+                except Exception as e:
+                    self.logger.warning(f"Failed to add stats field to about embed: {e}")
 
             # Footer with invite link
             embed.set_footer(
@@ -640,8 +640,8 @@ class Utility(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-        except:
-            pass
+        except (discord.HTTPException, discord.NotFound) as e:
+            self.logger.warning(f"Failed to send response: {e}")
 
 
 async def setup(bot: commands.Bot):

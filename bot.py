@@ -850,6 +850,23 @@ The bot will start in safe mode to prevent further issues.
             # Force exit if needed
             sys.exit(0)
 
+    async def health_check(self) -> dict:
+        """Return bot health status for monitoring"""
+        return {
+            "status": "healthy" if self.is_ready() else "starting",
+            "uptime": (
+                (datetime.now() - self.start_time).total_seconds()
+                if self.start_time
+                else 0
+            ),
+            "latency_ms": round(self.latency * 1000),
+            "guilds": len(self.guilds),
+            "users": sum(g.member_count for g in self.guilds),
+            "cogs_loaded": len(self.cogs),
+            "database": self.db_manager is not None,
+            "version": settings.BOT_VERSION,
+        }
+
 
 def main():
     """Main entry point."""
@@ -875,22 +892,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-    async def health_check(self) -> dict:
-        """Return bot health status for monitoring"""
-        from datetime import datetime
-
-        return {
-            "status": "healthy" if self.is_ready() else "starting",
-            "uptime": (
-                (datetime.now() - self.start_time).total_seconds()
-                if self.start_time
-                else 0
-            ),
-            "latency_ms": round(self.latency * 1000),
-            "guilds": len(self.guilds),
-            "users": sum(g.member_count for g in self.guilds),
-            "cogs_loaded": len(self.cogs),
-            "database": self.db_manager is not None,
-            "version": settings.BOT_VERSION,
-        }

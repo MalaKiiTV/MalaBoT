@@ -162,8 +162,8 @@ class BackupManager:
                         with open(metadata_path) as f:
                             metadata = json.load(f)
                             backup_info.update(metadata)
-                    except:
-                        pass
+                    except (json.JSONDecodeError, IOError) as e:
+                        logger.warning(f"Failed to read metadata for {backup_file}: {e}")
 
                 backups.append(backup_info)
 

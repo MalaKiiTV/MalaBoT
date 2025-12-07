@@ -274,7 +274,8 @@ class RoleConnectionSafeDB:
         try:
             connections = await self.load_connections(guild_id)
             return isinstance(connections, list)
-        except:
+        except Exception as e:
+            logger.error(f"Failed to check connections for guild {guild_id}: {e}")
             return False
 
     async def save_protected_roles(self, guild_id: int, role_ids: list) -> bool:

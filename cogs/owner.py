@@ -173,7 +173,8 @@ class Owner(commands.Cog):
 
             try:
                 subprocess.run(["./update.sh", "manual"], check=True)
-            except:
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                # Fallback to direct restart if update script not found
                 os.execv(sys.executable, [sys.executable] + sys.argv)
 
         except Exception as e:
@@ -397,8 +398,8 @@ class Owner(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-        except:
-            pass
+        except (discord.HTTPException, discord.NotFound) as e:
+            self.logger.warning(f"Failed to send response: {e}")
 
     @app_commands.command(
         name="clear-commands",
