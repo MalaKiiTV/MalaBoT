@@ -361,8 +361,7 @@ The bot will start in safe mode to prevent further issues.
         # Start daily digest task
         asyncio.create_task(self._daily_digest_task())
 
-        # Start birthday check task
-        asyncio.create_task(self._birthday_check_loop())
+        # Birthday check is handled by the birthdays cog
 
     async def _health_monitor_loop(self):
         """Background health monitoring loop."""
@@ -467,122 +466,8 @@ The bot will start in safe mode to prevent further issues.
                 self.logger.error(f"Daily digest error: {e}")
                 await asyncio.sleep(3600)  # Wait 1 hour and retry
 
-    async def _birthday_check_loop(self):
-        """Background loop for checking birthdays."""
-        while True:
-            try:
-                # Check birthdays every hour
-                await self._check_birthdays()
-                await asyncio.sleep(3600)  # 1 hour
-
-            except Exception as e:
-                self.logger.error(f"Birthday check error: {e}")
-                await asyncio.sleep(1800)  # Wait 30 minutes and retry
-
-    async def _check_birthdays(self):
-        """Check for birthdays today and send messages."""
-        if not self.db_manager:
-            return
-
-        try:
-            today_birthdays = await self.db_manager.get_today_birthdays()
-
-            if today_birthdays:
-                # Get birthday channel from settings
-                birthday_channel_id = await self.db_manager.get_setting(
-                    "birthday_channel_id"
-                )
-
-                if birthday_channel_id:
-                    channel = self.get_channel(birthday_channel_id)
-                    if channel:
-                        for user_id in today_birthdays:
-                            user = self.get_user(user_id)
-                            if user:
-                                embed = embed_helper.birthday_embed(
-                                    title="Happy Birthday! 🎉",
-                                    description=f"Happy birthday to {user.mention}! 🎂🎈",
-                                    user=(
-                                        user if hasattr(user, "display_name") else None
-                                    ),
-                                )
-
-                                await safe_send_message(channel, embed=embed)
-
-                                # Assign birthday role
-                                await self._assign_birthday_role(user)
-
-                                # Log celebration
-                                await self.db_manager.log_event(
-                                    category="BDAY",
-                                    action="CELEBRATED",
-                                    user_id=user_id,
-                                    details="Automatic birthday celebration",
-                                )
-
-        except Exception as e:
-            self.logger.error(f"Error checking birthdays: {e}")
-
-    async def _assign_birthday_role(self, user: discord.Member):
-        """Assign birthday role to user for 24 hours."""
-        if not isinstance(user, discord.Member):
-            return
-
-        try:
-            guild = user.guild
-
-            # Get or create birthday role
-            from config.constants import BIRTHDAY_ROLE_NAME
-
-            birthday_role = discord.utils.get(guild.roles, name=BIRTHDAY_ROLE_NAME)
-
-            if not birthday_role:
-                # Create the role if it doesn't exist
-                birthday_role = await guild.create_role(
-                    name=BIRTHDAY_ROLE_NAME,
-                    color=discord.Color.pink(),
-                    reason="Birthday role for celebrations",
-                )
-
-            # Assign role
-            await user.add_roles(birthday_role, reason="Birthday celebration")
-
-            # Schedule role removal after 24 hours using persistent scheduler
-            removal_time = datetime.now() + timedelta(hours=24)
-            self.scheduler.add_job(
-                self._remove_birthday_role,
-                "date",
-                run_date=removal_time,
-                args=[user.id, birthday_role.id, guild.id],
-                id=f"birthday_role_{user.id}_{int(datetime.now().timestamp())}",
-                replace_existing=True,
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error assigning birthday role: {e}")
-
-    async def _remove_birthday_role(self, user_id: int, role_id: int, guild_id: int):
-        """Remove birthday role from user after 24 hours."""
-        try:
-            guild = self.get_guild(guild_id)
-            if not guild:
-                return
-            user = guild.get_member(user_id)
-            if not user:
-                return
-            role = guild.get_role(role_id)
-            if not role:
-                return
-            if role in user.roles:
-                await user.remove_roles(role, reason="Birthday period ended")
-                await self.db_manager.log_event(
-                    category="BDAY",
-                    action="ROLE_REMOVED",
-                    user_id=user_id,
-                    details="Birthday role removed after 24 hours",
-                )
-        except Exception as e:
-            self.logger.error(f"Error removing birthday role: {e}")
+    # Birthday checking is now handled by the birthdays cog (cogs/birthdays.py)
+    # This provides better timezone support and per-guild configuration
 
     async def _send_daily_digest(self):
         """Send daily digest to owner."""
