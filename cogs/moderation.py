@@ -208,9 +208,9 @@ class Moderation(commands.Cog):
                     await interaction.followup.send(embed=embed, ephemeral=True)
                 else:
                     await interaction.response.send_message(embed=embed, ephemeral=True)
-            except:
+            except (discord.HTTPException, discord.NotFound) as e:
                 # If we can't respond, at least the messages were deleted
-                pass
+                self.logger.warning(f"Failed to send delete confirmation: {e}")
 
 
             log_moderation(

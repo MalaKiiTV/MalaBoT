@@ -117,7 +117,8 @@ class RoleConnectionManager:
         if protected_data:
             try:
                 self.protected_roles_cache[guild_id] = json.loads(protected_data)
-            except:
+            except json.JSONDecodeError as e:
+                self.logger.warning(f"Failed to parse protected roles for guild {guild_id}: {e}")
                 self.protected_roles_cache[guild_id] = []
         else:
             self.protected_roles_cache[guild_id] = []

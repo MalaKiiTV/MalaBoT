@@ -6,6 +6,7 @@ Handles user birthday tracking and celebrations.
 from datetime import datetime, timedelta
 
 import discord
+import pytz
 from discord import app_commands
 from discord.ext import commands, tasks
 
@@ -302,7 +303,7 @@ class Birthdays(commands.Cog):
                     try:
                         user = await self.bot.fetch_user(user_id)
                         display_name = user.display_name if user else f"User {user_id}"
-                    except:
+                    except (discord.NotFound, discord.HTTPException):
                         display_name = f"User {user_id}"
                     
                     # Format date
@@ -416,8 +417,6 @@ class Birthdays(commands.Cog):
     async def check_birthdays(self):
         """Check for today's birthdays and send celebration messages."""
         try:
-            now = datetime.now()
-            
             # Check each guild's birthday settings
             for guild in self.bot.guilds:
                 guild_id = guild.id
@@ -426,6 +425,7 @@ class Birthdays(commands.Cog):
                 birthday_channel_id = await self.bot.db_manager.get_setting("birthday_channel", guild_id)
                 birthday_time = await self.bot.db_manager.get_setting("birthday_time", guild_id)
                 birthday_message = await self.bot.db_manager.get_setting("birthday_message", guild_id)
+                timezone_str = await self.bot.db_manager.get_setting("timezone", guild_id)
                 
                 if not birthday_channel_id:
                     continue
@@ -436,7 +436,18 @@ class Birthdays(commands.Cog):
                     self.logger.warning(f"Birthday channel {birthday_channel_id} not found in guild {guild_id}")
                     continue
                 
-                # Get today's date in MM-DD format
+                # Get current time in the guild's timezone
+                try:
+                    if timezone_str:
+                        tz = pytz.timezone(timezone_str)
+                    else:
+                        tz = pytz.UTC
+                    now = datetime.now(tz)
+                except Exception as e:
+                    self.logger.error(f"Invalid timezone {timezone_str} for guild {guild_id}: {e}")
+                    now = datetime.now(pytz.UTC)
+                
+                # Get today's date in MM-DD format (in the guild's timezone)
                 today = now.strftime("%m-%d")
                 today_birthdays = await self.bot.db_manager.get_today_birthdays(today)
                 
@@ -475,7 +486,7 @@ class Birthdays(commands.Cog):
                         # Mark as announced for this year
                         await self.bot.db_manager.mark_birthday_announced(user_id, now.year)
                         
-                        self.logger.info(f"Sent birthday message for user {user_id} in guild {guild_id}")
+                        self.logger.info(f"Sent birthday message for user {user_id} in guild {guild_id} at {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
                         
                     except Exception as e:
                         self.logger.error(f"Error processing birthday for user {user_id}: {e}")
@@ -488,26 +499,43 @@ class Birthdays(commands.Cog):
         """Wait until bot is ready and schedule for configured time."""
         await self.bot.wait_until_ready()
         
-        # Get the first guild's birthday time setting (or use 09:00 as default)
+        # Get the first guild's birthday time and timezone settings (or use defaults)
         birthday_time = "09:00"
+        timezone_str = "UTC"
+        
         if self.bot.guilds:
             guild_id = self.bot.guilds[0].id
             stored_time = await self.bot.db_manager.get_setting("birthday_time", guild_id)
+            stored_timezone = await self.bot.db_manager.get_setting("timezone", guild_id)
+            
             if stored_time:
                 birthday_time = stored_time
+            if stored_timezone:
+                timezone_str = stored_timezone
         
         # Parse the time
-        hour, minute = map(int, birthday_time.split(":"))
+        try:
+            hour, minute = map(int, birthday_time.split(":"))
+        except ValueError:
+            self.logger.error(f"Invalid birthday time format: {birthday_time}, using 09:00")
+            hour, minute = 9, 0
         
-        # Calculate next occurrence of that time
-        now = datetime.now()
+        # Get timezone
+        try:
+            tz = pytz.timezone(timezone_str)
+        except Exception as e:
+            self.logger.error(f"Invalid timezone {timezone_str}: {e}, using UTC")
+            tz = pytz.UTC
+        
+        # Calculate next occurrence of that time in the guild's timezone
+        now = datetime.now(tz)
         target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
         
         # If target time already passed today, schedule for tomorrow
         if target_time <= now:
             target_time += timedelta(days=1)
         
-        self.logger.info(f"Birthday check scheduled for {target_time}")
+        self.logger.info(f"Birthday check scheduled for {target_time.strftime('%Y-%m-%d %H:%M:%S %Z')} (timezone: {timezone_str})")
         
         # Sleep until target time
         await discord.utils.sleep_until(target_time)
