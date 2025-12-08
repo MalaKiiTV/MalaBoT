@@ -70,7 +70,6 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                 (9, 31),
                 (11, 31),  # 30-day months
             ]
-
             if (month, day) in invalid_dates:
                 await interaction.response.send_message(
                     embed=create_embed(
@@ -81,15 +80,13 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                     ephemeral=True,
                 )
                 return
-
-
             # Store in database
             success = await self.bot.db_manager.set_user_birthday(  # type: ignore
                 interaction.user.id, birthday_str
             )
-
             if success:
                 # Remove Birthday Pending role if user has it
+                
                 guild_id = interaction.guild.id if interaction.guild else None
                 if guild_id:
                     birthday_pending_role_id = await self.bot.db_manager.get_setting("birthday_pending_role", guild_id)
@@ -102,18 +99,30 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                             except discord.Forbidden:
                                 get_logger("birthdays").error(f"Missing permissions to remove Birthday Pending role from {interaction.user.name}")
                     
-                    # Award XP for setting birthday
-                    xp_earned = 0
-                    birthday_xp = await self.bot.db_manager.get_setting("birthday_set_xp", guild_id)
-                    if birthday_xp:
-                        try:
-                            xp_amount = int(birthday_xp)
-                            await self.bot.db_manager.add_xp(interaction.user.id, guild_id, xp_amount)
-                            xp_earned = xp_amount
-                            get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday")
-                        except (ValueError, TypeError) as e:
-                            get_logger("birthdays").error(f"Invalid birthday_set_xp value: {birthday_xp}, error: {e}")
-                
+                # Award XP for setting birthday
+                xp_earned = 0
+                birthday_xp = await self.bot.db_manager.get_setting("birthday_set_xp", guild_id)
+                if birthday_xp:
+                    try:
+                        xp_amount = int(birthday_xp)
+                        # Direct database update - use the bot's pool attribute
+                        async with self.bot.pool.acquire() as conn:
+                            await conn.execute(
+                                """
+                                INSERT INTO user_xp (user_id, guild_id, xp, level, last_message_time)
+                                VALUES ($1, $2, $3, 0, NOW())
+                                ON CONFLICT (user_id, guild_id) 
+                                DO UPDATE SET xp = user_xp.xp + $3
+                                """,
+                                interaction.user.id, guild_id, xp_amount
+                            )
+                        xp_earned = xp_amount
+                        get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday")
+                    except (ValueError, TypeError) as e:
+                        get_logger("birthdays").error(f"Invalid birthday_set_xp value: {birthday_xp}, error: {e}")
+                    except Exception as e:
+                        get_logger("birthdays").error(f"Error awarding XP for birthday: {e}")
+
                 # Create success message with XP info if applicable
                 success_description = f"Your birthday has been set to {birthday_str}. You'll receive a special message on your birthday!"
                 if xp_earned > 0:

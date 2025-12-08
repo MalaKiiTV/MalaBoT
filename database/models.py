@@ -15,9 +15,21 @@ class DatabaseManager:
         self._connection: Optional[aiosqlite.Connection] = None
 
     async def get_connection(self) -> aiosqlite.Connection:
-        """Get database connection."""
+        """Get or create database connection with proper error handling."""
         if self._connection is None:
-            self._connection = await aiosqlite.connect(self.db_path)
+            try:
+                self._connection = await aiosqlite.connect(
+                    self.db_path,
+                    timeout=30.0
+                )
+                # Enable foreign keys
+                await self._connection.execute("PRAGMA foreign_keys = ON")
+                # Set journal mode for better concurrency
+                await self._connection.execute("PRAGMA journal_mode = WAL")
+                await self._connection.commit()
+            except Exception as e:
+                print(f"❌ Failed to connect to database: {e}")
+                raise
         return self._connection
 
     async def initialize(self) -> None:

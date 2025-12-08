@@ -148,31 +148,32 @@ class Welcome(commands.Cog):
             guild_id = member.guild.id
             user_id = member.id
 
-            # ✅ RESET ALL USER DATA WHEN THEY LEAVE
+                        # ✅ RESET ALL USER DATA WHEN THEY LEAVE
             try:
-                # Reset XP data
-                await self.bot.db_manager.execute(
-                    "DELETE FROM xp WHERE guild_id = ? AND user_id = ?",
-                    (guild_id, user_id)
-                )
-                
-                # Reset birthday data
-                await self.bot.db_manager.execute(
-                    "DELETE FROM birthdays WHERE user_id = ?",
-                    (user_id,)
-                )
-                
-                # Reset warnings data
-                await self.bot.db_manager.execute(
-                    "DELETE FROM warnings WHERE guild_id = ? AND user_id = ?",
-                    (guild_id, user_id)
-                )
-                
-                # Reset verification data
-                await self.bot.db_manager.execute(
-                    "DELETE FROM verified_users WHERE guild_id = ? AND user_id = ?",
-                    (guild_id, user_id)
-                )
+                async with self.bot.db_manager.pool.acquire() as conn:
+                    # Reset XP data
+                    await conn.execute(
+                        "DELETE FROM user_xp WHERE guild_id = $1 AND user_id = $2",
+                        guild_id, user_id
+                    )
+                    
+                    # Reset birthday data
+                    await conn.execute(
+                        "DELETE FROM birthdays WHERE user_id = $1",
+                        user_id
+                    )
+                    
+                    # Reset warnings data
+                    await conn.execute(
+                        "DELETE FROM warnings WHERE guild_id = $1 AND user_id = $2",
+                        guild_id, user_id
+                    )
+                    
+                    # Reset verification data
+                    await conn.execute(
+                        "DELETE FROM verified_users WHERE guild_id = $1 AND user_id = $2",
+                        guild_id, user_id
+                    )
                 
                 self.logger.info(f"Reset all data for user {member.name} ({user_id}) who left {member.guild.name}")
             except Exception as e:
