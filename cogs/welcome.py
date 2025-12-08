@@ -65,12 +65,12 @@ class Welcome(commands.Cog):
                     else:
                         self.logger.warning(f"Birthday Pending role ID {birthday_pending_role_id} not found in guild")
 
-            # Check if welcome system is enabled
+            # Check if welcome system is enabled (disabled by default when not configured)
             guild_id = member.guild.id
             welcome_enabled = await self.bot.db_manager.get_setting("welcome_enabled", guild_id)
             
-            # Skip if disabled (default to enabled if not set)
-            if welcome_enabled == "false":
+            # Skip if not explicitly enabled
+            if welcome_enabled != "true":
                 return
             
             # Get welcome settings

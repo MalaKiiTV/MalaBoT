@@ -575,16 +575,17 @@ class XP(commands.Cog):
             # Check cooldown
             user_id = message.author.id
             current_time = datetime.datetime.now().timestamp()
-
+            
             if user_id in self.last_xp_time:
                 time_diff = current_time - self.last_xp_time[user_id]
                 if time_diff < XP_COOLDOWN_SECONDS:
                     return
 
-            # Check if message XP is enabled
+            # Check if message XP is enabled (disabled by default when not configured)
             message_xp_enabled = await self.bot.db_manager.get_setting("xp_message_enabled", message.guild.id)
-            if message_xp_enabled == "false":
+            if message_xp_enabled != "true":  # Only enabled if explicitly set to "true"
                 return
+
             
             # Get XP amount from database or use default
             xp_amount_str = await self.bot.db_manager.get_setting("xp_per_message", message.guild.id)
@@ -623,9 +624,9 @@ class XP(commands.Cog):
             if not message or message.author.bot:
                 return
 
-            # Check if reaction XP is enabled
+            # Check if reaction XP is enabled (disabled by default when not configured)
             reaction_xp_enabled = await self.bot.db_manager.get_setting("xp_reaction_enabled", message.guild.id)
-            if reaction_xp_enabled == "false":
+            if reaction_xp_enabled != "true":  # Only enabled if explicitly set to "true"
                 return
             
             # Get XP amount from database or use default
@@ -668,9 +669,9 @@ class XP(commands.Cog):
                     minutes = int(time_spent.total_seconds() / 60)
 
                     if minutes > 0:
-                        # Check if voice XP is enabled
+                        # Check if voice XP is enabled (disabled by default when not configured)
                         voice_xp_enabled = await self.bot.db_manager.get_setting("xp_voice_enabled", member.guild.id)
-                        if voice_xp_enabled == "false":
+                        if voice_xp_enabled != "true":  # Only enabled if explicitly set to "true"
                             del self.bot.voice_time[member.id]
                             return
                         

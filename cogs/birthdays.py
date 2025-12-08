@@ -484,11 +484,11 @@ class Birthdays(commands.Cog):
             for guild in self.bot.guilds:
                 guild_id = guild.id
                 
-                # Check if birthday announcements are enabled
+                # Check if birthday announcements are enabled (disabled by default when not configured)
                 announcements_enabled = await self.bot.db_manager.get_setting("birthday_announcements_enabled", guild_id)
                 
-                # Skip if disabled (default to enabled if not set)
-                if announcements_enabled == "false":
+                # Skip if not explicitly enabled
+                if announcements_enabled != "true":
                     continue
                 
                 # Get birthday settings
