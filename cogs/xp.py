@@ -49,8 +49,8 @@ class XPGroup(app_commands.Group):
             target = user or interaction.user
 
             # Get user stats from database
-            xp = await self.cog.bot.db_manager.get_user_xp(target.id)
-            level = await self.cog.bot.db_manager.get_user_level(target.id)
+            xp = await self.cog.bot.db_manager.get_user_xp(target.id, interaction.guild.id)
+            level = await self.cog.bot.db_manager.get_user_level(target.id, interaction.guild.id)
 
             # Get rank
             rank = await self.cog.bot.db_manager.get_user_rank(
@@ -114,11 +114,11 @@ class XPGroup(app_commands.Group):
             placeholders = ",".join(["?" for _ in guild_member_ids])
             cursor = await conn.execute(
                 f"""SELECT user_id, xp, level
-                   FROM users
-                   WHERE user_id IN ({placeholders}) AND xp > 0
+                   FROM user_xp
+                   WHERE guild_id = ? AND user_id IN ({placeholders}) AND xp > 0
                    ORDER BY xp DESC
                    LIMIT 10""",
-                guild_member_ids,
+                [interaction.guild.id] + guild_member_ids,
             )
             rows = await cursor.fetchall()
 
@@ -171,8 +171,8 @@ class XPGroup(app_commands.Group):
             # Check last checkin
             conn = await self.cog.bot.db_manager.get_connection()
             cursor = await conn.execute(
-                "SELECT last_checkin, checkin_streak FROM daily_checkins WHERE user_id = ?",
-                (user_id,),
+                "SELECT last_checkin, checkin_streak FROM daily_checkins WHERE user_id = ? AND guild_id = ?",
+                (user_id, interaction.guild.id),
             )
             row = await cursor.fetchone()
 
@@ -208,10 +208,9 @@ class XPGroup(app_commands.Group):
 
             # Update checkin record
             await conn.execute(
-
-                """INSERT OR REPLACE INTO daily_checkins (user_id, last_checkin, checkin_streak)
-                   VALUES (?, ?, ?)""",
-                (user_id, today.isoformat(), streak),
+                """INSERT OR REPLACE INTO daily_checkins (user_id, guild_id, last_checkin, checkin_streak)
+                   VALUES (?, ?, ?, ?)""",
+                (user_id, interaction.guild.id, today.isoformat(), streak),
             )
             await conn.commit()
 
@@ -349,7 +348,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager.remove_user_xp(user.id, amount)
+            await self.cog.bot.db_manager.remove_user_xp(user.id, interaction.guild.id, amount)
             embed = create_embed(
                 title="✅ XP Removed",
                 description=f"Removed **{amount:,} XP** from {user.mention}",
@@ -385,9 +384,9 @@ class XPGroup(app_commands.Group):
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         try:
-            old_level = await self.cog.bot.db_manager.get_user_level(user.id)
-            await self.cog.bot.db_manager.set_user_xp(user.id, amount)
-            new_level = await self.cog.bot.db_manager.get_user_level(user.id)
+            old_level = await self.cog.bot.db_manager.get_user_level(user.id, interaction.guild.id)
+            await self.cog.bot.db_manager.set_user_xp(user.id, interaction.guild.id, amount)
+            new_level = await self.cog.bot.db_manager.get_user_level(user.id, interaction.guild.id)
             
             # Check if leveled up
             if new_level > old_level:
@@ -420,7 +419,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager.set_user_xp(user.id, 0)
+            await self.cog.bot.db_manager.set_user_xp(user.id, interaction.guild.id, 0)
             embed = create_embed(
                 title="✅ XP Reset",
                 description=f"Reset {user.mention}'s XP to **0**",
@@ -450,9 +449,9 @@ class XPGroup(app_commands.Group):
             # Defer the response since this might take a while
             await interaction.response.defer(ephemeral=True)
 
-            # Reset XP for all users in the database
+            # Reset XP for all users in this guild
             conn = await self.cog.bot.db_manager.get_connection()
-            await conn.execute("UPDATE users SET xp = 0, level = 0")
+            await conn.execute("UPDATE user_xp SET xp = 0, level = 0 WHERE guild_id = ?", (interaction.guild.id,))
             await conn.commit()
 
             # Get count of affected users
@@ -499,15 +498,15 @@ class XPGroup(app_commands.Group):
             # Defer the response since this might take a while
             await interaction.response.defer(ephemeral=True)
 
-            # Reset all check-in streaks
+            # Reset all check-in streaks for this guild
             conn = await self.cog.bot.db_manager.get_connection()
             
             # Get count before deletion
-            cursor = await conn.execute("SELECT COUNT(*) FROM daily_checkins")
+            cursor = await conn.execute("SELECT COUNT(*) FROM daily_checkins WHERE guild_id = ?", (interaction.guild.id,))
             count = (await cursor.fetchone())[0]
             
-            # Delete all check-in records
-            await conn.execute("DELETE FROM daily_checkins")
+            # Delete all check-in records for this guild
+            await conn.execute("DELETE FROM daily_checkins WHERE guild_id = ?", (interaction.guild.id,))
             await conn.commit()
 
             embed = create_embed(
@@ -550,6 +549,20 @@ class XP(commands.Cog):
         """Remove the command group when cog is unloaded."""
         if hasattr(self, "_xp_group"):
             self.bot.tree.remove_command(self._xp_group.name)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """Delete user data when they leave the server."""
+        try:
+            if not self.bot.db_manager:
+                return
+            
+            # Delete all user data for this guild
+            await self.bot.db_manager.delete_user_data_from_guild(member.id, member.guild.id)
+            self.logger.info(f"Deleted all data for user {member.name} ({member.id}) who left guild {member.guild.id}")
+            
+        except Exception as e:
+            self.logger.error(f"Error deleting user data for {member.name}: {e}")
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -688,8 +701,8 @@ class XP(commands.Cog):
         self.logger.info(f"[LEVEL ROLE] _check_level_up called for user {user.name} (ID: {user.id})")
 
         try:
-            # Get user's current level
-            current_level = await self.bot.db_manager.get_user_level(user.id)
+            # Get user's current level for this guild
+            current_level = await self.bot.db_manager.get_user_level(user.id, user.guild.id)
             self.logger.info(f"[LEVEL ROLE DEBUG] User {user.name} is level {current_level}")
 
             # Check if we already sent a level-up message for this level
