@@ -73,6 +73,21 @@ class DatabaseManager:
         """
         )
 
+        # User XP table
+        await conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_xp (
+                user_id INTEGER NOT NULL,
+                guild_id INTEGER NOT NULL,
+                xp INTEGER DEFAULT 0,
+                level INTEGER DEFAULT 0,
+                last_message_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, guild_id),
+                FOREIGN KEY (user_id) REFERENCES users(user_id)
+            )
+        """
+        )
+
         # Birthdays table
         await conn.execute(
             """
@@ -831,5 +846,3 @@ class DatabaseManager:
         except Exception as e:
             await conn.rollback()
             raise e
-        finally:
-            await conn.close()
