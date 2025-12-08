@@ -146,13 +146,37 @@ class Welcome(commands.Cog):
                 return
 
             guild_id = member.guild.id
+            user_id = member.id
 
-            # Check if goodbye system is enabled
-            goodbye_enabled = await self.bot.db_manager.get_setting("goodbye_enabled", guild_id)
-            
-            # Skip if disabled (default to enabled if not set)
-            if goodbye_enabled == "false":
-                return
+            # ✅ RESET ALL USER DATA WHEN THEY LEAVE
+            try:
+                # Reset XP data
+                await self.bot.db_manager.execute(
+                    "DELETE FROM xp WHERE guild_id = ? AND user_id = ?",
+                    (guild_id, user_id)
+                )
+                
+                # Reset birthday data
+                await self.bot.db_manager.execute(
+                    "DELETE FROM birthdays WHERE user_id = ?",
+                    (user_id,)
+                )
+                
+                # Reset warnings data
+                await self.bot.db_manager.execute(
+                    "DELETE FROM warnings WHERE guild_id = ? AND user_id = ?",
+                    (guild_id, user_id)
+                )
+                
+                # Reset verification data
+                await self.bot.db_manager.execute(
+                    "DELETE FROM verified_users WHERE guild_id = ? AND user_id = ?",
+                    (guild_id, user_id)
+                )
+                
+                self.logger.info(f"Reset all data for user {member.name} ({user_id}) who left {member.guild.name}")
+            except Exception as e:
+                self.logger.error(f"Error resetting user data: {e}")
 
             # Get goodbye settings
             goodbye_channel_id = await self.bot.db_manager.get_setting(

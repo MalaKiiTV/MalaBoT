@@ -98,9 +98,19 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                         if birthday_pending_role and birthday_pending_role in interaction.user.roles:
                             try:
                                 await interaction.user.remove_roles(birthday_pending_role, reason="Birthday set")
-                                self.bot.logger.info(f"Removed Birthday Pending role from {interaction.user.name}")
+                                get_logger("birthdays").info(f"Removed Birthday Pending role from {interaction.user.name}")
                             except discord.Forbidden:
-                                self.bot.logger.error(f"Missing permissions to remove Birthday Pending role from {interaction.user.name}")
+                                get_logger("birthdays").error(f"Missing permissions to remove Birthday Pending role from {interaction.user.name}")
+                    
+                    # Award XP for setting birthday
+                    birthday_xp = await self.bot.db_manager.get_setting("birthday_set_xp", guild_id)
+                    if birthday_xp:
+                        try:
+                            xp_amount = int(birthday_xp)
+                            await self.bot.db_manager.add_xp(interaction.user.id, guild_id, xp_amount)
+                            get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday")
+                        except (ValueError, TypeError) as e:
+                            get_logger("birthdays").error(f"Invalid birthday_set_xp value: {birthday_xp}, error: {e}")
                 
                 await interaction.response.send_message(
                     embed=create_embed(
@@ -131,7 +141,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                 ephemeral=True,
             )
         except Exception as e:
-            self.bot.logger.error(f"Unexpected error in birthday modal: {e}", exc_info=True)
+            get_logger("birthdays").error(f"Unexpected error in birthday modal: {e}", exc_info=True)
             await interaction.response.send_message(
                 embed=create_embed(
                     "❌ Error",
@@ -149,7 +159,7 @@ class Birthdays(commands.Cog):
         self.bot = bot
         self.logger = get_logger("birthdays")
         # Type ignore to handle MyPy Bot class attribute issue
-        self.db = bot.db_manager  # type: ignore  # type: ignore  # type: ignore
+        self.db = bot.db_manager  # type: ignore
 
     @app_commands.command(name="bday", description="Birthday commands")
     @app_commands.describe(action="What birthday action would you like to perform?")
@@ -296,7 +306,6 @@ class Birthdays(commands.Cog):
                 return
 
             # Get current date
-            from datetime import datetime
             now = datetime.now()
 
             # Parse and sort birthdays by days until next occurrence
