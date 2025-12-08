@@ -111,6 +111,8 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                         )
                         xp_earned = xp_amount
                         get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday (Total: {new_xp}, Level: {new_level})")
+                        xp_earned = xp_amount
+                        get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday")
                     except (ValueError, TypeError) as e:
                         get_logger("birthdays").error(f"Invalid birthday_set_xp value: {birthday_xp}, error: {e}")
                     except Exception as e:
@@ -168,7 +170,7 @@ class Birthdays(commands.Cog):
         self.logger = get_logger("birthdays")
         # Type ignore to handle MyPy Bot class attribute issue
         self.db = bot.db_manager  # type: ignore
-            @commands.Cog.listener()
+    @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
         """Clean up user data when they leave the server."""
         try:
@@ -643,24 +645,6 @@ class Birthdays(commands.Cog):
         except Exception as e:
             self.logger.error(f"Error setting up birthday reminder message: {e}")
             raise
-
-    @commands.Cog.listener()
-    async def on_member_remove(self, member: discord.Member):
-        """Handle member leaves - delete birthday data."""
-        try:
-            if not self.bot.db_manager:
-                return
-            
-            # Delete birthday data for user who left
-            await self.bot.db_manager.execute_query(
-                "DELETE FROM birthdays WHERE user_id = ?",
-                (member.id,)
-            )
-            
-            self.logger.info(f"Deleted birthday data for user {member.name} ({member.id}) who left {member.guild.name}")
-            
-        except Exception as e:
-            self.logger.error(f"Error deleting birthday data for member {member.name}: {e}")
 
 
 async def setup(bot: commands.Bot):

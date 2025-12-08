@@ -779,6 +779,19 @@ class DatabaseManager:
 
     # === ROAST METHODS ===
 
+    async def add_roast_xp(self, xp_amount: int) -> dict:
+        """Add roast XP."""
+        # This is a placeholder - implement based on your roast XP system
+        return {"xp_gained": xp_amount, "bot_level": 1}
+
+    # === CLEANUP ===
+
+    async def close(self) -> None:
+        """Close database connection."""
+        if self._connection:
+            await self._connection.close()
+            self._connection = None
+
     async def add_xp(self, user_id: int, guild_id: int, xp_amount: int) -> tuple[int, int]:
         """Add XP to a user and return their new XP and level."""
         conn = await self.get_connection()
@@ -820,16 +833,3 @@ class DatabaseManager:
             raise e
         finally:
             await conn.close()
-
-    async def add_roast_xp(self, xp_amount: int) -> dict:
-        """Add roast XP."""
-        # This is a placeholder - implement based on your roast XP system
-        return {"xp_gained": xp_amount, "bot_level": 1}
-
-    # === CLEANUP ===
-
-    async def close(self) -> None:
-        """Close database connection."""
-        if self._connection:
-            await self._connection.close()
-            self._connection = None
