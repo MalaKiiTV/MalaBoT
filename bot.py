@@ -25,7 +25,7 @@ logging.getLogger("discord.client").handlers.clear()
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config.settings import settings
-from database.models import DatabaseManager
+from database.supabase_models import DatabaseManager
 from utils.helpers import (
     create_embed,
     embed_helper,

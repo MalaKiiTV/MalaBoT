@@ -486,19 +486,18 @@ class XPGroup(app_commands.Group):
     )
     async def reset_checkins(self, interaction: discord.Interaction):
         """Reset all users' check-in streaks."""
+        await interaction.response.defer(ephemeral=True)
+        
         # Check if user is server owner
         if interaction.user.id != interaction.guild.owner_id:
             embed = embed_helper.error_embed(
                 "Permission Denied",
                 "Only the server owner can use this command.",
             )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
             return
 
         try:
-            # Defer the response since this might take a while
-            await interaction.response.defer(ephemeral=True)
-
             # Reset all check-in streaks
             conn = await self.cog.bot.db_manager.get_connection()
             
@@ -534,10 +533,8 @@ class XPGroup(app_commands.Group):
             await interaction.followup.send(embed=embed, ephemeral=True)
 
 
-
-
-
 class XP(commands.Cog):
+
     """XP and leveling system."""
 
     def __init__(self, bot: commands.Bot):
@@ -682,74 +679,67 @@ class XP(commands.Cog):
         except Exception as e:
             self.logger.error(f"Error in voice XP tracking: {e}")
 
-    async def _check_level_up(self, user):
-        """Check if user leveled up and assign roles if needed."""
-        self.logger.debug(f"_check_level_up called for {user.name}")
-        self.logger.info(f"[LEVEL ROLE] _check_level_up called for user {user.name} (ID: {user.id})")
+async def _check_level_up(self, user):
+    """Check if user leveled up and assign roles if needed."""
+    self.logger.debug(f"_check_level_up called for {user.name}")
+    self.logger.info(f"[LEVEL ROLE] _check_level_up called for user {user.name} (ID: {user.id})")
 
-        try:
-            # Get user's current level
-            current_level = await self.bot.db_manager.get_user_level(user.id)
-            self.logger.info(f"[LEVEL ROLE DEBUG] User {user.name} is level {current_level}")
+    try:
+        current_level = await self.bot.db_manager.get_user_level(user.id)
+        self.logger.info(f"[LEVEL ROLE DEBUG] User {user.name} is level {current_level}")
 
-            # Check if we already sent a level-up message for this level
-            level_key = f"{user.id}_{current_level}"
-            if level_key in self.level_up_sent:
-                self.logger.info(f"[LEVEL ROLE DEBUG] Already sent level-up message for {user.name} level {current_level}, skipping")
-            else:
-                # Mark this level as sent
-                self.level_up_sent[level_key] = True
-                
-                # Send level-up message to XP channel
-                xp_channel_id = await self.bot.db_manager.get_setting("xp_channel", user.guild.id)
-                levelup_message = await self.bot.db_manager.get_setting("xp_levelup_message", user.guild.id)
-                
-                self.logger.info(f"[LEVEL ROLE DEBUG] XP channel ID: {xp_channel_id}")
-                self.logger.info(f"[LEVEL ROLE DEBUG] Level-up message template: {levelup_message}")
+        level_key = f"{user.id}_{current_level}"
+        
+        if level_key not in self.level_up_sent:
+            self.level_up_sent[level_key] = True
+            
+            xp_channel_id = await self.bot.db_manager.get_setting("xp_channel", user.guild.id)
+            levelup_message = await self.bot.db_manager.get_setting("xp_levelup_message", user.guild.id)
+            
+            self.logger.info(f"[LEVEL ROLE DEBUG] XP channel ID: {xp_channel_id}")
+            self.logger.info(f"[LEVEL ROLE DEBUG] Level-up message template: {levelup_message}")
 
-                if xp_channel_id:
+            if xp_channel_id:
+                try:
                     channel = user.guild.get_channel(int(xp_channel_id))
                     self.logger.info(f"[LEVEL ROLE DEBUG] Channel object: {channel}")
                     if channel:
-                        # Format the message
                         msg = levelup_message or "🎉 {member} reached level {level}!"
                         msg = msg.replace("{member}", user.mention)
                         msg = msg.replace("{level}", str(current_level))
+                        await channel.send(msg)
+                        self.logger.info(f"Sent level-up message for {user.name} reaching level {current_level}")
+                except Exception as e:
+                    self.logger.error(f"Failed to send level-up message: {e}")
+        else:
+            self.logger.info(f"[LEVEL ROLE DEBUG] Already sent level-up message for {user.name} level {current_level}, skipping")
 
-                        try:
-                            await channel.send(msg)
-                            self.logger.info(f"Sent level-up message for {user.name} reaching level {current_level}")
-                        except Exception as e:
-                            self.logger.error(f"Failed to send level-up message: {e}")
+        conn = await self.bot.db_manager.get_connection()
+        cursor = await conn.execute(
+            "SELECT level, role_id FROM level_roles WHERE guild_id = ?",
+            (user.guild.id,),
+        )
+        rows = await cursor.fetchall()
+        self.logger.info(f"[LEVEL ROLE DEBUG] Found {len(rows)} level roles configured for guild {user.guild.id}")
 
-            # Check for level roles (always check, even if message was already sent)
-            conn = await self.bot.db_manager.get_connection()
-            cursor = await conn.execute(
-                "SELECT level, role_id FROM level_roles WHERE guild_id = ?",
-                (user.guild.id,),
-            )
-            rows = await cursor.fetchall()
-            self.logger.info(f"[LEVEL ROLE DEBUG] Found {len(rows)} level roles configured for guild {user.guild.id}")
+        for level, role_id in rows:
+            self.logger.info(f"[LEVEL ROLE DEBUG] Checking level {level} role (ID: {role_id})")
+            if current_level >= level:
+                role = user.guild.get_role(int(role_id))
+                self.logger.info(f"[LEVEL ROLE DEBUG] Role object: {role}")
+                if role and role not in user.roles:
+                    self.logger.info(f"[LEVEL ROLE DEBUG] Attempting to assign role {role.name} to {user.name}")
+                    await user.add_roles(role, reason=f"Reached level {level}")
+                    self.logger.info(f"Assigned role {role.name} to {user.name} for reaching level {level}")
+                elif role in user.roles:
+                    self.logger.info(f"[LEVEL ROLE DEBUG] User already has role {role.name}")
+                else:
+                    self.logger.warning(f"[LEVEL ROLE DEBUG] Role not found or is None")
 
-            for level, role_id in rows:
-                self.logger.info(f"[LEVEL ROLE DEBUG] Checking level {level} role (ID: {role_id})")
-                # If user reached this level, assign the role
-                if current_level >= level:
-                    role = user.guild.get_role(int(role_id))
-                    self.logger.info(f"[LEVEL ROLE DEBUG] Role object: {role}")
-                    if role and role not in user.roles:
-                        self.logger.info(f"[LEVEL ROLE DEBUG] Attempting to assign role {role.name} to {user.name}")
-                        await user.add_roles(role, reason=f"Reached level {level}")
-                        self.logger.info(
-                            f"Assigned role {role.name} to {user.name} for reaching level {level}"
-                        )
-                    elif role in user.roles:
-                        self.logger.info(f"[LEVEL ROLE DEBUG] User already has role {role.name}")
-                    else:
-                        self.logger.warning(f"[LEVEL ROLE DEBUG] Role not found or is None")
+    except Exception as e:
+        self.logger.error(f"Error checking level up: {e}")
 
-        except Exception as e:
-            self.logger.error(f"Error checking level up: {e}")
+
 
 async def setup(bot: commands.Bot):
     """Setup the XP cog."""
