@@ -1068,6 +1068,24 @@ class SetupSelect(Select):
         xp_cooldown = await db.get_setting("xp_cooldown", guild_id)
         timezone = await db.get_setting("timezone", guild_id)
         online_message = await db.get_setting("online_message", guild_id)
+        
+        # Fetch all toggle settings
+        welcome_enabled = await db.get_setting("welcome_enabled", guild_id)
+        goodbye_enabled = await db.get_setting("goodbye_enabled", guild_id)
+        birthday_announcements_enabled = await db.get_setting("birthday_announcements_enabled", guild_id)
+        birthday_pending_enabled = await db.get_setting("birthday_pending_enabled", guild_id)
+        xp_message_enabled = await db.get_setting("xp_message_enabled", guild_id)
+        xp_reaction_enabled = await db.get_setting("xp_reaction_enabled", guild_id)
+        xp_voice_enabled = await db.get_setting("xp_voice_enabled", guild_id)
+        
+        # Fetch additional settings
+        welcome_image = await db.get_setting("welcome_image", guild_id)
+        goodbye_image = await db.get_setting("goodbye_image", guild_id)
+        birthday_xp = await db.get_setting("birthday_set_xp", guild_id)
+        birthday_pending_role_id = await db.get_setting("birthday_pending_role", guild_id)
+        birthday_reminder_channel_id = await db.get_setting("birthday_reminder_channel", guild_id)
+        online_channel_id = await db.get_setting("online_message_channel", guild_id)
+        onboarding_role_id = await db.get_setting("onboarding_role", guild_id)
 
         embed = discord.Embed(
             title="📋 Current Bot Configuration",
@@ -1090,31 +1108,36 @@ class SetupSelect(Select):
         embed.add_field(name="✅ Verification", value=verify_text, inline=False)
 
         # Welcome settings
-        welcome_text = ""
+        welcome_text = f"**Status:** {'✅ Enabled' if welcome_enabled == 'true' else '❌ Disabled'}\n"
         if welcome_channel_id:
             welcome_text += f"Channel: <#{welcome_channel_id}>\n"
             if welcome_title:
                 welcome_text += f"Title: {welcome_title}\n"
             if welcome_message:
                 welcome_text += f"Message: {welcome_message[:50]}{'...' if len(welcome_message) > 50 else ''}\n"
+            if welcome_image:
+                welcome_text += f"Image: Set\n"
         else:
-            welcome_text = "Not configured"
+            welcome_text += "Channel: Not configured\n"
         embed.add_field(name="👋 Welcome", value=welcome_text, inline=False)
 
         # Goodbye settings
-        goodbye_text = ""
+        goodbye_text = f"**Status:** {'✅ Enabled' if goodbye_enabled == 'true' else '❌ Disabled'}\n"
         if goodbye_channel_id:
             goodbye_text += f"Channel: <#{goodbye_channel_id}>\n"
             if goodbye_title:
                 goodbye_text += f"Title: {goodbye_title}\n"
             if goodbye_message:
                 goodbye_text += f"Message: {goodbye_message[:50]}{'...' if len(goodbye_message) > 50 else ''}\n"
+            if goodbye_image:
+                goodbye_text += f"Image: Set\n"
         else:
-            goodbye_text = "Not configured"
+            goodbye_text += "Channel: Not configured\n"
         embed.add_field(name="👋 Goodbye", value=goodbye_text, inline=False)
 
         # Birthday settings
-        birthday_text = ""
+        birthday_text = f"**Announcements:** {'✅ Enabled' if birthday_announcements_enabled == 'true' else '❌ Disabled'}\n"
+        birthday_text += f"**Pending System:** {'✅ Enabled' if birthday_pending_enabled == 'true' else '❌ Disabled'}\n"
         if birthday_channel_id:
             birthday_text += f"Channel: <#{birthday_channel_id}>\n"
             if birthday_time:
@@ -1122,11 +1145,21 @@ class SetupSelect(Select):
             if birthday_message:
                 birthday_text += f"Message: {birthday_message[:50]}{'...' if len(birthday_message) > 50 else ''}\n"
         else:
-            birthday_text = "Not configured"
+            birthday_text += "Channel: Not configured\n"
+        if birthday_xp:
+            birthday_text += f"XP Reward: {birthday_xp} XP\n"
+        if birthday_pending_enabled == 'true':
+            if birthday_pending_role_id:
+                birthday_text += f"Pending Role: <@&{birthday_pending_role_id}>\n"
+            if birthday_reminder_channel_id:
+                birthday_text += f"Reminder Channel: <#{birthday_reminder_channel_id}>\n"
         embed.add_field(name="🎂 Birthday", value=birthday_text, inline=False)
 
         # XP settings
-        xp_text = ""
+        xp_text = f"**Message XP:** {'✅ Enabled' if xp_message_enabled == 'true' else '❌ Disabled'}\n"
+        xp_text += f"**Reaction XP:** {'✅ Enabled' if xp_reaction_enabled == 'true' else '❌ Disabled'}\n"
+        xp_text += f"**Voice XP:** {'✅ Enabled' if xp_voice_enabled == 'true' else '❌ Disabled'}\n"
+        xp_text += "\n**Settings:**\n"
         if xp_channel_id:
             xp_text += f"Level-up Channel: <#{xp_channel_id}>\n"
         if xp_per_message:
@@ -1137,20 +1170,17 @@ class SetupSelect(Select):
             xp_text += f"Voice XP: {xp_per_voice}/min\n"
         if xp_cooldown:
             xp_text += f"Cooldown: {xp_cooldown}s\n"
-        if not xp_text:
-            xp_text = "Not configured"
         embed.add_field(name="🏆 XP System", value=xp_text, inline=False)
 
         # General settings
-        online_channel_id = await db.get_setting("online_message_channel", guild_id)
-        onboarding_role_id = await db.get_setting("onboarding_role", guild_id)
-        general_text = f"Timezone: {timezone}\nOnline Message: {online_message}"
+        general_text = f"**Timezone:** {timezone}\n"
+        general_text += f"**Online Message:** {online_message}\n"
         if online_channel_id:
-            general_text += f"\nOnline Channel: <#{online_channel_id}>"
+            general_text += f"**Online Channel:** <#{online_channel_id}>\n"
         if mod_role_id:
-            general_text += f"\nMod Role: <@&{mod_role_id}>"
+            general_text += f"**Mod Role:** <@&{mod_role_id}>\n"
         if onboarding_role_id:
-            general_text += f"\nOnboarding Role: <@&{onboarding_role_id}>"
+            general_text += f"**Onboarding Role:** <@&{onboarding_role_id}>\n"
         embed.add_field(name="⚙️ General", value=general_text, inline=False)
 
         # Role Connections settings
@@ -1388,6 +1418,47 @@ class WelcomeSetupView(View):
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="📋", row=1)
+    async def view_welcome_config(self, interaction: discord.Interaction, button: Button):
+        """View current welcome configuration"""
+        welcome_channel_id = await self.db_manager.get_setting("welcome_channel", self.guild_id)
+        welcome_title = await self.db_manager.get_setting("welcome_title", self.guild_id)
+        welcome_message = await self.db_manager.get_setting("welcome_message", self.guild_id)
+        welcome_enabled = await self.db_manager.get_setting("welcome_enabled", self.guild_id)
+        welcome_image = await self.db_manager.get_setting("welcome_image", self.guild_id)
+        
+        config_text = ""
+        if welcome_channel_id:
+            config_text += f"**Channel:** <#{welcome_channel_id}>\n"
+        else:
+            config_text += "**Channel:** Not configured\n"
+            
+        if welcome_title:
+            config_text += f"**Title:** {welcome_title}\n"
+        else:
+            config_text += "**Title:** Not set\n"
+            
+        if welcome_message:
+            msg_preview = welcome_message[:50] + "..." if len(welcome_message) > 50 else welcome_message
+            config_text += f"**Message:** {msg_preview}\n"
+        else:
+            config_text += "**Message:** Not set\n"
+            
+        if welcome_image:
+            config_text += f"**Image:** {welcome_image}\n"
+        else:
+            config_text += "**Image:** Not set\n"
+            
+        config_text += f"**Status:** {'✅ Enabled' if welcome_enabled == 'true' else '❌ Disabled'}\n"
+        
+        embed = discord.Embed(
+            title="📋 Welcome System Configuration",
+            description=config_text,
+            color=COLORS["info"],
+        )
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
     @discord.ui.button(
         label="Goodbye System", style=ButtonStyle.secondary, emoji="👋", row=1
     )
@@ -1547,6 +1618,47 @@ class GoodbyeSetupView(View):
             title=f"Goodbye System {status}",
             description=f"System is now **{status.split()[1]}**",
             color=COLORS["success"] if new_state == "true" else COLORS["error"],
+        )
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="📋", row=1)
+    async def view_goodbye_config(self, interaction: discord.Interaction, button: Button):
+        """View current goodbye configuration"""
+        goodbye_channel_id = await self.db_manager.get_setting("goodbye_channel", self.guild_id)
+        goodbye_title = await self.db_manager.get_setting("goodbye_title", self.guild_id)
+        goodbye_message = await self.db_manager.get_setting("goodbye_message", self.guild_id)
+        goodbye_enabled = await self.db_manager.get_setting("goodbye_enabled", self.guild_id)
+        goodbye_image = await self.db_manager.get_setting("goodbye_image", self.guild_id)
+        
+        config_text = ""
+        if goodbye_channel_id:
+            config_text += f"**Channel:** <#{goodbye_channel_id}>\n"
+        else:
+            config_text += "**Channel:** Not configured\n"
+            
+        if goodbye_title:
+            config_text += f"**Title:** {goodbye_title}\n"
+        else:
+            config_text += "**Title:** Not set\n"
+            
+        if goodbye_message:
+            msg_preview = goodbye_message[:50] + "..." if len(goodbye_message) > 50 else goodbye_message
+            config_text += f"**Message:** {msg_preview}\n"
+        else:
+            config_text += "**Message:** Not set\n"
+            
+        if goodbye_image:
+            config_text += f"**Image:** {goodbye_image}\n"
+        else:
+            config_text += "**Image:** Not set\n"
+            
+        config_text += f"**Status:** {'✅ Enabled' if goodbye_enabled == 'true' else '❌ Disabled'}\n"
+        
+        embed = discord.Embed(
+            title="📋 Goodbye System Configuration",
+            description=config_text,
+            color=COLORS["error"],
         )
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -1965,6 +2077,39 @@ class BirthdayPendingSetupView(View):
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
 
+    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="📋", row=2)
+    async def view_birthday_pending_config(self, interaction: discord.Interaction, button: Button):
+        """View current Birthday Pending system configuration"""
+        enabled = await self.db_manager.get_setting("birthday_pending_enabled", self.guild_id)
+        pending_role_id = await self.db_manager.get_setting("birthday_pending_role", self.guild_id)
+        reminder_channel_id = await self.db_manager.get_setting("birthday_reminder_channel", self.guild_id)
+        reminder_message_id = await self.db_manager.get_setting("birthday_reminder_message_id", self.guild_id)
+        
+        config_text = f"**Status:** {'✅ Enabled' if enabled == 'true' else '❌ Disabled'}\n"
+        
+        if pending_role_id:
+            config_text += f"**Pending Role:** <@&{pending_role_id}>\n"
+        else:
+            config_text += "**Pending Role:** Not set\n"
+            
+        if reminder_channel_id:
+            config_text += f"**Reminder Channel:** <#{reminder_channel_id}>\n"
+        else:
+            config_text += "**Reminder Channel:** Not set\n"
+            
+        if reminder_message_id:
+            config_text += f"**Reminder Message:** Configured (ID: {reminder_message_id})\n"
+        else:
+            config_text += "**Reminder Message:** Not configured\n"
+        
+        embed = discord.Embed(
+            title="📋 Birthday Pending System Configuration",
+            description=config_text,
+            color=COLORS["primary"],
+        )
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 class LevelRolesView(View):
     def __init__(self, guild_id: int, db_manager):
@@ -2136,6 +2281,44 @@ class LevelRolesView(View):
 
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
+
+    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="📋")
+    async def view_level_roles_config(self, interaction: discord.Interaction, button: Button):
+        """View current level roles configuration"""
+        level_roles_setting = await self.db_manager.get_setting("level_roles", self.guild_id)
+        
+        if not level_roles_setting:
+            embed = discord.Embed(
+                title="📋 Level Roles Configuration",
+                description="**No level roles configured**\n\nUse the 'Add Level Role' button to add role rewards for specific levels.",
+                color=COLORS["info"],
+            )
+        else:
+            # Parse the level roles
+            roles = {}
+            for role_pair in level_roles_setting.split(","):
+                if ":" in role_pair:
+                    level, role_id = role_pair.split(":")
+                    roles[int(level)] = role_id
+            
+            # Sort by level
+            sorted_roles = sorted(roles.items())
+            
+            config_text = "**Current Level Roles:**\n\n"
+            for level, role_id in sorted_roles:
+                role = discord.utils.get(interaction.guild.roles, id=int(role_id))
+                if role:
+                    config_text += f"Level {level}: {role.mention}\n"
+                else:
+                    config_text += f"Level {level}: (Invalid role ID: {role_id})\n"
+            
+            embed = discord.Embed(
+                title="📋 Level Roles Configuration",
+                description=config_text,
+                color=COLORS["info"],
+            )
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @discord.ui.button(label="Back to XP Setup", style=ButtonStyle.secondary, emoji="◀️")
     async def back_button(self, interaction: discord.Interaction, button: Button):
@@ -2538,6 +2721,57 @@ class XPSetupView(View):
             description=f"Voice XP is now **{status.split()[1]}**",
             color=COLORS["success"] if new_state == "true" else COLORS["error"],
         )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="📋", row=2)
+    async def view_xp_config(self, interaction: discord.Interaction, button: Button):
+        """View current XP system configuration"""
+        xp_channel_id = await self.db_manager.get_setting("xp_channel", self.guild_id)
+        xp_per_message = await self.db_manager.get_setting("xp_per_message", self.guild_id)
+        xp_per_reaction = await self.db_manager.get_setting("xp_per_reaction", self.guild_id)
+        xp_per_voice = await self.db_manager.get_setting("xp_per_voice_minute", self.guild_id)
+        xp_cooldown = await self.db_manager.get_setting("xp_cooldown", self.guild_id)
+        message_enabled = await self.db_manager.get_setting("xp_message_enabled", self.guild_id)
+        reaction_enabled = await self.db_manager.get_setting("xp_reaction_enabled", self.guild_id)
+        voice_enabled = await self.db_manager.get_setting("xp_voice_enabled", self.guild_id)
+        
+        config_text = "**Toggles:**\n"
+        config_text += f"Message XP: {'✅ Enabled' if message_enabled == 'true' else '❌ Disabled'}\n"
+        config_text += f"Reaction XP: {'✅ Enabled' if reaction_enabled == 'true' else '❌ Disabled'}\n"
+        config_text += f"Voice XP: {'✅ Enabled' if voice_enabled == 'true' else '❌ Disabled'}\n\n"
+        
+        config_text += "**Settings:**\n"
+        if xp_channel_id:
+            config_text += f"Level-up Channel: <#{xp_channel_id}>\n"
+        else:
+            config_text += "Level-up Channel: Not set\n"
+            
+        if xp_per_message:
+            config_text += f"XP per Message: {xp_per_message}\n"
+        else:
+            config_text += "XP per Message: Not set\n"
+            
+        if xp_per_reaction:
+            config_text += f"XP per Reaction: {xp_per_reaction}\n"
+        else:
+            config_text += "XP per Reaction: Not set\n"
+            
+        if xp_per_voice:
+            config_text += f"XP per Voice Minute: {xp_per_voice}\n"
+        else:
+            config_text += "XP per Voice Minute: Not set\n"
+            
+        if xp_cooldown:
+            config_text += f"XP Cooldown: {xp_cooldown}s\n"
+        else:
+            config_text += "XP Cooldown: Not set\n"
+        
+        embed = discord.Embed(
+            title="📋 XP System Configuration",
+            description=config_text,
+            color=COLORS["primary"],
+        )
+        
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
