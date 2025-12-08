@@ -71,7 +71,7 @@ class DatabaseManager:
         """
         )
 
-        # User XP table (PER-GUILD SYSTEM)
+        # User XP table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS user_xp (
@@ -86,7 +86,7 @@ class DatabaseManager:
         """
         )
 
-        # Birthdays table (PER-GUILD SYSTEM)
+        # Birthdays table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS birthdays (
@@ -917,4 +917,3 @@ class DatabaseManager:
         except Exception as e:
             await conn.rollback()
             raise e
-        # DON'T close the connection here - it's managed by the class
