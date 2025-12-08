@@ -1731,12 +1731,62 @@ class BirthdaySetupView(View):
         
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
-    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="📋", row=1)
+# Code to insert into BirthdaySetupView class in cogs/setup.py
+# Insert this BEFORE the "View Config" button
+
+    @discord.ui.button(label="Set Birthday XP", style=ButtonStyle.primary, emoji="⭐", row=1)
+    async def set_birthday_xp(self, interaction: discord.Interaction, button: Button):
+        """Set XP reward for setting birthday"""
+        modal = Modal(title="Set Birthday XP Reward")
+        xp_input = discord.ui.TextInput(
+            label="XP Amount (0 to disable)",
+            placeholder="50",
+            style=discord.TextStyle.short,
+            required=True,
+            max_length=5,
+        )
+        modal.add_item(xp_input)
+
+        async def modal_callback(interaction: discord.Interaction):
+            try:
+                xp_amount = int(xp_input.value)
+                if xp_amount < 0:
+                    raise ValueError("XP amount cannot be negative")
+                
+                if xp_amount == 0:
+                    # Disable XP reward
+                    await self.db_manager.set_setting("birthday_set_xp", "", self.guild_id)
+                    embed = discord.Embed(
+                        title="✅ Birthday XP Disabled",
+                        description="Users will no longer receive XP for setting their birthday.",
+                        color=COLORS["success"],
+                    )
+                else:
+                    await self.db_manager.set_setting("birthday_set_xp", str(xp_amount), self.guild_id)
+                    embed = discord.Embed(
+                        title="✅ Birthday XP Set",
+                        description=f"Users will receive **{xp_amount} XP** when they set their birthday for the first time.",
+                        color=COLORS["success"],
+                    )
+                
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+            except ValueError:
+                embed = discord.Embed(
+                    title="❌ Invalid XP Amount",
+                    description="Please enter a valid number (0 or positive integer).",
+                    color=COLORS["error"],
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+
+        modal.on_submit = modal_callback
+        await interaction.response.send_modal(modal)
+    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="📋", row=2)
     async def view_birthday_config(self, interaction: discord.Interaction, button: Button):
         """View current birthday configuration"""
         birthday_channel_id = await self.db_manager.get_setting("birthday_channel", self.guild_id)
         birthday_time = await self.db_manager.get_setting("birthday_time", self.guild_id)
         birthday_message = await self.db_manager.get_setting("birthday_message", self.guild_id)
+        birthday_xp = await self.db_manager.get_setting("birthday_set_xp", self.guild_id)
         pending_enabled = await self.db_manager.get_setting("birthday_pending_enabled", self.guild_id)
         pending_role_id = await self.db_manager.get_setting("birthday_pending_role", self.guild_id)
         reminder_channel_id = await self.db_manager.get_setting("birthday_reminder_channel", self.guild_id)
@@ -1750,6 +1800,12 @@ class BirthdaySetupView(View):
             config_text += f"Message: {msg_preview}\n"
         else:
             config_text += "Message: Not set\n"
+        
+        config_text += "\n**Birthday Rewards:**\n"
+        if birthday_xp:
+            config_text += f"XP Reward: {birthday_xp} XP (one-time)\n"
+        else:
+            config_text += "XP Reward: Not set (disabled)\n"
         
         config_text += "\n**Birthday Pending:**\n"
         config_text += f"Status: {'✅ Enabled' if pending_enabled == 'true' else '❌ Disabled'}\n"
