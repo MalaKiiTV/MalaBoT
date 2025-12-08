@@ -175,6 +175,26 @@ class Birthdays(commands.Cog):
         self.logger = get_logger("birthdays")
         # Type ignore to handle MyPy Bot class attribute issue
         self.db = bot.db_manager  # type: ignore
+            @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """Clean up user data when they leave the server."""
+        try:
+            # Remove birthday data
+            await self.bot.db_manager.remove_user_birthday(member.id)
+            self.logger.info(f"Removed birthday data for {member.name} ({member.id}) who left guild {member.guild.id}")
+            
+            # Remove XP data for this guild
+            async with self.bot.pool.acquire() as conn:
+                await conn.execute(
+                    "DELETE FROM user_xp WHERE user_id = $1 AND guild_id = $2",
+                    member.id,
+                    member.guild.id
+                )
+            self.logger.info(f"Removed XP data for {member.name} ({member.id}) in guild {member.guild.id}")
+            
+        except Exception as e:
+            self.logger.error(f"Error cleaning up data for user {member.id} leaving guild {member.guild.id}: {e}")
+
 
     @app_commands.command(name="bday", description="Birthday commands")
     @app_commands.describe(action="What birthday action would you like to perform?")
