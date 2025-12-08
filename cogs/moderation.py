@@ -749,6 +749,34 @@ class Moderation(commands.Cog):
             self.logger.warning(f"Failed to send response: {e}")
 
 
+@commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """Handle member leave events for moderation cleanup."""
+        try:
+            # Log the member leave for moderation purposes
+            self.logger.info(f"Member {member.name} ({member.id}) left guild {member.guild.id} - moderation data cleanup")
+            
+            # Additional moderation-specific cleanup could be added here
+            # For example: clear active moderation flags, pending appeals, etc.
+            
+        except Exception as e:
+            self.logger.error(f"Error handling moderation cleanup for member {member.id}: {e}")
+
+
+@commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """Handle member leave events for moderation cleanup."""
+        try:
+            # Log the member leave for moderation purposes
+            self.logger.info(f"Member {member.name} ({member.id}) left guild {member.guild.id} - moderation data cleanup")
+            
+            # Additional moderation-specific cleanup could be added here
+            # For example: clear active moderation flags, pending appeals, etc.
+            
+        except Exception as e:
+            self.logger.error(f"Error handling moderation cleanup for member {member.id}: {e}")
+
+
 async def setup(bot: commands.Bot):
     """Setup function for the cog."""
     cog = Moderation(bot)

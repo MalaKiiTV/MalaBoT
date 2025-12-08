@@ -630,6 +630,37 @@ class Verify(commands.Cog):
         )
 
 
+@commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """Handle member leave events for verification cleanup."""
+        try:
+            # Log the member leave for verification purposes
+            self.logger.info(f"Member {member.name} ({member.id}) left guild {member.guild.id} - verification data cleanup")
+            
+            # Clean up any pending verification requests for this user in this guild
+            # (This would require additional database methods for verification cleanup)
+            
+        except Exception as e:
+            self.logger.error(f"Error handling verification cleanup for member {member.id}: {e}")
+
+
+@commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """Handle member leave events for verification cleanup."""
+        try:
+            # Log the member leave for verification purposes
+            self.logger.info(f"Member {member.name} ({member.id}) left guild {member.guild.id} - verification data cleanup")
+            
+            # Clean up any pending verifications for this user in this guild
+            if self.bot.db_manager:
+                # This would require adding guild_id to the verifications table in a future update
+                # For now, we just log the event
+                pass
+            
+        except Exception as e:
+            self.logger.error(f"Error handling verification cleanup for member {member.id}: {e}")
+
+
 async def setup(bot: commands.Bot):
     verify_cog = Verify(bot)
     await bot.add_cog(verify_cog)

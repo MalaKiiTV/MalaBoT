@@ -644,6 +644,17 @@ class Utility(commands.Cog):
             self.logger.warning(f"Failed to send response: {e}")
 
 
+@commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """Log when a member leaves (for tracking purposes)."""
+        try:
+            # Utility cog just logs the event - actual cleanup handled by main bot
+            self.logger.info(f"Member {member.name} ({member.id}) left guild {member.guild.id}")
+            
+        except Exception as e:
+            self.logger.error(f"Error logging member leave for {member.id}: {e}")
+
+
 async def setup(bot: commands.Bot):
     """Setup function for the cog."""
     utility_cog = Utility(bot)

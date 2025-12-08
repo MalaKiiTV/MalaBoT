@@ -49,8 +49,8 @@ class XPGroup(app_commands.Group):
             target = user or interaction.user
 
             # Get user stats from database
-            xp = await self.cog.bot.db_manager.get_user_xp(target.id)
-            level = await self.cog.bot.db_manager.get_user_level(target.id)
+            xp = await self.cog.bot.db_manager.get_user_xp(target.id, interaction.guild.id)
+            level = await self.cog.bot.db_manager.get_user_level(target.id, interaction.guild.id)
 
             # Get rank
             rank = await self.cog.bot.db_manager.get_user_rank(
@@ -168,13 +168,26 @@ class XPGroup(app_commands.Group):
             user_id = interaction.user.id
             today = datetime.datetime.now().date()
 
-            # Check last checkin
-            conn = await self.cog.bot.db_manager.get_connection()
-            cursor = await conn.execute(
-                "SELECT last_checkin, checkin_streak FROM daily_checkins WHERE user_id = ?",
-                (user_id,),
-            )
-            row = await cursor.fetchone()
+            # Check last checkin (per-server)
+            checkin_data = await self.cog.bot.db_manager.get_user_checkin(user_id, interaction.guild.id)
+            
+            if checkin_data:
+                last_checkin_str = checkin_data[2]  # last_checkin is at index 2
+                last_checkin = datetime.datetime.strptime(last_checkin_str, "%Y-%m-%d").date()
+                streak = checkin_data[3]  # checkin_streak is at index 3
+                if last_checkin == today:
+                    embed = create_embed(
+                        title="✅ Already Checked In",
+                        description="You've already claimed your daily bonus today!",
+                        color=COLORS["warning"],
+                    )
+                    await interaction.followup.send(embed=embed, ephemeral=True)
+                    return
+
+                # Calculate streak
+                streak = streak if (today - last_checkin).days == 1 else 0
+            else:
+                streak = 0
 
             if row:
                 last_checkin = datetime.datetime.strptime(row[0], "%Y-%m-%d").date()
@@ -207,13 +220,10 @@ class XPGroup(app_commands.Group):
                 await self.cog._check_level_up(interaction.user)
 
             # Update checkin record
-            await conn.execute(
-
-                """INSERT OR REPLACE INTO daily_checkins (user_id, last_checkin, checkin_streak)
-                   VALUES (?, ?, ?)""",
-                (user_id, today.isoformat(), streak),
+            # Update checkin record (per-server)
+            await self.cog.bot.db_manager.update_user_checkin(
+                user_id, interaction.guild.id, today.isoformat(), streak
             )
-            await conn.commit()
 
             embed = create_embed(
                 title="✅ Daily Check-in Complete!",
@@ -349,7 +359,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager.remove_user_xp(user.id, amount)
+            await self.cog.bot.db_manager.remove_user_xp(user.id, interaction.guild.id, amount)
             embed = create_embed(
                 title="✅ XP Removed",
                 description=f"Removed **{amount:,} XP** from {user.mention}",
@@ -385,9 +395,9 @@ class XPGroup(app_commands.Group):
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         try:
-            old_level = await self.cog.bot.db_manager.get_user_level(user.id)
-            await self.cog.bot.db_manager.set_user_xp(user.id, amount)
-            new_level = await self.cog.bot.db_manager.get_user_level(user.id)
+            old_level = await self.cog.bot.db_manager.get_user_level(user.id, interaction.guild.id)
+            await self.cog.bot.db_manager.set_user_xp(user.id, interaction.guild.id, amount)
+            new_level = await self.cog.bot.db_manager.get_user_level(user.id, interaction.guild.id)
             
             # Check if leveled up
             if new_level > old_level:
@@ -420,7 +430,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager.set_user_xp(user.id, 0)
+            await self.cog.bot.db_manager.set_user_xp(user.id, interaction.guild.id, 0)
             embed = create_embed(
                 title="✅ XP Reset",
                 description=f"Reset {user.mention}'s XP to **0**",
@@ -689,7 +699,7 @@ class XP(commands.Cog):
 
         try:
             # Get user's current level
-            current_level = await self.bot.db_manager.get_user_level(user.id)
+            current_level = await self.bot.db_manager.get_user_level(user.id, user.guild.id)
             self.logger.info(f"[LEVEL ROLE DEBUG] User {user.name} is level {current_level}")
 
             # Check if we already sent a level-up message for this level
@@ -750,6 +760,18 @@ class XP(commands.Cog):
 
         except Exception as e:
             self.logger.error(f"Error checking level up: {e}")
+
+@commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """Clean up XP and checkin data when a user leaves the server."""
+        try:
+            # Clean up all user data for this guild
+            await self.bot.db_manager.cleanup_user_data(member.id, member.guild.id)
+            self.logger.info(f"Cleaned up XP data for {member.name} ({member.id}) who left guild {member.guild.id}")
+            
+        except Exception as e:
+            self.logger.error(f"Error cleaning up XP data for user {member.id} leaving guild {member.guild.id}: {e}")
+
 
 async def setup(bot: commands.Bot):
     """Setup the XP cog."""
