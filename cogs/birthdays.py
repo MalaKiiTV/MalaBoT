@@ -82,7 +82,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                 return
             # Store in database
             success = await self.bot.db_manager.set_user_birthday(  # type: ignore
-                interaction.user.id, guild_id, birthday_str
+                interaction.user.id, birthday_str
             )
             if success:
                 # Remove Birthday Pending role if user has it
@@ -111,6 +111,8 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                         )
                         xp_earned = xp_amount
                         get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday (Total: {new_xp}, Level: {new_level})")
+                        xp_earned = xp_amount
+                        get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday")
                     except (ValueError, TypeError) as e:
                         get_logger("birthdays").error(f"Invalid birthday_set_xp value: {birthday_xp}, error: {e}")
                     except Exception as e:
@@ -173,7 +175,7 @@ class Birthdays(commands.Cog):
         """Clean up user data when they leave the server."""
         try:
             # Remove birthday data
-            await self.bot.db_manager.remove_user_birthday(member.id, member.guild.id)
+            await self.bot.db_manager.remove_user_birthday(member.id)
             self.logger.info(f"Removed birthday data for {member.name} ({member.id}) who left guild {member.guild.id}")
             
             # Remove XP data for this guild
@@ -228,7 +230,7 @@ class Birthdays(commands.Cog):
                 # Check if birthday data is corrupted (doesn't contain a dash)
                 if "-" not in birthday_str or birthday_str.isdigit():
                     # Corrupted data - remove and notify user
-                    await self.bot.db_manager.remove_user_birthday(interaction.user.id, interaction.guild.id)  # type: ignore
+                    await self.bot.db_manager.remove_user_birthday(interaction.user.id)  # type: ignore
                     await interaction.response.send_message(
                         embed=create_embed(
                             "🔧 Data Corruption Fixed",
@@ -255,7 +257,7 @@ class Birthdays(commands.Cog):
                 # Validate month range before indexing
                 if not (1 <= month <= 12):
                     self.logger.error(f"Invalid month {month} for user {interaction.user.id}")
-                    await self.bot.db_manager.remove_user_birthday(interaction.user.id, interaction.guild.id)  # type: ignore
+                    await self.bot.db_manager.remove_user_birthday(interaction.user.id)  # type: ignore
                     await interaction.response.send_message(
                         embed=create_embed(
                             "🔧 Data Corruption Fixed",
@@ -442,7 +444,7 @@ class Birthdays(commands.Cog):
     async def _remove_birthday(self, interaction: discord.Interaction):
         """Remove your birthday."""
         try:
-            success = await self.bot.db_manager.remove_user_birthday(interaction.user.id, interaction.guild.id)  # type: ignore
+            success = await self.bot.db_manager.remove_user_birthday(interaction.user.id)  # type: ignore
             
             if success:
                 await interaction.response.send_message(
@@ -484,11 +486,11 @@ class Birthdays(commands.Cog):
             for guild in self.bot.guilds:
                 guild_id = guild.id
                 
-                # Check if birthday announcements are enabled (disabled by default when not configured)
+                # Check if birthday announcements are enabled
                 announcements_enabled = await self.bot.db_manager.get_setting("birthday_announcements_enabled", guild_id)
                 
-                # Skip if not explicitly enabled
-                if announcements_enabled != "true":
+                # Skip if disabled (default to enabled if not set)
+                if announcements_enabled == "false":
                     continue
                 
                 # Get birthday settings

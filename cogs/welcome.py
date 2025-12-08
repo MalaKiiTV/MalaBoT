@@ -65,12 +65,12 @@ class Welcome(commands.Cog):
                     else:
                         self.logger.warning(f"Birthday Pending role ID {birthday_pending_role_id} not found in guild")
 
-            # Check if welcome system is enabled (disabled by default when not configured)
+            # Check if welcome system is enabled
             guild_id = member.guild.id
             welcome_enabled = await self.bot.db_manager.get_setting("welcome_enabled", guild_id)
             
-            # Skip if not explicitly enabled
-            if welcome_enabled != "true":
+            # Skip if disabled (default to enabled if not set)
+            if welcome_enabled == "false":
                 return
             
             # Get welcome settings
@@ -150,8 +150,30 @@ class Welcome(commands.Cog):
 
                         # ✅ RESET ALL USER DATA WHEN THEY LEAVE
             try:
-                # Use the proper database method to delete all user data for this guild
-                await self.bot.db_manager.delete_user_data_from_guild(user_id, guild_id)
+                async with self.bot.db_manager.pool.acquire() as conn:
+                    # Reset XP data
+                    await conn.execute(
+                        "DELETE FROM user_xp WHERE guild_id = $1 AND user_id = $2",
+                        guild_id, user_id
+                    )
+                    
+                    # Reset birthday data
+                    await conn.execute(
+                        "DELETE FROM birthdays WHERE user_id = $1",
+                        user_id
+                    )
+                    
+                    # Reset warnings data
+                    await conn.execute(
+                        "DELETE FROM warnings WHERE guild_id = $1 AND user_id = $2",
+                        guild_id, user_id
+                    )
+                    
+                    # Reset verification data
+                    await conn.execute(
+                        "DELETE FROM verified_users WHERE guild_id = $1 AND user_id = $2",
+                        guild_id, user_id
+                    )
                 
                 self.logger.info(f"Reset all data for user {member.name} ({user_id}) who left {member.guild.name}")
             except Exception as e:
