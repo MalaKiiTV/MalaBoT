@@ -654,37 +654,6 @@ The bot will start in safe mode to prevent further issues.
                 details=f"Left guild: {guild.name}",
             )
 
-    async def on_member_remove(self, member: discord.Member):
-        """Called when a member leaves a guild - clean up their per-server data."""
-        if not self.db_manager:
-            return
-            
-        try:
-            # Clean up all user data for this specific guild
-            await self.db_manager.cleanup_user_data(member.id, member.guild.id)
-            
-            self.logger.info(f"Cleaned up all data for {member.name} ({member.id}) who left guild {member.guild.id}")
-            
-            # Log the cleanup
-            await self.db_manager.log_event(
-                category="USER",
-                action="DATA_CLEANUP",
-                user_id=member.id,
-                guild_id=member.guild.id,
-                details=f"User left server - all per-server data cleaned up",
-            )
-            
-        except Exception as e:
-            self.logger.error(f"Error cleaning up data for user {member.id} leaving guild {member.guild.id}: {e}")
-            # Log the error
-            await self.db_manager.log_event(
-                category="SYSTEM",
-                action="DATA_CLEANUP_ERROR",
-                user_id=member.id,
-                guild_id=member.guild.id,
-                details=f"Error cleaning up user data: {e}",
-            )
-
     async def on_command_error(
         self, ctx: commands.Context, error: commands.CommandError
     ):

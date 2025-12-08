@@ -1,5 +1,5 @@
 """
-Database models and schema definitions for MalaBoT - FULLY PER-GUILD SYSTEM.
+Database models and schema definitions for MalaBoT.
 Uses aiosqlite for async database operations.
 """
 
@@ -28,7 +28,7 @@ class DatabaseManager:
                 await self._connection.execute("PRAGMA journal_mode = WAL")
                 await self._connection.commit()
             except Exception as e:
-                print(f"Γ¥î Failed to connect to database: {e}")
+                print(f"❌ Failed to connect to database: {e}")
                 raise
         return self._connection
 
@@ -36,7 +36,7 @@ class DatabaseManager:
         """Initialize database and create all tables."""
         conn = await self.get_connection()
 
-        # Users table - REMOVED: xp, level, birthday (now in per-guild tables)
+        # Users table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS users (
@@ -49,6 +49,8 @@ class DatabaseManager:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 is_bot BOOLEAN DEFAULT FALSE,
+                xp INTEGER DEFAULT 0,
+                level INTEGER DEFAULT 0,
                 total_messages INTEGER DEFAULT 0,
                 warning_count INTEGER DEFAULT 0,
                 kick_count INTEGER DEFAULT 0,
@@ -58,6 +60,7 @@ class DatabaseManager:
                 mute_reason TEXT,
                 reputation INTEGER DEFAULT 0,
                 bio TEXT,
+                birthday DATE,
                 currency_balance INTEGER DEFAULT 0,
                 last_daily TIMESTAMP,
                 last_work TIMESTAMP,
@@ -70,7 +73,7 @@ class DatabaseManager:
         """
         )
 
-        # User XP table - PER-GUILD SYSTEM
+        # User XP table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS user_xp (
@@ -85,24 +88,23 @@ class DatabaseManager:
         """
         )
 
-        # Birthdays table - PER-GUILD SYSTEM
+        # Birthdays table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS birthdays (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
-                guild_id INTEGER NOT NULL,
                 birthday DATE NOT NULL,
                 timezone TEXT DEFAULT 'UTC',
                 announced_year INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(user_id, guild_id),
+                UNIQUE(user_id),
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             )
         """
         )
 
-        # Settings table - PER-GUILD SYSTEM
+        # Settings table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS settings (
@@ -117,7 +119,7 @@ class DatabaseManager:
         """
         )
 
-        # Mod logs table - PER-GUILD SYSTEM
+        # Mod logs table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS mod_logs (
@@ -148,13 +150,12 @@ class DatabaseManager:
         """
         )
 
-        # Roast log table - PER-GUILD SYSTEM
+        # Roast log table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS roast_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
-                guild_id INTEGER NOT NULL,
                 target_id INTEGER,
                 action TEXT NOT NULL,
                 xp_gained INTEGER,
@@ -165,7 +166,7 @@ class DatabaseManager:
         """
         )
 
-        # Audit log table - PER-GUILD SYSTEM
+        # Audit log table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS audit_log (
@@ -183,7 +184,7 @@ class DatabaseManager:
         """
         )
 
-        # Health logs table
+        # Health logs table - FIXED SCHEMA
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS health_logs (
@@ -216,13 +217,12 @@ class DatabaseManager:
         """
         )
 
-        # Verifications table - PER-GUILD SYSTEM
+        # Verifications table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS verifications (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 discord_id INTEGER NOT NULL,
-                guild_id INTEGER NOT NULL,
                 activision_id TEXT NOT NULL,
                 platform TEXT NOT NULL,
                 screenshot_url TEXT,
@@ -235,7 +235,7 @@ class DatabaseManager:
         """
         )
 
-        # Appeals table - PER-GUILD SYSTEM
+        # Appeals table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS appeals (
@@ -252,7 +252,7 @@ class DatabaseManager:
         """
         )
 
-        # Level roles table - PER-GUILD SYSTEM
+        # Level roles table
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS level_roles (
@@ -266,17 +266,15 @@ class DatabaseManager:
         """
         )
 
-        # Daily checkins table - PER-GUILD SYSTEM
+        # Daily checkins table - MISSING TABLE ADDED
         await conn.execute(
             """
             CREATE TABLE IF NOT EXISTS daily_checkins (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                guild_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL UNIQUE,
                 last_checkin DATE NOT NULL,
                 checkin_streak INTEGER DEFAULT 1,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(user_id, guild_id)
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """
         )
@@ -305,10 +303,10 @@ class DatabaseManager:
             )
             await conn.commit()
 
-    # === XP METHODS - FULLY PER-GUILD ===
+    # === XP METHODS ===
 
-    async def get_user_xp(self, user_id: int, guild_id: int) -> int:
-        """Get user's current XP for a specific guild."""
+    async def get_user_xp(self, user_id: int) -> int:
+        """Get user's current XP."""
         conn = await self.get_connection()
 
         # Ensure user exists
@@ -319,14 +317,13 @@ class DatabaseManager:
         await conn.commit()
 
         cursor = await conn.execute(
-            "SELECT xp FROM user_xp WHERE user_id = ? AND guild_id = ?",
-            (user_id, guild_id)
+            "SELECT xp FROM users WHERE user_id = ?", (user_id,)
         )
         result = await cursor.fetchone()
         return result[0] if result else 0
 
-    async def set_user_xp(self, user_id: int, guild_id: int, amount: int) -> tuple[int, int]:
-        """Set user's XP to a specific amount for a specific guild and calculate level."""
+    async def set_user_xp(self, user_id: int, amount: int) -> tuple[int, int]:
+        """Set user's XP to a specific amount and calculate level."""
         from config.constants import XP_TABLE
 
         # Calculate the appropriate level for the XP amount
@@ -344,25 +341,17 @@ class DatabaseManager:
             "INSERT OR IGNORE INTO users (user_id, username, discriminator) VALUES (?, 'Unknown', '0')",
             (user_id,),
         )
-        await conn.commit()
 
-        # Set XP in user_xp table
         await conn.execute(
-            """
-            INSERT OR REPLACE INTO user_xp (user_id, guild_id, xp, level, last_message_time)
-            VALUES (?, ?, ?, ?, datetime('now'))
-        """,
-            (user_id, guild_id, amount, level),
+            "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
+            (amount, level, user_id),
         )
         await conn.commit()
 
         return amount, level
 
-    async def update_user_xp(self, user_id: int, xp_change: int, guild_id: int) -> tuple[int, int, bool]:
+    async def update_user_xp(self, user_id: int, xp_change: int, guild_id: int = None) -> tuple[int, int, bool]:
         """Update user's XP and recalculate level. Returns (new_xp, new_level, leveled_up)."""
-        if guild_id is None:
-            raise ValueError("guild_id is required for XP operations")
-
         conn = await self.get_connection()
 
         # Ensure user exists
@@ -372,10 +361,9 @@ class DatabaseManager:
         )
         await conn.commit()
 
-        # Get current XP and level for this guild
+        # Get current XP and level
         cursor = await conn.execute(
-            "SELECT xp, level FROM user_xp WHERE user_id = ? AND guild_id = ?",
-            (user_id, guild_id)
+            "SELECT xp, level FROM users WHERE user_id = ?", (user_id,)
         )
         result = await cursor.fetchone()
         current_xp = result[0] if result else 0
@@ -393,18 +381,10 @@ class DatabaseManager:
         # Check if leveled up
         leveled_up = new_level > old_level
 
-        # Update XP in user_xp table
+        # Update both XP and level
         await conn.execute(
-            """
-            INSERT INTO user_xp (user_id, guild_id, xp, level, last_message_time)
-            VALUES (?, ?, ?, ?, datetime('now'))
-            ON CONFLICT(user_id, guild_id) 
-            DO UPDATE SET 
-                xp = excluded.xp,
-                level = excluded.level,
-                last_message_time = excluded.last_message_time
-        """,
-            (user_id, guild_id, new_xp, new_level),
+            "UPDATE users SET xp = ?, level = ? WHERE user_id = ?",
+            (new_xp, new_level, user_id),
         )
         await conn.commit()
 
@@ -429,29 +409,29 @@ class DatabaseManager:
             # Level 3: 350-649 XP (300 XP needed), etc.
             if xp < 50:
                 return 0
-
+            
             level = 1
             total_xp_needed = 50  # Start at 50 for level 1
-
+            
             while level < 1000:  # Safety cap
                 # Each level needs: level * 100 XP
                 xp_for_next_level = (level + 1) * 100
                 total_xp_needed += xp_for_next_level
-
+                
                 if xp < total_xp_needed:
                     return level
                 level += 1
-
+            
             return 1000
 
         elif progression_type == "custom":
             # Hybrid: Uses XP_TABLE from constants
             from config.constants import XP_TABLE
-
+            
             # Level 0 if below 50 XP
             if xp < 50:
                 return 0
-
+            
             level = 0
             for lvl in sorted(XP_TABLE.keys()):
                 if xp >= XP_TABLE[lvl]:
@@ -464,16 +444,16 @@ class DatabaseManager:
             # Default to custom
             return await self._calculate_level_from_xp(xp, "custom")
 
-    async def remove_user_xp(self, user_id: int, guild_id: int, amount: int) -> tuple[int, int]:
-        """Remove XP from user (alias for update_user_xp with negative value)."""
-        return await self.update_user_xp(user_id, -amount, guild_id)
 
-    async def get_user_level(self, user_id: int, guild_id: int) -> int:
-        """Get user's current level for a specific guild."""
+    async def remove_user_xp(self, user_id: int, amount: int) -> tuple[int, int]:
+        """Remove XP from user (alias for update_user_xp with negative value)."""
+        return await self.update_user_xp(user_id, -amount)
+
+    async def get_user_level(self, user_id: int) -> int:
+        """Get user's current level."""
         conn = await self.get_connection()
         cursor = await conn.execute(
-            "SELECT level FROM user_xp WHERE user_id = ? AND guild_id = ?",
-            (user_id, guild_id)
+            "SELECT level FROM users WHERE user_id = ?", (user_id,)
         )
         result = await cursor.fetchone()
         return result[0] if result else 1
@@ -482,10 +462,9 @@ class DatabaseManager:
         """Get user's rank in the guild."""
         conn = await self.get_connection()
 
-        # Get all users in this guild with XP, sorted by XP descending
+        # Get all guild member IDs and their XP, sorted by XP descending
         cursor = await conn.execute(
-            "SELECT user_id FROM user_xp WHERE guild_id = ? AND xp > 0 ORDER BY xp DESC",
-            (guild_id,)
+            "SELECT user_id FROM users WHERE xp > 0 ORDER BY xp DESC"
         )
         all_users = await cursor.fetchall()
 
@@ -511,58 +490,54 @@ class DatabaseManager:
         columns = [desc[0] for desc in cursor.description]
         return dict(zip(columns, row, strict=False))
 
-    # === BIRTHDAY METHODS - FULLY PER-GUILD ===
+    # === BIRTHDAY METHODS ===
 
     async def set_birthday(
-        self, user_id: int, guild_id: int, birthday: str, timezone: str = "UTC"
+        self, user_id: int, birthday: str, timezone: str = "UTC"
     ) -> None:
-        """Set user birthday for a specific guild."""
-        if guild_id is None:
-            raise ValueError("guild_id is required for per-guild birthday operations")
-            
+        """Set user birthday."""
         conn = await self.get_connection()
         await conn.execute(
             """
-            INSERT OR REPLACE INTO birthdays (user_id, guild_id, birthday, timezone)
-            VALUES (?, ?, ?, ?)
+            INSERT OR REPLACE INTO birthdays (user_id, birthday, timezone)
+            VALUES (?, ?, ?)
         """,
-            (user_id, guild_id, birthday, timezone),
+            (user_id, birthday, timezone),
         )
         await conn.commit()
 
-    async def set_user_birthday(self, user_id: int, guild_id: int, birthday: str) -> bool:
-        """Set user birthday for a specific guild (returns success status)."""
+    async def set_user_birthday(self, user_id: int, birthday: str) -> bool:
+        """Set user birthday (returns success status)."""
         try:
-            await self.set_birthday(user_id, guild_id, birthday)
+            await self.set_birthday(user_id, birthday)
             return True
         except Exception:
             return False
 
-    async def remove_user_birthday(self, user_id: int, guild_id: int) -> bool:
-        """Remove user birthday for a specific guild (returns success status)."""
+    async def remove_user_birthday(self, user_id: int) -> bool:
+        """Remove user birthday (returns success status)."""
         try:
             conn = await self.get_connection()
             await conn.execute(
-                "DELETE FROM birthdays WHERE user_id = ? AND guild_id = ?",
-                (user_id, guild_id),
+                "DELETE FROM birthdays WHERE user_id = ?",
+                (user_id,),
             )
             await conn.commit()
             return True
         except Exception:
             return False
 
-    async def get_birthday(self, user_id: int, guild_id: int) -> Optional[tuple]:
-        """Get user birthday for a specific guild."""
+    async def get_birthday(self, user_id: int) -> Optional[tuple]:
+        """Get user birthday."""
         conn = await self.get_connection()
         cursor = await conn.execute(
-            "SELECT * FROM birthdays WHERE user_id = ? AND guild_id = ?",
-            (user_id, guild_id)
+            "SELECT * FROM birthdays WHERE user_id = ?", (user_id,)
         )
         return await cursor.fetchone()
 
-    async def get_user_birthday(self, user_id: int, guild_id: int) -> Optional[tuple]:
-        """Get user birthday for a specific guild (alias)."""
-        return await self.get_birthday(user_id, guild_id)
+    async def get_user_birthday(self, user_id: int) -> Optional[tuple]:
+        """Get user birthday (alias)."""
+        return await self.get_birthday(user_id)
 
     async def get_all_birthdays(self) -> list:
         """Get all birthdays."""
@@ -570,120 +545,51 @@ class DatabaseManager:
         cursor = await conn.execute("SELECT * FROM birthdays ORDER BY birthday")
         return await cursor.fetchall()
 
-    async def get_today_birthdays(self, today: Optional[str] = None, guild_id: Optional[int] = None) -> list:
-        """Get today's birthdays in MM-DD format for a specific guild."""
+    async def get_today_birthdays(self, today: Optional[str] = None) -> list:
+        """Get today's birthdays in MM-DD format."""
         conn = await self.get_connection()
 
-        if guild_id:
-            # Get birthdays for specific guild
-            if today:
-                cursor = await conn.execute(
-                    "SELECT user_id FROM birthdays WHERE guild_id = ? AND birthday LIKE ?",
-                    (guild_id, f"%{today}%")
-                )
-            else:
-                cursor = await conn.execute(
-                    """
-                    SELECT user_id FROM birthdays
-                    WHERE guild_id = ? AND strftime('%m-%d', birthday) = strftime('%m-%d', 'now')
-                """,
-                    (guild_id,)
-                )
+        if today:
+            # Use provided date
+            cursor = await conn.execute(
+                "SELECT user_id FROM birthdays WHERE birthday LIKE ?", (f"%{today}%",)
+            )
         else:
-            # Get all birthdays (legacy support)
-            if today:
-                cursor = await conn.execute(
-                    "SELECT user_id FROM birthdays WHERE birthday LIKE ?",
-                    (f"%{today}%",)
-                )
-            else:
-                cursor = await conn.execute(
-                    """
-                    SELECT user_id FROM birthdays
-                    WHERE strftime('%m-%d', birthday) = strftime('%m-%d', 'now')
+            # Use current date
+            cursor = await conn.execute(
                 """
-                )
+                SELECT user_id FROM birthdays
+                WHERE strftime('%m-%d', birthday) = strftime('%m-%d', 'now')
+            """
+            )
 
         return await cursor.fetchall()
 
-    async def get_unannounced_birthdays(self, current_year: int, guild_id: int) -> list:
-        """Get birthdays that haven't been announced this year for a specific guild."""
+    async def get_unannounced_birthdays(self, current_year: int) -> list:
+        """Get birthdays that haven't been announced this year."""
         conn = await self.get_connection()
         cursor = await conn.execute(
             """
             SELECT user_id, birthday FROM birthdays
-            WHERE guild_id = ? AND strftime('%m-%d', birthday) = strftime('%m-%d', 'now')
+            WHERE strftime('%m-%d', birthday) = strftime('%m-%d', 'now')
             AND (announced_year IS NULL OR announced_year < ?)
         """,
-            (guild_id, current_year),
+            (current_year,),
         )
         return await cursor.fetchall()
 
-    async def mark_birthday_announced(self, user_id: int, guild_id: int, year: int) -> None:
-        """Mark that a birthday has been announced for a specific year in a specific guild."""
+    async def mark_birthday_announced(self, user_id: int, year: int) -> None:
+        """Mark that a birthday has been announced for a specific year."""
         conn = await self.get_connection()
         await conn.execute(
             """
             UPDATE birthdays
             SET announced_year = ?
-            WHERE user_id = ? AND guild_id = ?
+            WHERE user_id = ?
         """,
-            (year, user_id, guild_id),
+            (year, user_id),
         )
         await conn.commit()
-
-    # === USER DATA CLEANUP METHODS ===
-
-    async def delete_user_data_from_guild(self, user_id: int, guild_id: int) -> bool:
-        """Delete all user data for a specific guild when they leave."""
-        try:
-            conn = await self.get_connection()
-            
-            # Delete XP data
-            await conn.execute(
-                "DELETE FROM user_xp WHERE user_id = ? AND guild_id = ?",
-                (user_id, guild_id)
-            )
-            
-            # Delete birthday data
-            await conn.execute(
-                "DELETE FROM birthdays WHERE user_id = ? AND guild_id = ?",
-                (user_id, guild_id)
-            )
-            
-            # Delete verification data
-            await conn.execute(
-                "DELETE FROM verifications WHERE discord_id = ? AND guild_id = ?",
-                (user_id, guild_id)
-            )
-            
-            # Delete appeals data
-            await conn.execute(
-                "DELETE FROM appeals WHERE user_id = ? AND guild_id = ?",
-                (user_id, guild_id)
-            )
-            
-            # Delete daily checkins data
-            await conn.execute(
-                "DELETE FROM daily_checkins WHERE user_id = ? AND guild_id = ?",
-                (user_id, guild_id)
-            )
-            
-            # Delete roast log data
-            await conn.execute(
-                "DELETE FROM roast_log WHERE user_id = ? AND guild_id = ?",
-                (user_id, guild_id)
-            )
-            
-            await conn.commit()
-            return True
-        except Exception as e:
-            print(f"Error deleting user data from guild: {e}")
-            return False
-
-    async def cleanup_user_data(self, user_id: int, guild_id: int) -> None:
-        """Remove all user data for a specific server when they leave."""
-        await self.delete_user_data_from_guild(user_id, guild_id)
 
     # === LOGGING METHODS ===
 
@@ -737,29 +643,17 @@ class DatabaseManager:
         )
         await conn.commit()
 
-    async def get_recent_moderation_logs(self, limit: int = 10, guild_id: Optional[int] = None) -> list[dict]:
-        """Get recent moderation logs for a specific guild."""
+    async def get_recent_moderation_logs(self, limit: int = 10) -> list[dict]:
+        """Get recent moderation logs."""
         conn = await self.get_connection()
-        
-        if guild_id:
-            cursor = await conn.execute(
-                """
-                SELECT * FROM mod_logs
-                WHERE guild_id = ?
-                ORDER BY timestamp DESC
-                LIMIT ?
-            """,
-                (guild_id, limit),
-            )
-        else:
-            cursor = await conn.execute(
-                """
-                SELECT * FROM mod_logs
-                ORDER BY timestamp DESC
-                LIMIT ?
-            """,
-                (limit,),
-            )
+        cursor = await conn.execute(
+            """
+            SELECT * FROM mod_logs
+            ORDER BY timestamp DESC
+            LIMIT ?
+        """,
+            (limit,),
+        )
 
         rows = await cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
@@ -784,13 +678,12 @@ class DatabaseManager:
         )
         await conn.commit()
 
-    async def log_roast_user(self, user_id: int, guild_id: Optional[int] = None) -> None:
+    async def log_roast_user(self, user_id: int) -> None:
         """Log that user roasted the bot."""
         await self.log_event(
             category="ROAST",
             action="USER_ROAST",
             user_id=user_id,
-            guild_id=guild_id,
             details="User roasted the bot",
         )
 
@@ -861,57 +754,34 @@ class DatabaseManager:
 
     # === AUDIT METHODS ===
 
-    async def get_audit_logs(self, limit: int = 100, guild_id: Optional[int] = None) -> list[dict]:
-        """Get recent audit logs for a specific guild."""
+    async def get_audit_logs(self, limit: int = 100) -> list[dict]:
+        """Get recent audit logs."""
         conn = await self.get_connection()
-        
-        if guild_id:
-            cursor = await conn.execute(
-                "SELECT * FROM audit_log WHERE guild_id = ? ORDER BY timestamp DESC LIMIT ?",
-                (guild_id, limit)
-            )
-        else:
-            cursor = await conn.execute(
-                "SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT ?",
-                (limit,)
-            )
+        cursor = await conn.execute(
+            "SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT ?", (limit,)
+        )
 
         rows = await cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
 
         return [dict(zip(columns, row, strict=False)) for row in rows]
 
-    async def get_daily_digest_stats(self, guild_id: Optional[int] = None) -> dict:
-        """Get optimized daily digest statistics for a specific guild."""
+    async def get_daily_digest_stats(self) -> dict:
+        """Get optimized daily digest statistics."""
         conn = await self.get_connection()
 
-        if guild_id:
-            cursor = await conn.execute(
-                """
-                SELECT
-                    COUNT(*) as total_logs,
-                    COUNT(CASE WHEN category = 'CRITICAL' THEN 1 END) as critical_events,
-                    COUNT(CASE WHEN category = 'WARNING' THEN 1 END) as warnings,
-                    COUNT(CASE WHEN action LIKE '%BAN%' OR action LIKE '%KICK%' OR action LIKE '%MUTE%' THEN 1 END) as moderation_actions,
-                    COUNT(CASE WHEN action LIKE '%JOIN%' OR action LIKE '%LEAVE%' THEN 1 END) as user_events
-                FROM audit_log
-                WHERE guild_id = ? AND timestamp >= datetime('now', '-1 day')
-            """,
-                (guild_id,)
-            )
-        else:
-            cursor = await conn.execute(
-                """
-                SELECT
-                    COUNT(*) as total_logs,
-                    COUNT(CASE WHEN category = 'CRITICAL' THEN 1 END) as critical_events,
-                    COUNT(CASE WHEN category = 'WARNING' THEN 1 END) as warnings,
-                    COUNT(CASE WHEN action LIKE '%BAN%' OR action LIKE '%KICK%' OR action LIKE '%MUTE%' THEN 1 END) as moderation_actions,
-                    COUNT(CASE WHEN action LIKE '%JOIN%' OR action LIKE '%LEAVE%' THEN 1 END) as user_events
-                FROM audit_log
-                WHERE timestamp >= datetime('now', '-1 day')
+        cursor = await conn.execute(
             """
-            )
+            SELECT
+                COUNT(*) as total_logs,
+                COUNT(CASE WHEN category = 'CRITICAL' THEN 1 END) as critical_events,
+                COUNT(CASE WHEN category = 'WARNING' THEN 1 END) as warnings,
+                COUNT(CASE WHEN action LIKE '%BAN%' OR action LIKE '%KICK%' OR action LIKE '%MUTE%' THEN 1 END) as moderation_actions,
+                COUNT(CASE WHEN action LIKE '%JOIN%' OR action LIKE '%LEAVE%' THEN 1 END) as user_events
+            FROM audit_log
+            WHERE timestamp >= datetime('now', '-1 day')
+        """
+        )
 
         result = await cursor.fetchone()
         return {
@@ -939,50 +809,40 @@ class DatabaseManager:
 
     async def add_xp(self, user_id: int, guild_id: int, xp_amount: int) -> tuple[int, int]:
         """Add XP to a user and return their new XP and level."""
-        if guild_id is None:
-            raise ValueError("guild_id is required for XP operations")
-
         conn = await self.get_connection()
-
+        
         try:
-            # Ensure user exists in users table
+            # Add XP using UPSERT
             await conn.execute(
-                "INSERT OR IGNORE INTO users (user_id, username, discriminator) VALUES (?, 'Unknown', '0')",
-                (user_id,),
+                """
+                INSERT INTO user_xp (user_id, guild_id, xp, level, last_message_time)
+                VALUES (?, ?, ?, 0, datetime('now'))
+                ON CONFLICT(user_id, guild_id)
+                DO UPDATE SET xp = xp + ?
+                """,
+                (user_id, guild_id, xp_amount, xp_amount)
             )
             
-            # Get current XP or use 0 if new
+            # Get updated XP and calculate level
             cursor = await conn.execute(
                 "SELECT xp FROM user_xp WHERE user_id = ? AND guild_id = ?",
                 (user_id, guild_id)
             )
             result = await cursor.fetchone()
-            current_xp = result[0] if result else 0
+            new_xp = result[0] if result else xp_amount
             
-            new_xp = current_xp + xp_amount
+            # Calculate level (simplified calculation)
+            new_level = int((new_xp / 100) ** 0.5)  # Adjust formula as needed
             
-            # Calculate level using the same formula as other XP methods
-            progression_type = await self.get_setting("xp_progression_type", guild_id) or "custom"
-            new_level = await self._calculate_level_from_xp(new_xp, progression_type)
-            
-            # Update XP using UPSERT
+            # Update level
             await conn.execute(
-                """
-                INSERT INTO user_xp (user_id, guild_id, xp, level, last_message_time)
-                VALUES (?, ?, ?, ?, datetime('now'))
-                ON CONFLICT(user_id, guild_id) 
-                DO UPDATE SET 
-                    xp = excluded.xp,
-                    level = excluded.level,
-                    last_message_time = excluded.last_message_time
-            """,
-            (user_id, guild_id, new_xp, new_level)
+                "UPDATE user_xp SET level = ? WHERE user_id = ? AND guild_id = ?",
+                (new_level, user_id, guild_id)
             )
             
             await conn.commit()
             return new_xp, new_level
-
+            
         except Exception as e:
             await conn.rollback()
             raise e
-        # DON'T close the connection here - it's managed by the class
