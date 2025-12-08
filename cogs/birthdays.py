@@ -105,19 +105,12 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                 if birthday_xp:
                     try:
                         xp_amount = int(birthday_xp)
-                        # Direct database update - use the bot's pool attribute
-                        async with self.bot.pool.acquire() as conn:
-                            await conn.execute(
-                                """
-                                INSERT INTO user_xp (user_id, guild_id, xp, level, last_message_time)
-                                VALUES ($1, $2, $3, 0, NOW())
-                                ON CONFLICT (user_id, guild_id) 
-                                DO UPDATE SET xp = user_xp.xp + $3
-                                """,
-                                interaction.user.id, guild_id, xp_amount
-                            )
+                        # Use the proper add_xp method
+                        new_xp, new_level = await self.bot.db_manager.add_xp(
+                            interaction.user.id, guild_id, xp_amount
+                        )
                         xp_earned = xp_amount
-                        get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday")
+                        get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday (Total: {new_xp}, Level: {new_level})")
                     except (ValueError, TypeError) as e:
                         get_logger("birthdays").error(f"Invalid birthday_set_xp value: {birthday_xp}, error: {e}")
                     except Exception as e:
@@ -650,6 +643,24 @@ class Birthdays(commands.Cog):
         except Exception as e:
             self.logger.error(f"Error setting up birthday reminder message: {e}")
             raise
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """Handle member leaves - delete birthday data."""
+        try:
+            if not self.bot.db_manager:
+                return
+            
+            # Delete birthday data for user who left
+            await self.bot.db_manager.execute_query(
+                "DELETE FROM birthdays WHERE user_id = ?",
+                (member.id,)
+            )
+            
+            self.logger.info(f"Deleted birthday data for user {member.name} ({member.id}) who left {member.guild.name}")
+            
+        except Exception as e:
+            self.logger.error(f"Error deleting birthday data for member {member.name}: {e}")
 
 
 async def setup(bot: commands.Bot):

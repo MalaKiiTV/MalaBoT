@@ -779,6 +779,48 @@ class DatabaseManager:
 
     # === ROAST METHODS ===
 
+    async def add_xp(self, user_id: int, guild_id: int, xp_amount: int) -> tuple[int, int]:
+        """Add XP to a user and return their new XP and level."""
+        conn = await self.get_connection()
+        
+        try:
+            # Add XP using UPSERT
+            await conn.execute(
+                """
+                INSERT INTO user_xp (user_id, guild_id, xp, level, last_message_time)
+                VALUES (?, ?, ?, 0, datetime('now'))
+                ON CONFLICT(user_id, guild_id)
+                DO UPDATE SET xp = xp + ?
+                """,
+                (user_id, guild_id, xp_amount, xp_amount)
+            )
+            
+            # Get updated XP and calculate level
+            cursor = await conn.execute(
+                "SELECT xp FROM user_xp WHERE user_id = ? AND guild_id = ?",
+                (user_id, guild_id)
+            )
+            result = await cursor.fetchone()
+            new_xp = result[0] if result else xp_amount
+            
+            # Calculate level (simplified calculation)
+            new_level = int((new_xp / 100) ** 0.5)  # Adjust formula as needed
+            
+            # Update level
+            await conn.execute(
+                "UPDATE user_xp SET level = ? WHERE user_id = ? AND guild_id = ?",
+                (new_level, user_id, guild_id)
+            )
+            
+            await conn.commit()
+            return new_xp, new_level
+            
+        except Exception as e:
+            await conn.rollback()
+            raise e
+        finally:
+            await conn.close()
+
     async def add_roast_xp(self, xp_amount: int) -> dict:
         """Add roast XP."""
         # This is a placeholder - implement based on your roast XP system
