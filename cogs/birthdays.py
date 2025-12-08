@@ -488,7 +488,7 @@ class Birthdays(commands.Cog):
                 announcements_enabled = await self.bot.db_manager.get_setting("birthday_announcements_enabled", guild_id)
                 
                 # Skip if disabled (default to enabled if not set)
-                if announcements_enabled == "false":
+                if announcements_enabled != "true":
                     continue
                 
                 # Get birthday settings

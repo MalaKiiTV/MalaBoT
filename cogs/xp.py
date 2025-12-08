@@ -583,7 +583,7 @@ class XP(commands.Cog):
 
             # Check if message XP is enabled
             message_xp_enabled = await self.bot.db_manager.get_setting("xp_message_enabled", message.guild.id)
-            if message_xp_enabled == "false":
+            if message_xp_enabled != "true":
                 return
             
             # Get XP amount from database or use default
@@ -625,7 +625,7 @@ class XP(commands.Cog):
 
             # Check if reaction XP is enabled
             reaction_xp_enabled = await self.bot.db_manager.get_setting("xp_reaction_enabled", message.guild.id)
-            if reaction_xp_enabled == "false":
+            if reaction_xp_enabled != "true":
                 return
             
             # Get XP amount from database or use default
@@ -670,7 +670,7 @@ class XP(commands.Cog):
                     if minutes > 0:
                         # Check if voice XP is enabled
                         voice_xp_enabled = await self.bot.db_manager.get_setting("xp_voice_enabled", member.guild.id)
-                        if voice_xp_enabled == "false":
+                        if voice_xp_enabled != "true":
                             del self.bot.voice_time[member.id]
                             return
                         

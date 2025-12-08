@@ -70,7 +70,7 @@ class Welcome(commands.Cog):
             welcome_enabled = await self.bot.db_manager.get_setting("welcome_enabled", guild_id)
             
             # Skip if disabled (default to enabled if not set)
-            if welcome_enabled == "false":
+            if welcome_enabled != "true":
                 return
             
             # Get welcome settings
