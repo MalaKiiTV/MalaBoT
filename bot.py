@@ -211,11 +211,7 @@ class MalaBoT(commands.Bot):
     async def _initialize_database(self):
         """Initialize database connection."""
         try:
-            self.db_manager = DatabaseManager(
-                settings.DATABASE_URL.replace("sqlite:///", "")
-                if settings.DATABASE_URL.startswith("sqlite://")
-                else settings.DATABASE_URL
-            )
+            self.db_manager = DatabaseManager()
             await self.db_manager.initialize()
             self.logger.info("Database initialized successfully")
 
@@ -520,9 +516,7 @@ The bot will start in safe mode to prevent further issues.
                     if log["category"] == "SYSTEM" and "ERROR" in log["action"].upper()
                 ),
                 "memory": f"{get_system_info().get('memory_used_mb', 'Unknown')} MB",
-                "db_size": system_helper.get_file_size(
-                    settings.DATABASE_URL.replace("sqlite:///", "")
-                ),
+                "db_size": "Supabase Cloud",
             }
 
             # Create digest embed
