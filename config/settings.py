@@ -28,6 +28,12 @@ class Settings:
         self.DEBUG_GUILDS: list[int] = self._parse_int_list(
             os.getenv("DEBUG_GUILDS", "")
         )
+        # Database Configuration
+        self.SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+        self.SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
+        self.GUILD_ID: str = os.getenv("GUILD_ID", "542004156513255445")
+        
+        # Legacy SQLite support (deprecated)
         self.DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///data/bot.db")
 
         # Logging Configuration
@@ -111,6 +117,13 @@ class Settings:
 
         if not self.OWNER_IDS:
             errors.append("OWNER_IDS must contain at least one owner ID")
+
+        # Validate database configuration
+        if not self.SUPABASE_URL or not self.SUPABASE_KEY:
+            if self.DATABASE_URL.startswith("sqlite://"):
+                errors.append("WARNING: Using deprecated SQLite. Please migrate to Supabase.")
+            else:
+                errors.append("Either SUPABASE_URL/SUPABASE_KEY or DATABASE_URL is required")
 
         return errors
 

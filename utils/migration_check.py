@@ -1,67 +1,34 @@
-"""
-Database migration verification utility
-"""
+"""Database migration verification utility"""
 
 import asyncio
 import logging
-from database.models import DatabaseManager
+from database.supabase_models import DatabaseManager
 
 logger = logging.getLogger(__name__)
 
 
 async def verify_migrations():
-    """Verify all migrations have been applied"""
+    """Verify Supabase connection and basic functionality"""
     try:
-        db = DatabaseManager("data/bot.db")
+        db = DatabaseManager()
         await db.initialize()
 
-        # Check for migration table
-        conn = await db.get_connection()
-        cursor = await conn.execute(
-            """
-            SELECT name FROM sqlite_master
-            WHERE type='table' AND name='migrations'
-        """
-        )
-
-        if not await cursor.fetchone():
-            # Create migrations table
-            await conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS migrations (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT UNIQUE NOT NULL,
-                    applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """
-            )
-            await conn.commit()
-            logger.info("Created migrations table")
-
-        # List of migrations that should be applied
-        required_migrations = [
-            "add_component_to_health_logs",
-            "migrate_appeals_table",
-            "migrate_settings_table",
-        ]
-
-        # Check which are applied
-        cursor = await conn.execute("SELECT name FROM migrations")
-        applied = [row[0] for row in await cursor.fetchall()]
-
-        missing = [m for m in required_migrations if m not in applied]
-        if missing:
-            logger.warning(f"Missing migrations: {missing}")
+        # Test basic database connectivity
+        try:
+            # Try a simple query to verify connection
+            result = db.supabase.table('users').select('count').execute()
+            logger.info("Supabase connection verified ✅")
+            return True
+        except Exception as e:
+            logger.error(f"Supabase connection failed: {e}")
             return False
 
-        logger.info("All migrations verified ✅")
-        return True
-
     except Exception as e:
-        logger.error(f"Migration check failed: {e}")
+        logger.error(f"Database verification failed: {e}")
         return False
     finally:
-        await db.close()
+        # Supabase doesn't need explicit connection closing
+        pass
 
 
 if __name__ == "__main__":

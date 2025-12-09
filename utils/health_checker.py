@@ -98,7 +98,7 @@ class HealthChecker:
 
             conn = await self.bot.db_manager.get_connection()
             cursor = await conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
+                # Supabase health check - tables are managed in Supabase dashboard
             )
             tables = [row[0] for row in await cursor.fetchall()]
 

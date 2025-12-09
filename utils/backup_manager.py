@@ -1,31 +1,30 @@
-"""
-Automatic Backup Manager
-Handles database backups, verification, and recovery
+"""Automatic Backup Manager
+Handles Supabase data backups, verification, and recovery
 """
 
 import json
 import logging
 import os
-import shutil
+import asyncio
 from datetime import datetime
+from database.supabase_models import DatabaseManager
 
 logger = logging.getLogger("backup_manager")
 
 
 class BackupManager:
-    """Manages automatic database backups and recovery"""
+    """Manages automatic Supabase data backups and recovery"""
 
-    def __init__(self, db_path: str = "data/bot.db", backup_dir: str = "data/backups"):
-        self.db_path = db_path
+    def __init__(self, backup_dir: str = "data/backups"):
         self.backup_dir = backup_dir
         self.max_backups = 7  # Keep last 7 days
 
         # Create backup directory if it doesn't exist
         os.makedirs(backup_dir, exist_ok=True)
 
-    def create_backup(self, backup_type: str = "auto") -> str:
+    async def create_backup(self, backup_type: str = "auto") -> str:
         """
-        Create a database backup
+        Create a Supabase data backup
 
         Args:
             backup_type: Type of backup (auto, manual, pre-migration)
@@ -34,16 +33,35 @@ class BackupManager:
             Path to backup file
         """
         try:
-            if not os.path.exists(self.db_path):
-                logger.error(f"Database file not found: {self.db_path}")
-                return None
+            db = DatabaseManager()
+            await db.initialize()
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_filename = f"bot_backup_{backup_type}_{timestamp}.db"
+            backup_filename = f"supabase_backup_{backup_type}_{timestamp}.json"
             backup_path = os.path.join(self.backup_dir, backup_filename)
 
-            # Copy database file
-            shutil.copy2(self.db_path, backup_path)
+            # Get all data from Supabase
+            backup_data = {
+                "timestamp": datetime.now().isoformat(),
+                "type": backup_type,
+                "tables": {}
+            }
+
+            # List of tables to backup
+            tables = ['users', 'birthdays', 'audit_log', 'mod_logs', 'health_logs', 'settings', 'system_flags']
+
+            for table in tables:
+                try:
+                    result = db.supabase.table(table).select('*').execute()
+                    backup_data["tables"][table] = result.data
+                    logger.info(f"Backed up {len(result.data)} records from {table}")
+                except Exception as e:
+                    logger.warning(f"Failed to backup table {table}: {e}")
+                    backup_data["tables"][table] = []
+
+            # Save backup to file
+            with open(backup_path, 'w') as f:
+                json.dump(backup_data, f, indent=2)
 
             # Verify backup
             if self.verify_backup(backup_path):
@@ -76,8 +94,6 @@ class BackupManager:
             True if backup is valid
         """
         try:
-            import sqlite3
-
             # Check file exists and has size
             if not os.path.exists(backup_path):
                 return False
@@ -85,26 +101,24 @@ class BackupManager:
             if os.path.getsize(backup_path) == 0:
                 return False
 
-            # Try to open database
-            conn = sqlite3.connect(backup_path)
-            cursor = conn.cursor()
+            # Try to load JSON
+            with open(backup_path, 'r') as f:
+                backup_data = json.load(f)
 
-            # Verify tables exist
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            tables = cursor.fetchall()
+            # Verify structure
+            required_keys = ['timestamp', 'type', 'tables']
+            if not all(key in backup_data for key in required_keys):
+                return False
 
-            conn.close()
-
-            # Should have at least some tables
-            return len(tables) > 0
+            return True
 
         except Exception as e:
             logger.error(f"Backup verification error: {e}")
             return False
 
-    def restore_backup(self, backup_path: str) -> bool:
+    async def restore_backup(self, backup_path: str) -> bool:
         """
-        Restore database from backup
+        Restore Supabase data from backup
 
         Args:
             backup_path: Path to backup file
@@ -121,11 +135,30 @@ class BackupManager:
                 logger.error(f"Backup file is corrupted: {backup_path}")
                 return False
 
-            # Create backup of current database before restoring
-            current_backup = self.create_backup("pre-restore")
+            # Create backup of current data before restoring
+            current_backup = await self.create_backup("pre-restore")
+            if not current_backup:
+                logger.warning("Failed to create pre-restore backup")
 
-            # Restore backup
-            shutil.copy2(backup_path, self.db_path)
+            # Load backup data
+            with open(backup_path, 'r') as f:
+                backup_data = json.load(f)
+
+            db = DatabaseManager()
+            await db.initialize()
+
+            # Restore data for each table
+            for table_name, records in backup_data["tables"].items():
+                try:
+                    if records:  # Only restore if there are records
+                        # Clear existing data and insert backup data
+                        db.supabase.table(table_name).delete().neq('id', -1).execute()  # Delete all
+                        db.supabase.table(table_name).insert(records).execute()
+                        logger.info(f"✅ Restored {len(records)} records to {table_name}")
+                    else:
+                        logger.info(f"⚠️ No records to restore for {table_name}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to restore table {table_name}: {e}")
 
             logger.info(f"✅ Database restored from: {backup_path}")
             return True
@@ -144,7 +177,7 @@ class BackupManager:
         backups = []
 
         for filename in os.listdir(self.backup_dir):
-            if filename.endswith(".db"):
+            if filename.endswith(".json"):
                 filepath = os.path.join(self.backup_dir, filename)
                 metadata_path = filepath + ".meta"
 
@@ -163,7 +196,7 @@ class BackupManager:
                             metadata = json.load(f)
                             backup_info.update(metadata)
                     except (json.JSONDecodeError, IOError) as e:
-                        logger.warning(f"Failed to read metadata for {backup_file}: {e}")
+                        logger.warning(f"Failed to read metadata for {filename}: {e}")
 
                 backups.append(backup_info)
 
@@ -187,7 +220,6 @@ class BackupManager:
         metadata = {
             "type": backup_type,
             "created": datetime.now().isoformat(),
-            "original_size": os.path.getsize(self.db_path),
             "backup_size": os.path.getsize(backup_path),
         }
 
@@ -202,7 +234,7 @@ class BackupManager:
 
             # Keep only max_backups most recent
             if len(backups) > self.max_backups:
-                for backup in backups[self.max_backups :]:
+                for backup in backups[self.max_backups:]:
                     try:
                         os.remove(backup["path"])
                         metadata_path = backup["path"] + ".meta"
@@ -215,7 +247,7 @@ class BackupManager:
         except Exception as e:
             logger.error(f"Cleanup failed: {e}")
 
-    def auto_backup_if_needed(self) -> bool:
+    async def auto_backup_if_needed(self) -> bool:
         """
         Create automatic backup if needed (once per day)
 
@@ -233,7 +265,7 @@ class BackupManager:
                     return False
 
             # Create daily backup
-            self.create_backup("auto")
+            await self.create_backup("auto")
             return True
 
         except Exception as e:
@@ -242,18 +274,18 @@ class BackupManager:
 
 
 # Convenience functions
-def create_backup(backup_type: str = "manual") -> str:
-    """Create a database backup"""
+async def create_backup(backup_type: str = "manual") -> str:
+    """Create a Supabase data backup"""
     manager = BackupManager()
-    return manager.create_backup(backup_type)
+    return await manager.create_backup(backup_type)
 
 
-def restore_latest_backup() -> bool:
+async def restore_latest_backup() -> bool:
     """Restore from most recent backup"""
     manager = BackupManager()
     latest = manager.get_latest_backup()
     if latest:
-        return manager.restore_backup(latest)
+        return await manager.restore_backup(latest)
     return False
 
 

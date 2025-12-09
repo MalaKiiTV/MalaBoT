@@ -55,10 +55,11 @@ class TestXPDatabaseOperations:
 
     async def test_set_user_xp(self):
         """Test setting user XP and level calculation."""
-        from database.models import DatabaseManager
+        from database.supabase_models import DatabaseManager
 
-        # Mock database connection
-        db_manager = DatabaseManager(":memory:")
+        # Mock database connection (Supabase doesn't use local files)
+        # Note: This test requires actual Supabase credentials in environment
+        db_manager = DatabaseManager()
         await db_manager.initialize()
 
         # Test setting XP - returns (xp, level)
@@ -73,9 +74,9 @@ class TestXPDatabaseOperations:
 
     async def test_update_user_xp(self):
         """Test updating user XP."""
-        from database.models import DatabaseManager
+        from database.supabase_models import DatabaseManager
 
-        db_manager = DatabaseManager(":memory:")
+        db_manager = DatabaseManager()
         await db_manager.initialize()
 
         # Update XP (adds to existing)
@@ -89,9 +90,9 @@ class TestXPDatabaseOperations:
 
     async def test_remove_user_xp(self):
         """Test removing user XP."""
-        from database.models import DatabaseManager
+        from database.supabase_models import DatabaseManager
 
-        db_manager = DatabaseManager(":memory:")
+        db_manager = DatabaseManager()
         await db_manager.initialize()
 
         # Set initial XP
