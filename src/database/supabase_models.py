@@ -190,6 +190,55 @@ class DatabaseManager:
         
         return len(result.data) + 1
 
+    # === LEADERBOARD METHODS ===
+
+    async def get_leaderboard(self, guild_id: int, limit: int = 10) -> list:
+        """Get XP leaderboard for a guild."""
+        result = self.supabase.table('users').select('user_id, xp, level').eq('guild_id', guild_id).gt('xp', 0).order('xp', desc=True).limit(limit).execute()
+        return [(r['user_id'], r['xp'], r['level']) for r in result.data]
+
+    # === DAILY CHECKIN METHODS ===
+
+    async def get_daily_checkin(self, user_id: int) -> Optional[tuple]:
+        """Get user daily checkin data."""
+        result = self.supabase.table('daily_checkins').select('*').eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+        if result.data:
+            r = result.data[0]
+            return (r.get('last_checkin'), r.get('checkin_streak', 0))
+        return None
+
+    async def update_daily_checkin(self, user_id: int, last_checkin: str, streak: int) -> None:
+        """Update user daily checkin."""
+        self.supabase.table('daily_checkins').upsert({
+            'user_id': user_id,
+            'guild_id': self.guild_id,
+            'last_checkin': last_checkin,
+            'checkin_streak': streak
+        }).execute()
+
+    async def reset_all_xp(self, guild_id: int) -> None:
+        """Reset all XP for a guild."""
+        self.supabase.table('users').update({'xp': 0, 'level': 0}).eq('guild_id', guild_id).execute()
+
+    async def get_user_count(self, guild_id: int) -> int:
+        """Get count of users with XP."""
+        result = self.supabase.table('users').select('user_id', count='exact').eq('guild_id', guild_id).gt('xp', 0).execute()
+        return result.count if hasattr(result, 'count') else len(result.data)
+
+    async def get_checkin_count(self) -> int:
+        """Get count of daily checkins."""
+        result = self.supabase.table('daily_checkins').select('user_id', count='exact').eq('guild_id', self.guild_id).execute()
+        return result.count if hasattr(result, 'count') else len(result.data)
+
+    async def reset_all_checkins(self) -> None:
+        """Reset all daily checkins."""
+        self.supabase.table('daily_checkins').delete().eq('guild_id', self.guild_id).execute()
+
+    async def get_level_roles(self, guild_id: int) -> list:
+        """Get level roles for a guild."""
+        result = self.supabase.table('level_roles').select('*').eq('guild_id', guild_id).order('level').execute()
+        return [(r['level'], r['role_id']) for r in result.data]
+
     # === USER METHODS ===
 
     async def get_user(self, user_id: int) -> Optional[dict]:
@@ -200,34 +249,43 @@ class DatabaseManager:
     # === BIRTHDAY METHODS ===
 
     async def set_birthday(self, user_id: int, birthday: str, timezone: str = "UTC") -> None:
-        """Set user birthday."""
-        # Convert MM-DD to full date (2000-MM-DD)
-        if len(birthday.split('-')) == 2:
-            month, day = birthday.split('-')
-            birthday = f"2000-{month.zfill(2)}-{day.zfill(2)}"
-        
-        self.supabase.table('birthdays').upsert({
+    """Set user birthday."""
+    # Convert MM-DD to full date (2000-MM-DD)
+    if len(birthday.split('-')) == 2:
+        month, day = birthday.split('-')
+        birthday = f"2000-{month.zfill(2)}-{day.zfill(2)}"
+
+    # Check if birthday exists
+    result = self.supabase.table('birthdays').select('id').eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+    
+    if result.data:
+        # Update existing
+        self.supabase.table('birthdays').update({
+            'birthday': birthday,
+            'timezone': timezone
+        }).eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+    else:
+        # Insert new
+        self.supabase.table('birthdays').insert({
             'user_id': user_id,
             'guild_id': self.guild_id,
             'birthday': birthday,
             'timezone': timezone
         }).execute()
 
+
     async def set_user_birthday(self, user_id: int, birthday: str) -> bool:
         """Set user birthday (returns success status)."""
         try:
             await self.set_birthday(user_id, birthday)
             return True
-        except Exception:
+        except Exception as e:
+            print(f"ERROR setting birthday: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
-    async def remove_user_birthday(self, user_id: int) -> bool:
-        """Remove user birthday."""
-        try:
-            self.supabase.table('birthdays').delete().eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
-            return True
-        except Exception:
-            return False
+
 
     async def get_birthday(self, user_id: int) -> Optional[tuple]:
         """Get user birthday."""

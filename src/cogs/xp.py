@@ -110,17 +110,10 @@ class XPGroup(app_commands.Group):
 
                 return
 
-            conn = await self.cog.bot.db_manager.get_connection()
-            placeholders = ",".join(["?" for _ in guild_member_ids])
-            cursor = await conn.execute(
-                f"""SELECT user_id, xp, level
-                   FROM users
-                   WHERE user_id IN ({placeholders}) AND xp > 0
-                   ORDER BY xp DESC
-                   LIMIT 10""",
-                guild_member_ids,
+            rows = await self.cog.bot.db_manager.get_leaderboard(
+                guild_id=interaction.guild.id,
+                limit=10
             )
-            rows = await cursor.fetchall()
 
             if not rows:
                 embed = create_embed(
@@ -169,12 +162,8 @@ class XPGroup(app_commands.Group):
             today = datetime.datetime.now().date()
 
             # Check last checkin
-            conn = await self.cog.bot.db_manager.get_connection()
-            cursor = await conn.execute(
-                "SELECT last_checkin, checkin_streak FROM daily_checkins WHERE user_id = ?",
-                (user_id,),
-            )
-            row = await cursor.fetchone()
+            row = await self.cog.bot.db_manager.get_daily_checkin(user_id)
+
 
             if row:
                 last_checkin = datetime.datetime.strptime(row[0], "%Y-%m-%d").date()
@@ -208,11 +197,10 @@ class XPGroup(app_commands.Group):
 
             # Update checkin record
             await conn.execute(
-
-                """INSERT OR REPLACE INTO daily_checkins (user_id, last_checkin, checkin_streak)
-                   VALUES (?, ?, ?)""",
-                (user_id, today.isoformat(), streak),
+                "INSERT OR REPLACE INTO daily_checkins (user_id, last_checkin, checkin_streak) VALUES (?, ?, ?)",
+                (user_id, today.strftime("%Y-%m-%d"), new_streak),
             )
+
             await conn.commit()
 
             embed = create_embed(
@@ -452,12 +440,13 @@ class XPGroup(app_commands.Group):
 
             # Reset XP for all users in the database
             conn = await self.cog.bot.db_manager.get_connection()
-            await conn.execute("UPDATE users SET xp = 0, level = 0")
+            await self.cog.bot.db_manager.reset_all_xp(interaction.guild.id)
+
             await conn.commit()
 
             # Get count of affected users
-            cursor = await conn.execute("SELECT COUNT(*) FROM users")
-            count = (await cursor.fetchone())[0]
+            count = await self.cog.bot.db_manager.get_user_count(interaction.guild.id)
+
 
             embed = create_embed(
                 title="✅ All XP Reset",
@@ -503,11 +492,12 @@ class XPGroup(app_commands.Group):
             conn = await self.cog.bot.db_manager.get_connection()
             
             # Get count before deletion
-            cursor = await conn.execute("SELECT COUNT(*) FROM daily_checkins")
-            count = (await cursor.fetchone())[0]
+            count = await self.cog.bot.db_manager.get_checkin_count()
+
             
             # Delete all check-in records
-            await conn.execute("DELETE FROM daily_checkins")
+            await self.cog.bot.db_manager.reset_all_checkins()
+
             await conn.commit()
 
             embed = create_embed(
@@ -724,11 +714,8 @@ class XP(commands.Cog):
 
             # Check for level roles (always check, even if message was already sent)
             conn = await self.bot.db_manager.get_connection()
-            cursor = await conn.execute(
-                "SELECT level, role_id FROM level_roles WHERE guild_id = ?",
-                (user.guild.id,),
-            )
-            rows = await cursor.fetchall()
+            rows = await self.cog.bot.db_manager.get_level_roles(interaction.guild.id)
+
             self.logger.info(f"[LEVEL ROLE DEBUG] Found {len(rows)} level roles configured for guild {user.guild.id}")
 
             for level, role_id in rows:
