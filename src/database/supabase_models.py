@@ -249,29 +249,29 @@ class DatabaseManager:
     # === BIRTHDAY METHODS ===
 
     async def set_birthday(self, user_id: int, birthday: str, timezone: str = "UTC") -> None:
-    """Set user birthday."""
-    # Convert MM-DD to full date (2000-MM-DD)
-    if len(birthday.split('-')) == 2:
-        month, day = birthday.split('-')
-        birthday = f"2000-{month.zfill(2)}-{day.zfill(2)}"
+        """Set user birthday."""
+        # Convert MM-DD to full date (2000-MM-DD)
+        if len(birthday.split('-')) == 2:
+            month, day = birthday.split("-")
+            birthday = f"2000-{month.zfill(2)}-{day.zfill(2)}"
 
-    # Check if birthday exists
-    result = self.supabase.table('birthdays').select('id').eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+        # Check if birthday exists
+        result = self.supabase.table('birthdays').select('id').eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
     
-    if result.data:
-        # Update existing
-        self.supabase.table('birthdays').update({
-            'birthday': birthday,
-            'timezone': timezone
-        }).eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
-    else:
-        # Insert new
-        self.supabase.table('birthdays').insert({
-            'user_id': user_id,
-            'guild_id': self.guild_id,
-            'birthday': birthday,
-            'timezone': timezone
-        }).execute()
+        if result.data:
+            # Update existing
+            self.supabase.table("birthdays").update({
+                "birthday": birthday,
+                "timezone": timezone
+            }).eq("user_id", user_id).eq("guild_id", self.guild_id).execute()
+        else:
+            # Insert new
+            self.supabase.table("birthdays").insert({
+                "user_id": user_id,
+                "guild_id": self.guild_id,
+                "birthday": birthday,
+                "timezone": timezone
+            }).execute()
 
 
     async def set_user_birthday(self, user_id: int, birthday: str) -> bool:
@@ -338,6 +338,15 @@ class DatabaseManager:
         }).eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
 
     # === LOGGING METHODS ===
+
+    async def remove_user_birthday(self, user_id: int) -> bool:
+        """Remove user birthday."""
+        try:
+            self.supabase.table('birthdays').delete().eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+            return True
+        except Exception as e:
+            print(f"Error removing birthday: {e}")
+            return False
 
     async def log_event(
         self,

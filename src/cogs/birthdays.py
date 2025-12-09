@@ -47,7 +47,14 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
         try:
             # Parse birthday input
             birthday_str = self.birthday.value.strip()
-            month, day = map(int, birthday_str.split("-"))
+            # Handle both MM-DD and YYYY-MM-DD formats
+            parts = birthday_str.split("-")
+            if len(parts) == 3:  # YYYY-MM-DD format
+                month, day = int(parts[1]), int(parts[2])
+            elif len(parts) == 2:  # MM-DD format
+                month, day = int(parts[0]), int(parts[1])
+            else:
+                raise ValueError("Invalid birthday format")
 
             # Validate date
             if month < 1 or month > 12 or day < 1 or day > 31:
@@ -80,6 +87,10 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                     ephemeral=True,
                 )
                 return
+            # Check if birthday already exists
+            existing_birthday = await self.bot.db_manager.get_user_birthday(interaction.user.id)
+            is_new_birthday = existing_birthday is None
+
             # Store in database
             success = await self.bot.db_manager.set_user_birthday(  # type: ignore
                 interaction.user.id, birthday_str
@@ -99,30 +110,31 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                             except discord.Forbidden:
                                 get_logger("birthdays").error(f"Missing permissions to remove Birthday Pending role from {interaction.user.name}")
                     
-                # Award XP for setting birthday
+                # Award XP for setting birthday (only if new)
                 xp_earned = 0
-                birthday_xp = await self.bot.db_manager.get_setting("birthday_set_xp", guild_id)
-                if birthday_xp:
-                    try:
-                        xp_amount = int(birthday_xp)
-                        # Use the proper add_xp method
-                        new_xp, new_level = await self.bot.db_manager.add_xp(
-                            interaction.user.id, guild_id, xp_amount
-                        )
-                        xp_earned = xp_amount
-                        get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday (Total: {new_xp}, Level: {new_level})")
-                        xp_earned = xp_amount
-                        get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday")
-                    except (ValueError, TypeError) as e:
-                        get_logger("birthdays").error(f"Invalid birthday_set_xp value: {birthday_xp}, error: {e}")
-                    except Exception as e:
-                        get_logger("birthdays").error(f"Error awarding XP for birthday: {e}")
+                if is_new_birthday:
+                    birthday_xp = await self.bot.db_manager.get_setting("birthday_set_xp", guild_id)
+                    if birthday_xp:
+                        try:
+                            xp_amount = int(birthday_xp)
+                            # Use the proper add_xp method
+                            new_xp, new_level = await self.bot.db_manager.add_xp(
+                                interaction.user.id, guild_id, xp_amount
+                            )
+                            xp_earned = xp_amount
+                            get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday (Total: {new_xp}, Level: {new_level})")
+                        except (ValueError, TypeError) as e:
+                            get_logger("birthdays").error(f"Invalid birthday_set_xp value: {birthday_xp}, error: {e}")
+                        except Exception as e:
+                            get_logger("birthdays").error(f"Error awarding XP for birthday: {e}")
 
                 # Create success message with XP info if applicable
-                success_description = f"Your birthday has been set to {birthday_str}. You'll receive a special message on your birthday!"
-                if xp_earned > 0:
-                    success_description += f"\n\nYou earned **{xp_earned} XP** for setting your birthday!"
-                
+                if is_new_birthday:
+                    success_description = f"Your birthday has been set to {birthday_str}. You'll receive a special message on your birthday!"
+                    if xp_earned > 0:
+                        success_description += f"\n\nYou earned **{xp_earned} XP** for setting your birthday!"
+                else:
+                    success_description = f"Your birthday has been updated to {birthday_str}."
                 await interaction.response.send_message(
                     embed=create_embed(
                         "🎂 Birthday Set!",
@@ -198,7 +210,6 @@ class Birthdays(commands.Cog):
             app_commands.Choice(name="Set Birthday", value="set"),
             app_commands.Choice(name="View Birthday", value="view"),
             app_commands.Choice(name="List All Birthdays", value="list"),
-            app_commands.Choice(name="Remove Birthday", value="remove"),
         ]
     )
     async def birthday(self, interaction: discord.Interaction, action: str):
@@ -214,8 +225,6 @@ class Birthdays(commands.Cog):
         elif action == "list":
             await self._list_birthdays(interaction)
 
-        elif action == "remove":
-            await self._remove_birthday(interaction)
 
     async def _view_birthday(self, interaction: discord.Interaction):
         """View your birthday."""
@@ -248,11 +257,13 @@ class Birthdays(commands.Cog):
                     raise ValueError(msg)
 
                 parts = birthday_str.split("-")
-                if len(parts) != 2:
-                    msg = f"Birthday data malformed, expected 2 parts got {len(parts)}: {birthday_str}"
+                if len(parts) == 3:  # YYYY-MM-DD format
+                    month, day = int(parts[1]), int(parts[2])
+                elif len(parts) == 2:  # MM-DD format
+                    month, day = int(parts[0]), int(parts[1])
+                else:
+                    msg = f"Birthday data malformed, invalid format: {birthday_str}"
                     raise ValueError(msg)
-
-                month, day = map(int, parts)
                 
                 # Validate month range before indexing
                 if not (1 <= month <= 12):
@@ -288,7 +299,8 @@ class Birthdays(commands.Cog):
 
                 embed = create_embed(
                     "🎂 Your Birthday",
-                    f"Your birthday is set to **{formatted_date}** ({birthday_str})",
+                    f"Your birthday is set to **{formatted_date}**",
+
                     discord.Color.blue(),
                 )
 
@@ -350,7 +362,14 @@ class Birthdays(commands.Cog):
                     continue
 
                 try:
-                    month, day = map(int, birthday_str.split("-"))
+                    # Handle both MM-DD and YYYY-MM-DD formats
+                    parts = birthday_str.split("-")
+                    if len(parts) == 3:  # YYYY-MM-DD format
+                        month, day = int(parts[1]), int(parts[2])
+                    elif len(parts) == 2:  # MM-DD format
+                        month, day = int(parts[0]), int(parts[1])
+                    else:
+                        raise ValueError("Invalid birthday format")
                     
                     # Calculate days until next birthday
                     # Create datetime for this year's birthday
@@ -440,43 +459,6 @@ class Birthdays(commands.Cog):
         if 11 <= day <= 13:
             return "th"
         return {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
-
-    async def _remove_birthday(self, interaction: discord.Interaction):
-        """Remove your birthday."""
-        try:
-            success = await self.bot.db_manager.remove_user_birthday(interaction.user.id)  # type: ignore
-            
-            if success:
-                await interaction.response.send_message(
-                    embed=create_embed(
-                        "✅ Birthday Removed",
-                        "Your birthday has been removed from the system.",
-                        discord.Color.green(),
-                    ),
-                    ephemeral=True,
-                )
-            else:
-                await interaction.response.send_message(
-                    embed=create_embed(
-                        "❌ No Birthday Set",
-                        "You don't have a birthday set.",
-                        discord.Color.red(),
-                    ),
-                    ephemeral=True,
-                )
-        except Exception as e:
-            self.logger.error(f"Error removing birthday for user {interaction.user.id}: {e}")
-            await interaction.response.send_message(
-                embed=create_embed(
-                    "❌ Error",
-                    "There was an error removing your birthday. Please try again.",
-                    discord.Color.red(),
-                ),
-                ephemeral=True,
-            )
-
-    # Daily birthday check task
-
 
     @tasks.loop(hours=24)
     async def check_birthdays(self):

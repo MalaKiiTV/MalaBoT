@@ -187,6 +187,38 @@ class SafeDatabase:
         return self.write_log
 
 
+    async def get_daily_checkin(self, user_id: int):
+        """Get user's last daily checkin."""
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchone(
+                "SELECT last_checkin, checkin_streak FROM daily_checkins WHERE user_id = ?",
+                (user_id,)
+            )
+            return row
+
+    async def update_daily_checkin(self, user_id: int, date: str, streak: int):
+        """Update user's daily checkin record."""
+        async with self.pool.acquire() as conn:
+            await conn.execute(
+                "INSERT OR REPLACE INTO daily_checkins (user_id, last_checkin, checkin_streak) VALUES (?, ?, ?)",
+                (user_id, date, streak)
+            )
+            await conn.commit()
+
+    async def get_checkin_count(self):
+        """Get total number of checkin records."""
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchone("SELECT COUNT(*) FROM daily_checkins")
+            return row[0] if row else 0
+
+    async def reset_all_checkins(self):
+        """Reset all daily checkin records."""
+        async with self.pool.acquire() as conn:
+            await conn.execute("DELETE FROM daily_checkins")
+            await conn.commit()
+
+
+
 class RoleConnectionSafeDB:
     """
     Specialized safe database for role connections

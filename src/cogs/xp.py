@@ -196,12 +196,8 @@ class XPGroup(app_commands.Group):
                 await self.cog._check_level_up(interaction.user)
 
             # Update checkin record
-            await conn.execute(
-                "INSERT OR REPLACE INTO daily_checkins (user_id, last_checkin, checkin_streak) VALUES (?, ?, ?)",
-                (user_id, today.strftime("%Y-%m-%d"), new_streak),
-            )
+            await self.cog.bot.db_manager.update_daily_checkin(user_id, today.strftime("%Y-%m-%d"), streak)
 
-            await conn.commit()
 
             embed = create_embed(
                 title="✅ Daily Check-in Complete!",
@@ -439,10 +435,7 @@ class XPGroup(app_commands.Group):
             await interaction.response.defer(ephemeral=True)
 
             # Reset XP for all users in the database
-            conn = await self.cog.bot.db_manager.get_connection()
             await self.cog.bot.db_manager.reset_all_xp(interaction.guild.id)
-
-            await conn.commit()
 
             # Get count of affected users
             count = await self.cog.bot.db_manager.get_user_count(interaction.guild.id)
@@ -489,7 +482,6 @@ class XPGroup(app_commands.Group):
             await interaction.response.defer(ephemeral=True)
 
             # Reset all check-in streaks
-            conn = await self.cog.bot.db_manager.get_connection()
             
             # Get count before deletion
             count = await self.cog.bot.db_manager.get_checkin_count()
@@ -498,7 +490,6 @@ class XPGroup(app_commands.Group):
             # Delete all check-in records
             await self.cog.bot.db_manager.reset_all_checkins()
 
-            await conn.commit()
 
             embed = create_embed(
                 title="✅ All Check-ins Reset",
@@ -713,8 +704,7 @@ class XP(commands.Cog):
                             self.logger.error(f"Failed to send level-up message: {e}")
 
             # Check for level roles (always check, even if message was already sent)
-            conn = await self.bot.db_manager.get_connection()
-            rows = await self.cog.bot.db_manager.get_level_roles(interaction.guild.id)
+            rows = await self.bot.db_manager.get_level_roles(user.guild.id)
 
             self.logger.info(f"[LEVEL ROLE DEBUG] Found {len(rows)} level roles configured for guild {user.guild.id}")
 
