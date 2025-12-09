@@ -225,7 +225,7 @@ class HealthChecker:
             (success, message)
         """
         try:
-            from utils.safe_database import RoleConnectionSafeDB
+            from src.utils.safe_database import RoleConnectionSafeDB
 
             safe_db = RoleConnectionSafeDB(self.bot.db_manager)
 

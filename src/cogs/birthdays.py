@@ -10,8 +10,8 @@ import pytz
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from utils.helpers import create_embed
-from utils.logger import get_logger
+from src.utils.helpers import create_embed
+from src.utils.logger import get_logger
 
 
 class BirthdayReminderView(discord.ui.View):

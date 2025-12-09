@@ -75,3 +75,5 @@ outputs/
 # Crash flags
 data/flags/# Environment variables
 .env
+src/__pycache__/  
+src/*/__pycache__/ 

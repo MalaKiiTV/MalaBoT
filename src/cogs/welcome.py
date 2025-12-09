@@ -8,16 +8,16 @@ import asyncio
 import discord
 from discord.ext import commands
 
-from config.constants import (
+from src.config.constants import (
     COLORS,
     DEFAULT_GOODBYE_MESSAGE,
     DEFAULT_GOODBYE_TITLE,
     DEFAULT_WELCOME_MESSAGE,
     DEFAULT_WELCOME_TITLE,
 )
-from config.settings import settings
-from utils.helpers import create_embed, embed_helper, is_admin, safe_send_message
-from utils.logger import get_logger
+from src.config.settings import settings
+from src.utils.helpers import create_embed, embed_helper, is_admin, safe_send_message
+from src.utils.logger import get_logger
 
 
 class Welcome(commands.Cog):

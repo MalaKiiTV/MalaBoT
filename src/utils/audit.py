@@ -2,7 +2,7 @@
 
 import discord
 from datetime import datetime
-from utils.logger import log_system
+from src.utils.logger import log_system
 
 
 async def log_audit(bot, guild_id: int, user_id: int, action: str, details: str):

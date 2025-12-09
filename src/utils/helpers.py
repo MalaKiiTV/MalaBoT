@@ -11,8 +11,8 @@ from typing import Any
 import discord
 import psutil
 
-from config.constants import COLORS
-from utils.logger import get_logger
+from src.config.constants import COLORS
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -126,7 +126,7 @@ class PermissionHelper:
     @staticmethod
     def is_owner(user: discord.User) -> bool:
         """Check if user is a bot owner."""
-        from config.settings import settings
+        from src.config.settings import settings
 
         return str(user.id) in settings.OWNER_IDS
 
@@ -153,7 +153,7 @@ class CooldownHelper:
         """Set a cooldown for a user on a command."""
         if seconds is None:
             # Import here to avoid circular dependency
-            from config.constants import COMMAND_COOLDOWNS
+            from src.config.constants import COMMAND_COOLDOWNS
 
             seconds = COMMAND_COOLDOWNS.get(command, 5)
 
@@ -473,7 +473,7 @@ def is_staff_decorator():
 
 def xp_helper(xp: int) -> dict:
     """Helper function for XP calculations."""
-    from config.constants import XP_TABLE
+    from src.config.constants import XP_TABLE
 
     # Find current level based on XP
     level = 1

@@ -68,7 +68,7 @@ class DatabaseManager:
 
     async def set_user_xp(self, user_id: int, amount: int) -> tuple[int, int]:
         """Set user's XP to a specific amount and calculate level."""
-        from config.constants import XP_TABLE
+        from src.config.constants import XP_TABLE
 
         # Calculate level
         level = 1
@@ -155,7 +155,7 @@ class DatabaseManager:
             return 1000
 
         elif progression_type == "custom":
-            from config.constants import XP_TABLE
+            from src.config.constants import XP_TABLE
 
             if xp < 50:
                 return 0

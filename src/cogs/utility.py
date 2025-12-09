@@ -11,16 +11,16 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from config.constants import COLORS, COMMAND_CATEGORIES
-from config.settings import settings
-from utils.helpers import (
+from src.config.constants import COLORS, COMMAND_CATEGORIES
+from src.config.settings import settings
+from src.utils.helpers import (
     create_embed,
     embed_helper,
     format_duration,
     get_system_info,
     time_helper,
 )
-from utils.logger import get_logger
+from src.utils.logger import get_logger
 
 
 class Utility(commands.Cog):

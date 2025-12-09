@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from database.supabase_models import DatabaseManager
+from src.database.supabase_models import DatabaseManager
 
 logger = logging.getLogger(__name__)
 

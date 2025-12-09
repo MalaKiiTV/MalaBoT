@@ -8,9 +8,9 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ui import Modal, TextInput
 
-from config.constants import COLORS
-from utils.helpers import create_embed
-from utils.logger import log_system
+from src.config.constants import COLORS
+from src.utils.helpers import create_embed
+from src.utils.logger import log_system
 
 
 class SendMessageModal(Modal, title="Send Message as Bot"):

@@ -9,14 +9,14 @@ from discord import ButtonStyle, app_commands
 from discord.ext import commands
 from discord.ui import Button, Modal, Select, TextInput, View
 
-from cogs.role_connection_ui import (
+from src.cogs.role_connection_ui import (
     AddConnectionView,
     ManageConnectionsView,
     ProtectedRolesView,
 )
-from config.constants import COLORS
-from utils.helpers import create_embed
-from utils.logger import log_system
+from src.config.constants import COLORS
+from src.utils.helpers import create_embed
+from src.utils.logger import log_system
 
 # ============================================================
 # VERIFICATION SYSTEM COMPONENTS

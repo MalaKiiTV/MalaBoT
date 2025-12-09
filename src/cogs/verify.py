@@ -12,9 +12,9 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ui import Modal, Select, TextInput, View
 
-from config.constants import COLORS
-from utils.helpers import create_embed, safe_send_message
-from utils.logger import log_system
+from src.config.constants import COLORS
+from src.utils.helpers import create_embed, safe_send_message
+from src.utils.logger import log_system
 
 # Platform options for dropdown
 PLATFORM_OPTIONS = [
@@ -287,7 +287,7 @@ class VerifyGroup(app_commands.Group):
             await interaction.response.defer(ephemeral=True, thinking=True)
 
             # Check staff permission (uses general mod role)
-            from utils.helpers import check_mod_permission
+            from src.utils.helpers import check_mod_permission
 
             if not await check_mod_permission(interaction, self.cog.db):
                 return

@@ -10,13 +10,13 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from config.constants import COLORS, COMMAND_COOLDOWNS, FACTS, JOKES, ROASTS
-from utils.helpers import (
+from src.config.constants import COLORS, COMMAND_COOLDOWNS, FACTS, JOKES, ROASTS
+from src.utils.helpers import (
     cooldown_helper,
     embed_helper,
     system_helper,
 )
-from utils.logger import get_logger
+from src.utils.logger import get_logger
 
 
 class Fun(commands.Cog):
@@ -201,7 +201,7 @@ class Fun(commands.Cog):
 
             # Add bot's roast XP gain
             if self.bot.db_manager:
-                from config.constants import ROAST_XP_MAX, ROAST_XP_MIN
+                from src.config.constants import ROAST_XP_MAX, ROAST_XP_MIN
 
                 xp_gained = random.randint(ROAST_XP_MIN, ROAST_XP_MAX)
                 updated_roast_xp = await self.bot.db_manager.add_roast_xp(xp_gained)
@@ -211,7 +211,7 @@ class Fun(commands.Cog):
 
                 # Check for level up
                 if updated_roast_xp:
-                    from config.constants import ROAST_TITLES
+                    from src.config.constants import ROAST_TITLES
 
                     current_title = ROAST_TITLES.get(
                         updated_roast_xp["bot_level"], "Unknown"

@@ -7,9 +7,9 @@ import asyncio
 import discord
 from discord.ui import Button, Select, View
 
-from config.constants import COLORS
-from utils.helpers import create_embed
-from utils.logger import log_system
+from src.config.constants import COLORS
+from src.utils.helpers import create_embed
+from src.utils.logger import log_system
 
 
 class AddConnectionView(View):

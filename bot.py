@@ -20,13 +20,17 @@ logging.getLogger("discord").handlers.clear()
 logging.getLogger("discord.gateway").handlers.clear()
 logging.getLogger("discord.client").handlers.clear()
 
+# Reduce noise from HTTP requests and Discord internals
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("discord.http").setLevel(logging.WARNING)
+
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from config.settings import settings
-from database.supabase_models import DatabaseManager
-from utils.helpers import (
+from src.config.settings import settings
+from src.database.supabase_models import DatabaseManager
+from src.utils.helpers import (
     create_embed,
     embed_helper,
     format_duration,
@@ -34,7 +38,7 @@ from utils.helpers import (
     safe_send_message,
     system_helper,
 )
-from utils.logger import get_logger, log_critical, log_startup_verification, log_system
+from src.utils.logger import get_logger, log_critical, log_startup_verification, log_system
 
 
 class MalaBoT(commands.Bot):
@@ -103,13 +107,13 @@ class MalaBoT(commands.Bot):
                     self.logger.warning(
                         "No running event loop, forcing immediate shutdown"
                     )
-                    sys.exit(0)
+                    # Graceful shutdown complete - let asyncio handle exit
             except RuntimeError:
                 # No event loop at all
                 self.logger.warning(
                     "No event loop available, forcing immediate shutdown"
                 )
-                sys.exit(0)
+                # Graceful shutdown complete - let asyncio handle exit
 
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
@@ -287,12 +291,12 @@ The bot will start in safe mode to prevent further issues.
         if self.safe_mode:
             # Safe mode: load only essential cogs
             essential_cogs = [
-                "cogs.utility",
-                "cogs.moderation",
-                "cogs.xp",
-                "cogs.birthdays",
-                "cogs.owner",
-                "cogs.verify",
+                "src.cogs.utility",
+                "src.cogs.moderation",
+                "src.cogs.xp",
+                "src.cogs.birthdays",
+                "src.cogs.owner",
+                "src.cogs.verify",
             ]
 
             self.logger.info("Loading essential cogs in safe mode...")
@@ -302,21 +306,21 @@ The bot will start in safe mode to prevent further issues.
         else:
             # Normal mode: load all enabled cogs
             cogs_to_load = [
-                "cogs.utility",
-                "cogs.fun",
-                "cogs.moderation",
-                "cogs.xp",
-                "cogs.birthdays",
-                "cogs.welcome",
-                "cogs.owner",
-                "cogs.verify",
-                "cogs.setup",
-                "cogs.appeal",
-                "cogs.bot_control",
-                "cogs.role_connections",
+                "src.cogs.utility",
+                "src.cogs.fun",
+                "src.cogs.moderation",
+                "src.cogs.xp",
+                "src.cogs.birthdays",
+                "src.cogs.welcome",
+                "src.cogs.owner",
+                "src.cogs.verify",
+                "src.cogs.setup",
+                "src.cogs.appeal",
+                "src.cogs.bot_control",
+                "src.cogs.role_connections",
             ]
 
-            self.logger.info("Loading all cogs...")
+            self.logger.info("Loading all src.cogs...")
             for cog in cogs_to_load:
                 await self._load_cog(cog)
 
@@ -726,8 +730,9 @@ The bot will start in safe mode to prevent further issues.
             self.logger.error(f"Error during shutdown: {e}")
 
         finally:
-            # Force exit if needed
-            sys.exit(0)
+            # Graceful shutdown complete
+            pass
+
 
     async def health_check(self) -> dict:
         """Return bot health status for monitoring"""

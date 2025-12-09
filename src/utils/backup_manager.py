@@ -7,7 +7,7 @@ import logging
 import os
 import asyncio
 from datetime import datetime
-from database.supabase_models import DatabaseManager
+from src.database.supabase_models import DatabaseManager
 
 logger = logging.getLogger("backup_manager")
 

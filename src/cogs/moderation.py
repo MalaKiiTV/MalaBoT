@@ -9,10 +9,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from config.constants import COLORS, DELETE_LOG_LIMIT
-from config.settings import settings
-from utils.helpers import create_embed, embed_helper, is_owner, safe_send_message
-from utils.logger import get_logger, log_moderation
+from src.config.constants import COLORS, DELETE_LOG_LIMIT
+from src.config.settings import settings
+from src.utils.helpers import create_embed, embed_helper, is_owner, safe_send_message
+from src.utils.logger import get_logger, log_moderation
 
 
 class Moderation(commands.Cog):
@@ -47,7 +47,7 @@ class Moderation(commands.Cog):
                 return
 
             # Check if user is owner, admin, or staff
-            from utils.helpers import is_staff
+            from src.utils.helpers import is_staff
 
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (
@@ -322,7 +322,7 @@ class Moderation(commands.Cog):
         """Kick a user from the server."""
         try:
             # Check if user is owner, admin, or staff
-            from utils.helpers import is_staff
+            from src.utils.helpers import is_staff
 
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (
@@ -419,7 +419,7 @@ class Moderation(commands.Cog):
         """Ban a user from the server."""
         try:
             # Check if user is owner, admin, or staff
-            from utils.helpers import is_staff
+            from src.utils.helpers import is_staff
 
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (
@@ -524,7 +524,7 @@ class Moderation(commands.Cog):
         """Mute a user in the server."""
         try:
             # Check if user is owner, admin, or staff
-            from utils.helpers import is_staff
+            from src.utils.helpers import is_staff
 
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (
@@ -652,7 +652,7 @@ class Moderation(commands.Cog):
         """Unmute a user in the server."""
         try:
             # Check if user is owner, admin, or staff
-            from utils.helpers import is_staff
+            from src.utils.helpers import is_staff
 
             is_bot_owner = is_owner(interaction.user)
             has_admin_perm = (

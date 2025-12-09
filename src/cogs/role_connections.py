@@ -3,7 +3,7 @@ import json
 import discord
 from discord.ext import commands, tasks
 
-from utils.logger import log_system
+from src.utils.logger import log_system
 
 
 class RoleConnection:

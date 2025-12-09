@@ -11,7 +11,7 @@ from typing import Optional
 
 import colorlog
 
-from config.settings import settings
+from src.config.settings import settings
 
 
 class MalaBotLogger:
@@ -228,7 +228,7 @@ Error Details:
 
     def log_startup_verification(self, verification_results: dict):
         """Log startup verification results."""
-        from config.constants import SYSTEM_MESSAGES
+        from src.config.constants import SYSTEM_MESSAGES
 
         verification_info = f"""
 {SYSTEM_MESSAGES['startup_verification']}
@@ -244,7 +244,7 @@ Verification Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
     def log_daily_digest(self, digest_data: dict):
         """Log daily digest report."""
-        from config.constants import SYSTEM_MESSAGES
+        from src.config.constants import SYSTEM_MESSAGES
 
         digest_info = f"""
 {SYSTEM_MESSAGES['daily_digest']}
@@ -266,7 +266,7 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
     def log_watchdog_event(self, event_type: str, details: str):
         """Log watchdog events."""
-        from config.constants import SYSTEM_MESSAGES
+        from src.config.constants import SYSTEM_MESSAGES
 
         watchdog_info = f"""
 {SYSTEM_MESSAGES['watchdog_report']}

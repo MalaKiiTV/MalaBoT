@@ -1,8 +1,8 @@
 """
 XP and leveling system cog for MalaBoT.
 Handles user XP gains, level progression, and XP administration.
-Supabase integration for cloud database operations.
 """
+# Test comment - verifying deployment workflow
 import datetime
 from typing import Optional
 
@@ -10,7 +10,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from config.constants import (
+from src.config.constants import (
     COLORS,
     DAILY_CHECKIN_XP,
     STREAK_BONUS_PERCENT,
@@ -20,11 +20,11 @@ from config.constants import (
     XP_PER_VOICE_MINUTE,
     XP_TABLE,
 )
-from utils.helpers import (
+from src.utils.helpers import (
     create_embed,
     embed_helper,
 )
-from utils.logger import get_logger
+from src.utils.logger import get_logger
 
 
 class XPGroup(app_commands.Group):
@@ -48,29 +48,14 @@ class XPGroup(app_commands.Group):
             
             target = user or interaction.user
 
-            # Get user stats from Supabase
-            result = self.cog.bot.db_manager.supabase.table('users')\
-                .select('xp, level')\
-                .eq('user_id', str(target.id))\
-                .eq('guild_id', str(interaction.guild.id))\
-                .execute()
-
-            if not result.data:
-                xp = 0
-                level = 1
-            else:
-                user_data = result.data[0]
-                xp = user_data['xp']
-                level = user_data['level']
+            # Get user stats from database
+            xp = await self.cog.bot.db_manager.get_user_xp(target.id)
+            level = await self.cog.bot.db_manager.get_user_level(target.id)
 
             # Get rank
-            rank_result = self.cog.bot.db_manager.supabase.table('users')\
-                .select('user_id')\
-                .eq('guild_id', str(interaction.guild.id))\
-                .gt('xp', xp)\
-                .execute()
-            
-            rank = len(rank_result.data) + 1
+            rank = await self.cog.bot.db_manager.get_user_rank(
+                target.id, interaction.guild.id
+            )
 
             # Calculate XP for next level using XP_TABLE
             if level < len(XP_TABLE):
@@ -85,7 +70,7 @@ class XPGroup(app_commands.Group):
             xp_total_needed = next_level_xp - current_level_xp
 
             # Create progress bar
-            progress = int((xp_progress / xp_total_needed) * 20) if xp_total_needed > 0 else 0
+            progress = int((xp_progress / xp_total_needed) * 20)
             progress_bar = "█" * progress + "░" * (20 - progress)
 
             embed = create_embed(
@@ -97,6 +82,7 @@ class XPGroup(app_commands.Group):
             embed.set_thumbnail(url=target.display_avatar.url)
 
             await interaction.followup.send(embed=embed, ephemeral=True)
+
 
         except Exception as e:
             self.cog.logger.error(f"Error in rank command: {e}")
@@ -112,16 +98,29 @@ class XPGroup(app_commands.Group):
             # Defer immediately to prevent timeout
             await interaction.response.defer(ephemeral=True)
             
-            # Get top users by XP for this guild only using Supabase
-            result = self.cog.bot.db_manager.supabase.table('users')\
-                .select('user_id, xp, level')\
-                .eq('guild_id', str(interaction.guild.id))\
-                .gt('xp', 0)\
-                .order('xp', desc=True)\
-                .limit(10)\
-                .execute()
+            # Get top users by XP for this guild only
+            guild_member_ids = [member.id for member in interaction.guild.members]
+            if not guild_member_ids:
+                embed = create_embed(
+                    title="\ud83c\udfc6 XP Leaderboard",
+                    description="No guild members found!",
+                    color=COLORS["warning"],
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
 
-            rows = result.data if result.data else []
+                return
+
+            conn = await self.cog.bot.db_manager.get_connection()
+            placeholders = ",".join(["?" for _ in guild_member_ids])
+            cursor = await conn.execute(
+                f"""SELECT user_id, xp, level
+                   FROM users
+                   WHERE user_id IN ({placeholders}) AND xp > 0
+                   ORDER BY xp DESC
+                   LIMIT 10""",
+                guild_member_ids,
+            )
+            rows = await cursor.fetchall()
 
             if not rows:
                 embed = create_embed(
@@ -133,10 +132,7 @@ class XPGroup(app_commands.Group):
                 return
 
             description = ""
-            for i, row in enumerate(rows, 1):
-                user_id = int(row['user_id'])
-                xp = row['xp']
-                level = row['level']
+            for i, (user_id, xp, level) in enumerate(rows, 1):
                 user = interaction.guild.get_member(user_id)
                 if user:
                     medal = ""
@@ -172,32 +168,29 @@ class XPGroup(app_commands.Group):
             user_id = interaction.user.id
             today = datetime.datetime.now().date()
 
-            # Check last checkin using Supabase
-            result = self.cog.bot.db_manager.supabase.table('users')\
-                .select('last_checkin, checkin_streak')\
-                .eq('user_id', str(user_id))\
-                .eq('guild_id', str(interaction.guild.id))\
-                .execute()
+            # Check last checkin
+            conn = await self.cog.bot.db_manager.get_connection()
+            cursor = await conn.execute(
+                "SELECT last_checkin, checkin_streak FROM daily_checkins WHERE user_id = ?",
+                (user_id,),
+            )
+            row = await cursor.fetchone()
 
-            streak = 0
-            if result.data:
-                user_data = result.data[0]
-                last_checkin_str = user_data.get('last_checkin')
-                if last_checkin_str:
-                    last_checkin = datetime.datetime.fromisoformat(last_checkin_str).date()
-                    if last_checkin == today:
-                        embed = create_embed(
-                            title="✅ Already Checked In",
-                            description="You've already claimed your daily bonus today!",
-                            color=COLORS["warning"],
-                        )
-                        await interaction.followup.send(embed=embed, ephemeral=True)
-                        return
+            if row:
+                last_checkin = datetime.datetime.strptime(row[0], "%Y-%m-%d").date()
+                if last_checkin == today:
+                    embed = create_embed(
+                        title="✅ Already Checked In",
+                        description="You've already claimed your daily bonus today!",
+                        color=COLORS["warning"],
+                    )
+                    await interaction.followup.send(embed=embed, ephemeral=True)
+                    return
 
-                    # Calculate streak
-                    streak = user_data.get('checkin_streak', 0) if (today - last_checkin).days == 1 else 0
-                else:
-                    streak = 0
+                # Calculate streak
+                streak = row[1] if (today - last_checkin).days == 1 else 0
+            else:
+                streak = 0
 
             streak += 1
 
@@ -206,18 +199,21 @@ class XPGroup(app_commands.Group):
             if streak > 1:
                 bonus = int(bonus * (1 + (STREAK_BONUS_PERCENT / 100 * (streak - 1))))
 
-            # Give XP using Supabase
-            await self.cog.bot.db_manager.add_xp(user_id, interaction.guild.id, bonus)
+            # Give XP
+            new_xp, new_level, leveled_up = await self.cog.bot.db_manager.update_user_xp(user_id, bonus, interaction.guild.id)
 
-            # Update checkin record using Supabase
-            self.cog.bot.db_manager.supabase.table('users')\
-                .update({
-                    'last_checkin': today.isoformat(),
-                    'checkin_streak': streak
-                })\
-                .eq('user_id', str(user_id))\
-                .eq('guild_id', str(interaction.guild.id))\
-                .execute()
+            # Check for level-up and assign roles
+            if leveled_up:
+                await self.cog._check_level_up(interaction.user)
+
+            # Update checkin record
+            await conn.execute(
+
+                """INSERT OR REPLACE INTO daily_checkins (user_id, last_checkin, checkin_streak)
+                   VALUES (?, ?, ?)""",
+                (user_id, today.isoformat(), streak),
+            )
+            await conn.commit()
 
             embed = create_embed(
                 title="✅ Daily Check-in Complete!",
@@ -257,7 +253,9 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager.add_xp(user.id, interaction.guild.id, amount)
+            new_xp, new_level, leveled_up = await self.cog.bot.db_manager.update_user_xp(user.id, amount, interaction.guild.id)
+            if leveled_up:
+                await self.cog._check_level_up(user)
             embed = create_embed(
                 title="✅ XP Added",
                 description=f"Added **{amount:,} XP** to {user.mention}",
@@ -307,7 +305,11 @@ class XPGroup(app_commands.Group):
             # Add XP to all users in the server
             for member in interaction.guild.members:
                 if not member.bot:
-                    await self.cog.bot.db_manager.add_xp(member.id, interaction.guild.id, amount)
+                    new_xp, new_level, leveled_up = await self.cog.bot.db_manager.update_user_xp(member.id, amount, interaction.guild.id)
+
+                    # Check for level-up and assign roles
+                    if leveled_up:
+                        await self.cog._check_level_up(member)
 
             embed = create_embed(
                 title="✅ XP Added to All Users",
@@ -347,7 +349,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager.remove_user_xp(user.id, interaction.guild.id, amount)
+            await self.cog.bot.db_manager.remove_user_xp(user.id, amount)
             embed = create_embed(
                 title="✅ XP Removed",
                 description=f"Removed **{amount:,} XP** from {user.mention}",
@@ -382,9 +384,15 @@ class XPGroup(app_commands.Group):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
-
         try:
-            await self.cog.bot.db_manager.set_user_xp(user.id, interaction.guild.id, amount)
+            old_level = await self.cog.bot.db_manager.get_user_level(user.id)
+            await self.cog.bot.db_manager.set_user_xp(user.id, amount)
+            new_level = await self.cog.bot.db_manager.get_user_level(user.id)
+            
+            # Check if leveled up
+            if new_level > old_level:
+                await self.cog._check_level_up(user)
+            
             embed = create_embed(
                 title="✅ XP Set",
                 description=f"Set {user.mention}'s XP to **{amount:,}**",
@@ -412,7 +420,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager.set_user_xp(user.id, interaction.guild.id, 0)
+            await self.cog.bot.db_manager.set_user_xp(user.id, 0)
             embed = create_embed(
                 title="✅ XP Reset",
                 description=f"Reset {user.mention}'s XP to **0**",
@@ -442,18 +450,14 @@ class XPGroup(app_commands.Group):
             # Defer the response since this might take a while
             await interaction.response.defer(ephemeral=True)
 
-            # Reset XP for all users in the database using Supabase
-            self.cog.bot.db_manager.supabase.table('users')\
-                .update({'xp': 0, 'level': 1})\
-                .eq('guild_id', str(interaction.guild.id))\
-                .execute()
+            # Reset XP for all users in the database
+            conn = await self.cog.bot.db_manager.get_connection()
+            await conn.execute("UPDATE users SET xp = 0, level = 0")
+            await conn.commit()
 
             # Get count of affected users
-            count_result = self.cog.bot.db_manager.supabase.table('users')\
-                .select('user_id')\
-                .eq('guild_id', str(interaction.guild.id))\
-                .execute()
-            count = len(count_result.data) if count_result.data else 0
+            cursor = await conn.execute("SELECT COUNT(*) FROM users")
+            count = (await cursor.fetchone())[0]
 
             embed = create_embed(
                 title="✅ All XP Reset",
@@ -482,30 +486,29 @@ class XPGroup(app_commands.Group):
     )
     async def reset_checkins(self, interaction: discord.Interaction):
         """Reset all users' check-in streaks."""
-        await interaction.response.defer(ephemeral=True)
-        
         # Check if user is server owner
         if interaction.user.id != interaction.guild.owner_id:
             embed = embed_helper.error_embed(
                 "Permission Denied",
                 "Only the server owner can use this command.",
             )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             return
 
         try:
-            # Reset all check-in streaks using Supabase
-            self.cog.bot.db_manager.supabase.table('users')\
-                .update({'last_checkin': None, 'checkin_streak': 0})\
-                .eq('guild_id', str(interaction.guild.id))\
-                .execute()
+            # Defer the response since this might take a while
+            await interaction.response.defer(ephemeral=True)
 
-            # Get count of affected users
-            count_result = self.cog.bot.db_manager.supabase.table('users')\
-                .select('user_id')\
-                .eq('guild_id', str(interaction.guild.id))\
-                .execute()
-            count = len(count_result.data) if count_result.data else 0
+            # Reset all check-in streaks
+            conn = await self.cog.bot.db_manager.get_connection()
+            
+            # Get count before deletion
+            cursor = await conn.execute("SELECT COUNT(*) FROM daily_checkins")
+            count = (await cursor.fetchone())[0]
+            
+            # Delete all check-in records
+            await conn.execute("DELETE FROM daily_checkins")
+            await conn.commit()
 
             embed = create_embed(
                 title="✅ All Check-ins Reset",
@@ -531,8 +534,10 @@ class XPGroup(app_commands.Group):
             await interaction.followup.send(embed=embed, ephemeral=True)
 
 
-class XP(commands.Cog):
 
+
+
+class XP(commands.Cog):
     """XP and leveling system."""
 
     def __init__(self, bot: commands.Bot):
@@ -575,12 +580,15 @@ class XP(commands.Cog):
             if xp_amount <= 0:
                 return
 
-            # Award XP and check for level up using Supabase
-            await self.bot.db_manager.add_xp(user_id, message.guild.id, xp_amount)
+            # Award XP and check for level up
+            new_xp, new_level, leveled_up = await self.bot.db_manager.update_user_xp(
+                user_id, xp_amount, message.guild.id
+            )
             self.last_xp_time[user_id] = current_time
 
             # Check and assign level roles
-            await self._check_level_up(message.author)
+            if leveled_up:
+                await self._check_level_up(message.author)
 
         except Exception as e:
             self.logger.error(f"Error awarding message XP: {e}")
@@ -614,11 +622,12 @@ class XP(commands.Cog):
             if xp_amount <= 0:
                 return
 
-            # Award XP to message author using Supabase
-            await self.bot.db_manager.add_xp(message.author.id, message.guild.id, xp_amount)
+            # Award XP to message author
+            new_xp, new_level, leveled_up = await self.bot.db_manager.update_user_xp(message.author.id, xp_amount, message.guild.id)
             
             # Check for level-up
-            await self._check_level_up(message.author)
+            if leveled_up:
+                await self._check_level_up(message.author)
 
         except Exception as e:
             self.logger.error(f"Error awarding reaction XP: {e}")
@@ -661,11 +670,12 @@ class XP(commands.Cog):
                             return
                         
                         xp_gained = minutes * xp_per_minute
-                        # Award voice XP using Supabase
-                        await self.bot.db_manager.add_xp(member.id, member.guild.id, xp_gained)
+                        # Award voice XP
+                        new_xp, new_level, leveled_up = await self.bot.db_manager.update_user_xp(member.id, xp_gained, member.guild.id)
                         
                         # Check for level-up
-                        await self._check_level_up(member)
+                        if leveled_up:
+                            await self._check_level_up(member)
 
                     del self.bot.voice_time[member.id]
 
@@ -678,25 +688,19 @@ class XP(commands.Cog):
         self.logger.info(f"[LEVEL ROLE] _check_level_up called for user {user.name} (ID: {user.id})")
 
         try:
-            # Get current level from Supabase
-            result = self.bot.db_manager.supabase.table('users')\
-                .select('level')\
-                .eq('user_id', str(user.id))\
-                .eq('guild_id', str(user.guild.id))\
-                .execute()
-
-            if not result.data:
-                current_level = 1
-            else:
-                current_level = result.data[0]['level']
-
+            # Get user's current level
+            current_level = await self.bot.db_manager.get_user_level(user.id)
             self.logger.info(f"[LEVEL ROLE DEBUG] User {user.name} is level {current_level}")
 
+            # Check if we already sent a level-up message for this level
             level_key = f"{user.id}_{current_level}"
-            
-            if level_key not in self.level_up_sent:
+            if level_key in self.level_up_sent:
+                self.logger.info(f"[LEVEL ROLE DEBUG] Already sent level-up message for {user.name} level {current_level}, skipping")
+            else:
+                # Mark this level as sent
                 self.level_up_sent[level_key] = True
                 
+                # Send level-up message to XP channel
                 xp_channel_id = await self.bot.db_manager.get_setting("xp_channel", user.guild.id)
                 levelup_message = await self.bot.db_manager.get_setting("xp_levelup_message", user.guild.id)
                 
@@ -704,40 +708,41 @@ class XP(commands.Cog):
                 self.logger.info(f"[LEVEL ROLE DEBUG] Level-up message template: {levelup_message}")
 
                 if xp_channel_id:
-                    try:
-                        channel = user.guild.get_channel(int(xp_channel_id))
-                        self.logger.info(f"[LEVEL ROLE DEBUG] Channel object: {channel}")
-                        if channel:
-                            msg = levelup_message or "🎉 {member} reached level {level}!"
-                            msg = msg.replace("{member}", user.mention)
-                            msg = msg.replace("{level}", str(current_level))
+                    channel = user.guild.get_channel(int(xp_channel_id))
+                    self.logger.info(f"[LEVEL ROLE DEBUG] Channel object: {channel}")
+                    if channel:
+                        # Format the message
+                        msg = levelup_message or "🎉 {member} reached level {level}!"
+                        msg = msg.replace("{member}", user.mention)
+                        msg = msg.replace("{level}", str(current_level))
+
+                        try:
                             await channel.send(msg)
                             self.logger.info(f"Sent level-up message for {user.name} reaching level {current_level}")
-                    except Exception as e:
-                        self.logger.error(f"Failed to send level-up message: {e}")
-            else:
-                self.logger.info(f"[LEVEL ROLE DEBUG] Already sent level-up message for {user.name} level {current_level}, skipping")
+                        except Exception as e:
+                            self.logger.error(f"Failed to send level-up message: {e}")
 
-            # Get level roles from Supabase
-            level_roles_result = self.bot.db_manager.supabase.table('level_roles')\
-                .select('level, role_id')\
-                .eq('guild_id', str(user.guild.id))\
-                .execute()
-
-            rows = level_roles_result.data if level_roles_result.data else []
+            # Check for level roles (always check, even if message was already sent)
+            conn = await self.bot.db_manager.get_connection()
+            cursor = await conn.execute(
+                "SELECT level, role_id FROM level_roles WHERE guild_id = ?",
+                (user.guild.id,),
+            )
+            rows = await cursor.fetchall()
             self.logger.info(f"[LEVEL ROLE DEBUG] Found {len(rows)} level roles configured for guild {user.guild.id}")
 
-            for row in rows:
-                level = row['level']
-                role_id = row['role_id']
+            for level, role_id in rows:
                 self.logger.info(f"[LEVEL ROLE DEBUG] Checking level {level} role (ID: {role_id})")
+                # If user reached this level, assign the role
                 if current_level >= level:
                     role = user.guild.get_role(int(role_id))
                     self.logger.info(f"[LEVEL ROLE DEBUG] Role object: {role}")
                     if role and role not in user.roles:
                         self.logger.info(f"[LEVEL ROLE DEBUG] Attempting to assign role {role.name} to {user.name}")
                         await user.add_roles(role, reason=f"Reached level {level}")
-                        self.logger.info(f"Assigned role {role.name} to {user.name} for reaching level {level}")
+                        self.logger.info(
+                            f"Assigned role {role.name} to {user.name} for reaching level {level}"
+                        )
                     elif role in user.roles:
                         self.logger.info(f"[LEVEL ROLE DEBUG] User already has role {role.name}")
                     else:
@@ -745,7 +750,6 @@ class XP(commands.Cog):
 
         except Exception as e:
             self.logger.error(f"Error checking level up: {e}")
-
 
 async def setup(bot: commands.Bot):
     """Setup the XP cog."""

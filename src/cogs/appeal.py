@@ -9,9 +9,9 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ui import Modal, TextInput
 
-from config.constants import COLORS
-from utils.helpers import create_embed, safe_send_message
-from utils.logger import log_system
+from src.config.constants import COLORS
+from src.utils.helpers import create_embed, safe_send_message
+from src.utils.logger import log_system
 
 
 class AppealGroup(app_commands.Group):
@@ -91,7 +91,7 @@ class AppealGroup(app_commands.Group):
             await interaction.response.defer(ephemeral=True, thinking=True)
 
             # Check staff permission
-            from utils.helpers import check_staff_permission
+            from src.utils.helpers import check_staff_permission
 
             if not await check_staff_permission(interaction, self.cog.db):
                 return

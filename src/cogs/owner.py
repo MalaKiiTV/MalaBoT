@@ -14,13 +14,13 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from config.constants import COLORS
-from config.settings import settings
-from utils.helpers import (
+from src.config.constants import COLORS
+from src.config.settings import settings
+from src.utils.helpers import (
     embed_helper,
     get_system_info,
 )
-from utils.logger import get_logger
+from src.utils.logger import get_logger
 
 
 class Owner(commands.Cog):

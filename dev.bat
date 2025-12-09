@@ -152,7 +152,7 @@ if not exist .env (
 )
 
 echo [3/4] Testing configuration...
-python -c "from config.settings import settings; errors = settings.validate(); print('Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
+python -c "from src.config.settings import settings; errors = settings.validate(); print('Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Configuration test failed!
     echo [INFO] Please check your .env file and ensure:
@@ -213,7 +213,7 @@ if not exist .env (
     goto menu
 )
 
-python -c "from config.settings import settings; errors = settings.validate(); print('Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
+python -c "from src.config.settings import settings; errors = settings.validate(); print('Configuration OK' if not errors else f'Errors: {errors}')" 2>NUL
 if %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Configuration test failed!
     echo [INFO] Check your .env file settings
@@ -540,7 +540,7 @@ if not exist .env (
 )
 
 python -c "try:
-    from config.settings import settings
+    from src.config.settings import settings
     errors = settings.validate()
     if errors:
         print('[ERROR] Configuration errors:')
@@ -667,7 +667,7 @@ if not exist .env (
     goto menu
 )
 
-python -c "from config.settings import settings; errs=settings.validate(); import sys; sys.exit(0) if not errs else (print('[ERROR] Config validation failed:') or [print(' -', e) for e in errs] or sys.exit(1))"
+python -c "from src.config.settings import settings; errs=settings.validate(); import sys; sys.exit(0) if not errs else (print('[ERROR] Config validation failed:') or [print(' -', e) for e in errs] or sys.exit(1))"
 if %ERRORLEVEL% EQU 0 (
     echo [OK] Environment validated successfully.
 ) else (
