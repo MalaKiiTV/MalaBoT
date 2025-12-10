@@ -2629,12 +2629,7 @@ class XPSetupView(View):
         await interaction.response.defer(ephemeral=True)
 
         # Get current level roles from database table
-        conn = await self.db_manager.get_connection()
-        cursor = await conn.execute(
-            "SELECT level, role_id FROM level_roles WHERE guild_id = ? ORDER BY level",
-            (self.guild_id,)
-        )
-        rows = await cursor.fetchall()
+        rows = await self.db_manager.get_level_roles(self.guild_id)
 
         # Build description
         if rows:

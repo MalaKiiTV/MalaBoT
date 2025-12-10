@@ -333,7 +333,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager.remove_user_xp(user.id, amount)
+            await self.cog.bot.db_manager.remove_user_xp(user.id, amount, interaction.guild.id)
             embed = create_embed(
                 title="✅ XP Removed",
                 description=f"Removed **{amount:,} XP** from {user.mention}",

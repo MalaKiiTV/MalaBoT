@@ -171,9 +171,9 @@ class DatabaseManager:
         else:
             return await self._calculate_level_from_xp(xp, "custom")
 
-    async def remove_user_xp(self, user_id: int, amount: int) -> tuple[int, int]:
+    async def remove_user_xp(self, user_id: int, amount: int, guild_id: int) -> tuple[int, int]:
         """Remove XP from user."""
-        return await self.update_user_xp(user_id, -amount)
+        return await self.update_user_xp(user_id, -amount, guild_id)
 
     async def get_user_level(self, user_id: int, guild_id: int) -> int:
         """Get user's current level."""
@@ -435,7 +435,7 @@ class DatabaseManager:
             'setting_key': key,
             'value': value,
             'updated_at': datetime.now().isoformat()
-        }).execute()
+        }, on_conflict='guild_id,setting_key').execute()
 
     # === SYSTEM FLAGS ===
 
