@@ -1,4 +1,5 @@
 import json
+import logging
 
 import discord
 from discord.ext import commands, tasks
@@ -65,13 +66,15 @@ class RoleConnection:
 
 
 class RoleConnectionManager:
-    """Manages role connections for a guild"""
+    """Manages role connections and protected roles"""
 
     def __init__(self, bot, db_manager):
         self.bot = bot
         self.db = db_manager
+        self.logger = logging.getLogger("role_connections")
         self.connections_cache = {}  # {guild_id: [RoleConnection]}
         self.protected_roles_cache = {}  # {guild_id: [role_ids]}
+
 
     async def load_connections(self, guild_id: int):
         """Load all connections for a guild from database"""
@@ -113,6 +116,8 @@ class RoleConnectionManager:
 
     async def load_protected_roles(self, guild_id: int):
         """Load protected roles for a guild"""
+        self.logger.debug(f"Loading protected roles for guild {guild_id}")
+
         protected_data = await self.db.get_setting("protected_roles", guild_id)
         if protected_data:
             try:

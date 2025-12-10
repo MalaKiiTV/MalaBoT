@@ -834,10 +834,20 @@ class RoleConnectionMainSelect(Select):
 
         if protected:
             role_list = []
+            deleted_roles = []
             for role_id in protected:
                 role = self.guild.get_role(role_id)
                 if role:
                     role_list.append(f"• {role.mention}")
+                else:
+                    deleted_roles.append(role_id)
+            
+            # Clean up deleted roles
+            if deleted_roles:
+                for role_id in deleted_roles:
+                    protected.remove(role_id)
+                self.manager.protected_roles_cache[self.guild.id] = protected
+                await self.manager.save_protected_roles(self.guild.id)
             embed.add_field(
                 name="Protected", value="\n".join(role_list) or "None", inline=False
             )
