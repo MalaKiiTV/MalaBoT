@@ -89,12 +89,15 @@ class PlatformSelect(Select):
             bot = interaction.client
             db = bot.db_manager
 
-            conn = await db.get_connection()
-            await conn.execute(
-                "INSERT INTO verifications (user_id, activision_id, platform, screenshot_url) VALUES (?, ?, ?, ?)",
-                (self.user_id, self.activision_id, platform, self.screenshot_url),
-            )
-            await conn.commit()
+            # Insert verification into Supabase
+            db.supabase.table('verifications').insert({
+                'user_id': str(self.user_id),
+                'activision_id': self.activision_id,
+                'platform': platform,
+                'screenshot_url': self.screenshot_url,
+                'status': 'pending',
+                'guild_id': str(interaction.guild_id)
+            }).execute()
 
             # Delete the platform selection message to clean up the channel
             try:
@@ -308,12 +311,12 @@ class VerifyGroup(app_commands.Group):
                 )
                 return
 
-            conn = await self.cog.db.get_connection()
-            await conn.execute(
-                "UPDATE verifications SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, notes = ? WHERE user_id = ?",
-                (decision_value, interaction.user.id, notes, user.id),
-            )
-            await conn.commit()
+            # Update verification in Supabase
+            self.cog.db.supabase.table('verifications').update({
+                'status': decision_value,
+                'reviewed_by': str(interaction.user.id),
+                'notes': notes
+            }).eq('user_id', str(user.id)).execute()
 
             guild = interaction.guild
             member = guild.get_member(user.id)

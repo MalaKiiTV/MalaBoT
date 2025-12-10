@@ -330,6 +330,7 @@ class Birthdays(commands.Cog):
     async def _list_birthdays(self, interaction: discord.Interaction):
         """List all birthdays sorted by who's next."""
         try:
+            guild_id = interaction.guild.id
             # Get all birthdays from database
             all_birthdays = await self.bot.db_manager.get_all_birthdays(guild_id)  # type: ignore
 

@@ -274,10 +274,10 @@ class DatabaseManager:
             }).execute()
 
 
-    async def set_user_birthday(self, user_id: int, birthday: str) -> bool:
+    async def set_user_birthday(self, user_id: int, birthday: str, guild_id: int) -> bool:
         """Set user birthday (returns success status)."""
         try:
-            await self.set_birthday(user_id, birthday)
+            await self.set_birthday(user_id, birthday, guild_id)
             return True
         except Exception as e:
             print(f"ERROR setting birthday: {e}")
@@ -298,7 +298,7 @@ class DatabaseManager:
 
     async def get_user_birthday(self, user_id: int, guild_id: int) -> Optional[tuple]:
         """Get user birthday (alias)."""
-        return await self.get_birthday(user_id)
+        return await self.get_birthday(user_id, guild_id)
 
     async def get_all_birthdays(self, guild_id: int) -> list:
         """Get all birthdays."""
