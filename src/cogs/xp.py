@@ -196,7 +196,7 @@ class XPGroup(app_commands.Group):
                 await self.cog._check_level_up(interaction.user)
 
             # Update checkin record
-            await self.cog.bot.db_manager.update_daily_checkin(user_id, today.strftime("%Y-%m-%d", interaction.guild.id), streak)
+            await self.cog.bot.db_manager.update_daily_checkin(user_id, today.strftime("%Y-%m-%d"), interaction.guild.id, streak)
 
 
             embed = create_embed(
@@ -669,7 +669,7 @@ class XP(commands.Cog):
         self.logger.info(f"[LEVEL ROLE] _check_level_up called for user {user.name} (ID: {user.id})")
 
         try:
-            # Get user's current level
+            current_level = await self.bot.db_manager.get_user_level(user.id, user.guild.id)
             current_level = await self.bot.db_manager.get_user_level(user.id, interaction.guild.id)
             self.logger.info(f"[LEVEL ROLE DEBUG] User {user.name} is level {current_level}")
 

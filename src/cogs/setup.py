@@ -470,7 +470,7 @@ class OnboardingRoleSelectView(View):
                 description="Could not find the selected role. Please try again.",
                 color=COLORS["error"],
             )
-            await interaction.response.edit_message(embed=embed, view=None)
+            await interaction.edit_original_response(embed=embed, view=None)
 
             import asyncio
             await asyncio.sleep(3)
@@ -493,7 +493,7 @@ class OnboardingRoleSelectView(View):
             description=f"Members will receive {role.mention} until they complete onboarding",
             color=COLORS["success"],
         )
-        await interaction.response.edit_message(embed=embed, view=None)
+        await interaction.edit_original_response(embed=embed, view=None)
 
         # Wait 2 seconds then return to general settings
         import asyncio
@@ -590,7 +590,7 @@ class GeneralSettingsView(View):
                 description=f"Mod role set to {role.mention}",
                 color=COLORS["success"],
             )
-            await interaction.response.edit_message(embed=embed, view=None)
+            await interaction.edit_original_response(embed=embed, view=None)
 
             # Wait 2 seconds then return to general settings
             import asyncio
@@ -1042,10 +1042,10 @@ class SetupSelect(Select):
 
     async def view_config(self, interaction: discord.Interaction):
         """View current configuration"""
+        await interaction.response.defer()
         bot = interaction.client
         db = bot.db_manager
         guild_id = interaction.guild.id
-
         # Fetch all settings
         verify_channel_id = await db.get_setting("verify_channel", guild_id)
         verify_role_id = await db.get_setting("verify_role", guild_id)
@@ -1204,7 +1204,7 @@ class SetupSelect(Select):
                 name="🔗 Role Connections", value=role_conn_text, inline=False
             )
 
-        await interaction.response.edit_message(embed=embed, view=None)
+        await interaction.edit_original_response(embed=embed, view=None)
 
     async def setup_role_connections(self, interaction: discord.Interaction):
         """Setup role connections system"""

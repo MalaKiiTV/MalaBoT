@@ -62,7 +62,8 @@ echo [GIT OPERATIONS]
 echo  9. Check Git Status             - View modified/staged files
 echo 10. Stage All Changes            - Stage all files for commit
 echo 11. Commit Changes               - Commit staged files with message
-echo 12. Pull from GitHub             - Get latest changes from remote
+echo 12. Preview GitHub Changes      - See what will be pulled before pulling
+echo 13. Pull from GitHub             - Get latest changes from remote
 echo.
 echo [EXIT]
 echo  0. Exit                         - Close development tools
@@ -81,7 +82,8 @@ if "%choice%"=="8" goto droplet_logs
 if "%choice%"=="9" goto gitstatus
 if "%choice%"=="10" goto gitstage
 if "%choice%"=="11" goto gitcommit
-if "%choice%"=="12" goto gitpull
+if "%choice%"=="12" goto gitpreview
+if "%choice%"=="13" goto gitpull
 if "%choice%"=="0" goto exit
 
 echo Invalid choice. Please try again.
@@ -390,6 +392,40 @@ if %ERRORLEVEL% EQU 0 (
     echo [INFO] No changes to commit or commit failed
 )
 timeout /T 3 /NOBREAK >NUL
+goto menu
+
+:gitpreview
+echo.
+echo [INFO] Fetching latest changes from GitHub...
+call :get_current_branch
+if not defined current_branch (
+    echo [ERROR] Could not determine the current Git branch.
+    pause
+    goto menu
+)
+echo [INFO] Comparing local branch with remote: %current_branch%
+echo.
+echo ========================================
+echo Changes that will be pulled:
+echo ========================================
+git fetch origin %current_branch%
+git log HEAD..origin/%current_branch% --oneline --decorate
+if 0 NEQ 0 (
+    echo [INFO] No new changes to pull or fetch failed.
+) else (
+    echo.
+    echo ========================================
+    echo Files that will be changed:
+    echo ========================================
+    git diff --name-status HEAD..origin/%current_branch%
+)
+echo.
+echo ========================================
+if /i "%proceed%"=="y" goto gitpull
+if /i "%%proceed%%"=="y" goto gitpull
+echo [INFO] Pull cancelled.
+echo.
+pause
 goto menu
 
 :gitpull
