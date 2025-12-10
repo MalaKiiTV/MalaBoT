@@ -21,7 +21,7 @@ class DatabaseManager:
             os.getenv('SUPABASE_URL'),
             os.getenv('SUPABASE_KEY')
         )
-        self.guild_id = int(os.getenv('GUILD_ID', '542004156513255445'))
+        # Note: guild_id removed to ensure per-guild operations only
 
     async def get_connection(self):
         """Compatibility method - returns self since Supabase doesn't need connections."""
@@ -48,15 +48,15 @@ class DatabaseManager:
 
     # === XP METHODS ===
 
-    async def get_user_xp(self, user_id: int) -> int:
+    async def get_user_xp(self, user_id: int, guild_id: int) -> int:
         """Get user's current XP."""
-        result = self.supabase.table('users').select('xp').eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+        result = self.supabase.table('users').select('xp').eq('user_id', user_id).eq('guild_id', guild_id).execute()
         
         if not result.data:
             # Create user if doesn't exist
             self.supabase.table('users').insert({
                 'user_id': user_id,
-                'guild_id': self.guild_id,
+                'guild_id': guild_id,
                 'username': 'Unknown',
                 'discriminator': '0',
                 'xp': 0,
@@ -66,7 +66,7 @@ class DatabaseManager:
         
         return result.data[0]['xp']
 
-    async def set_user_xp(self, user_id: int, amount: int) -> tuple[int, int]:
+    async def set_user_xp(self, user_id: int, amount: int, guild_id: int) -> tuple[int, int]:
         """Set user's XP to a specific amount and calculate level."""
         from src.config.constants import XP_TABLE
 
@@ -81,7 +81,7 @@ class DatabaseManager:
         # Upsert user
         self.supabase.table('users').upsert({
             'user_id': user_id,
-            'guild_id': self.guild_id,
+            'guild_id': guild_id,
             'username': 'Unknown',
             'discriminator': '0',
             'xp': amount,
@@ -92,7 +92,7 @@ class DatabaseManager:
 
     async def update_user_xp(self, user_id: int, xp_change: int, guild_id: int = None) -> tuple[int, int, bool]:
         """Update user's XP and recalculate level. Returns (new_xp, new_level, leveled_up)."""
-        guild_id = guild_id or self.guild_id
+        # guild_id required parameter
         
         # Get current XP and level
         result = self.supabase.table('users').select('xp, level').eq('user_id', user_id).eq('guild_id', guild_id).execute()
@@ -175,9 +175,9 @@ class DatabaseManager:
         """Remove XP from user."""
         return await self.update_user_xp(user_id, -amount)
 
-    async def get_user_level(self, user_id: int) -> int:
+    async def get_user_level(self, user_id: int, guild_id: int) -> int:
         """Get user's current level."""
-        result = self.supabase.table('users').select('level').eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+        result = self.supabase.table('users').select('level').eq('user_id', user_id).eq('guild_id', guild_id).execute()
         return result.data[0]['level'] if result.data else 1
 
     async def get_user_rank(self, user_id: int, guild_id: int) -> int:
@@ -199,19 +199,19 @@ class DatabaseManager:
 
     # === DAILY CHECKIN METHODS ===
 
-    async def get_daily_checkin(self, user_id: int) -> Optional[tuple]:
+    async def get_daily_checkin(self, user_id: int, guild_id: int) -> Optional[tuple]:
         """Get user daily checkin data."""
-        result = self.supabase.table('daily_checkins').select('*').eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+        result = self.supabase.table('daily_checkins').select('*').eq('user_id', user_id).eq('guild_id', guild_id).execute()
         if result.data:
             r = result.data[0]
             return (r.get('last_checkin'), r.get('checkin_streak', 0))
         return None
 
-    async def update_daily_checkin(self, user_id: int, last_checkin: str, streak: int) -> None:
+    async def update_daily_checkin(self, user_id: int, last_checkin: str, streak: int, guild_id: int) -> None:
         """Update user daily checkin."""
         self.supabase.table('daily_checkins').upsert({
             'user_id': user_id,
-            'guild_id': self.guild_id,
+            'guild_id': guild_id,
             'last_checkin': last_checkin,
             'checkin_streak': streak
         }).execute()
@@ -225,14 +225,14 @@ class DatabaseManager:
         result = self.supabase.table('users').select('user_id', count='exact').eq('guild_id', guild_id).gt('xp', 0).execute()
         return result.count if hasattr(result, 'count') else len(result.data)
 
-    async def get_checkin_count(self) -> int:
+    async def get_checkin_count(self, guild_id: int) -> int:
         """Get count of daily checkins."""
-        result = self.supabase.table('daily_checkins').select('user_id', count='exact').eq('guild_id', self.guild_id).execute()
+        result = self.supabase.table('daily_checkins').select('user_id', count='exact').eq('guild_id', guild_id).execute()
         return result.count if hasattr(result, 'count') else len(result.data)
 
-    async def reset_all_checkins(self) -> None:
+    async def reset_all_checkins(self, guild_id: int) -> None:
         """Reset all daily checkins."""
-        self.supabase.table('daily_checkins').delete().eq('guild_id', self.guild_id).execute()
+        self.supabase.table('daily_checkins').delete().eq('guild_id', guild_id).execute()
 
     async def get_level_roles(self, guild_id: int) -> list:
         """Get level roles for a guild."""
@@ -241,14 +241,14 @@ class DatabaseManager:
 
     # === USER METHODS ===
 
-    async def get_user(self, user_id: int) -> Optional[dict]:
+    async def get_user(self, user_id: int, guild_id: int) -> Optional[dict]:
         """Get user data."""
-        result = self.supabase.table('users').select('*').eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+        result = self.supabase.table('users').select('*').eq('user_id', user_id).eq('guild_id', guild_id).execute()
         return result.data[0] if result.data else None
 
     # === BIRTHDAY METHODS ===
 
-    async def set_birthday(self, user_id: int, birthday: str, timezone: str = "UTC") -> None:
+    async def set_birthday(self, user_id: int, birthday: str, guild_id: int, timezone: str = "UTC") -> None:
         """Set user birthday."""
         # Convert MM-DD to full date (2000-MM-DD)
         if len(birthday.split('-')) == 2:
@@ -256,19 +256,19 @@ class DatabaseManager:
             birthday = f"2000-{month.zfill(2)}-{day.zfill(2)}"
 
         # Check if birthday exists
-        result = self.supabase.table('birthdays').select('id').eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+        result = self.supabase.table('birthdays').select('id').eq('user_id', user_id).eq('guild_id', guild_id).execute()
     
         if result.data:
             # Update existing
             self.supabase.table("birthdays").update({
                 "birthday": birthday,
                 "timezone": timezone
-            }).eq("user_id", user_id).eq("guild_id", self.guild_id).execute()
+            }).eq("user_id", user_id).eq("guild_id", guild_id).execute()
         else:
             # Insert new
             self.supabase.table("birthdays").insert({
                 "user_id": user_id,
-                "guild_id": self.guild_id,
+                "guild_id": guild_id,
                 "birthday": birthday,
                 "timezone": timezone
             }).execute()
@@ -287,41 +287,41 @@ class DatabaseManager:
 
 
 
-    async def get_birthday(self, user_id: int) -> Optional[tuple]:
+    async def get_birthday(self, user_id: int, guild_id: int) -> Optional[tuple]:
         """Get user birthday."""
-        result = self.supabase.table('birthdays').select('*').eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+        result = self.supabase.table('birthdays').select('*').eq('user_id', user_id).eq('guild_id', guild_id).execute()
         if result.data:
             row = result.data[0]
             # Return as tuple for compatibility (id, user_id, birthday, timezone, announced_year, created_at)
             return (row['id'], row['user_id'], row['birthday'], row.get('timezone', 'UTC'), row.get('announced_year'), row.get('created_at'))
         return None
 
-    async def get_user_birthday(self, user_id: int) -> Optional[tuple]:
+    async def get_user_birthday(self, user_id: int, guild_id: int) -> Optional[tuple]:
         """Get user birthday (alias)."""
         return await self.get_birthday(user_id)
 
-    async def get_all_birthdays(self) -> list:
+    async def get_all_birthdays(self, guild_id: int) -> list:
         """Get all birthdays."""
-        result = self.supabase.table('birthdays').select('*').eq('guild_id', self.guild_id).order('birthday').execute()
+        result = self.supabase.table('birthdays').select('*').eq('guild_id', guild_id).order('birthday').execute()
         return [(r['id'], r['user_id'], r['birthday'], r.get('timezone', 'UTC'), r.get('announced_year'), r.get('created_at')) for r in result.data]
 
-    async def get_today_birthdays(self, today: Optional[str] = None) -> list:
+    async def get_today_birthdays(self, guild_id: int, today: Optional[str] = None) -> list:
         """Get today's birthdays in MM-DD format."""
         # Supabase stores as 2000-MM-DD, we need to match MM-DD
         if today:
             # today is in MM-DD format
-            result = self.supabase.table('birthdays').select('user_id').eq('guild_id', self.guild_id).like('birthday', f'%{today}').execute()
+            result = self.supabase.table('birthdays').select('user_id').eq('guild_id', guild_id).like('birthday', f'%{today}').execute()
         else:
             # Get current MM-DD
             current_mmdd = datetime.now().strftime('%m-%d')
-            result = self.supabase.table('birthdays').select('user_id').eq('guild_id', self.guild_id).like('birthday', f'%{current_mmdd}').execute()
+            result = self.supabase.table('birthdays').select('user_id').eq('guild_id', guild_id).like('birthday', f'%{current_mmdd}').execute()
         
         return [(r['user_id'],) for r in result.data]
 
-    async def get_unannounced_birthdays(self, current_year: int) -> list:
+    async def get_unannounced_birthdays(self, guild_id: int, current_year: int) -> list:
         """Get birthdays that haven't been announced this year."""
         current_mmdd = datetime.now().strftime('%m-%d')
-        result = self.supabase.table('birthdays').select('user_id, birthday').eq('guild_id', self.guild_id).like('birthday', f'%{current_mmdd}').execute()
+        result = self.supabase.table('birthdays').select('user_id, birthday').eq('guild_id', guild_id).like('birthday', f'%{current_mmdd}').execute()
         
         # Filter for unannounced
         unannounced = []
@@ -331,18 +331,18 @@ class DatabaseManager:
         
         return unannounced
 
-    async def mark_birthday_announced(self, user_id: int, year: int) -> None:
+    async def mark_birthday_announced(self, user_id: int, guild_id: int, year: int) -> None:
         """Mark that a birthday has been announced for a specific year."""
         self.supabase.table('birthdays').update({
             'announced_year': year
-        }).eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+        }).eq('user_id', user_id).eq('guild_id', guild_id).execute()
 
     # === LOGGING METHODS ===
 
-    async def remove_user_birthday(self, user_id: int) -> bool:
+    async def remove_user_birthday(self, user_id: int, guild_id: int) -> bool:
         """Remove user birthday."""
         try:
-            self.supabase.table('birthdays').delete().eq('user_id', user_id).eq('guild_id', self.guild_id).execute()
+            self.supabase.table('birthdays').delete().eq('user_id', user_id).eq('guild_id', guild_id).execute()
             return True
         except Exception as e:
             print(f"Error removing birthday: {e}")
@@ -366,7 +366,7 @@ class DatabaseManager:
             'target_id': target_id,
             'channel_id': channel_id,
             'details': details,
-            'guild_id': guild_id or self.guild_id
+            'guild_id': guild_id
         }).execute()
 
     async def log_moderation_action(
@@ -385,14 +385,14 @@ class DatabaseManager:
             'user_id': target_id,
             'action': action,
             'reason': reason,
-            'guild_id': guild_id or self.guild_id,
+            'guild_id': guild_id,
             'channel_id': channel_id,
             'message_count': message_count
         }).execute()
 
-    async def get_recent_moderation_logs(self, limit: int = 10) -> list[dict]:
+    async def get_recent_moderation_logs(self, guild_id: int, limit: int = 10) -> list[dict]:
         """Get recent moderation logs."""
-        result = self.supabase.table('mod_logs').select('*').eq('guild_id', self.guild_id).order('created_at', desc=True).limit(limit).execute()
+        result = self.supabase.table('mod_logs').select('*').eq('guild_id', guild_id).order('created_at', desc=True).limit(limit).execute()
         return result.data
 
     async def log_health_check(
@@ -423,13 +423,13 @@ class DatabaseManager:
 
     async def get_setting(self, key: str, guild_id: Optional[int] = None) -> Optional[str]:
         """Get setting value."""
-        guild_id = guild_id or self.guild_id
+        # guild_id required parameter
         result = self.supabase.table('settings').select('value').eq('setting_key', key).eq('guild_id', guild_id).execute()
         return result.data[0]['value'] if result.data else None
 
     async def set_setting(self, key: str, value: str, guild_id: Optional[int] = None) -> None:
         """Set setting value."""
-        guild_id = guild_id or self.guild_id
+        # guild_id required parameter
         self.supabase.table('settings').upsert({
             'guild_id': guild_id,
             'setting_key': key,
@@ -458,16 +458,16 @@ class DatabaseManager:
 
     # === AUDIT METHODS ===
 
-    async def get_audit_logs(self, limit: int = 100) -> list[dict]:
+    async def get_audit_logs(self, guild_id: int, limit: int = 100) -> list[dict]:
         """Get recent audit logs."""
-        result = self.supabase.table('audit_log').select('*').eq('guild_id', self.guild_id).order('timestamp', desc=True).limit(limit).execute()
+        result = self.supabase.table('audit_log').select('*').eq('guild_id', guild_id).order('timestamp', desc=True).limit(limit).execute()
         return result.data
 
-    async def get_daily_digest_stats(self) -> dict:
+    async def get_daily_digest_stats(self, guild_id: int) -> dict:
         """Get optimized daily digest statistics."""
         # Get logs from last 24 hours
         yesterday = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-        result = self.supabase.table('audit_log').select('category, action').eq('guild_id', self.guild_id).gte('timestamp', yesterday).execute()
+        result = self.supabase.table('audit_log').select('category, action').eq('guild_id', guild_id).gte('timestamp', yesterday).execute()
         
         logs = result.data
         return {

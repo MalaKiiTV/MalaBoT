@@ -150,30 +150,17 @@ class Welcome(commands.Cog):
 
                         # ✅ RESET ALL USER DATA WHEN THEY LEAVE
             try:
-                async with self.bot.db_manager.pool.acquire() as conn:
-                    # Reset XP data
-                    await conn.execute(
-                        "DELETE FROM user_xp WHERE guild_id = $1 AND user_id = $2",
-                        guild_id, user_id
-                    )
-                    
-                    # Reset birthday data
-                    await conn.execute(
-                        "DELETE FROM birthdays WHERE user_id = $1",
-                        user_id
-                    )
-                    
-                    # Reset warnings data
-                    await conn.execute(
-                        "DELETE FROM warnings WHERE guild_id = $1 AND user_id = $2",
-                        guild_id, user_id
-                    )
-                    
-                    # Reset verification data
-                    await conn.execute(
-                        "DELETE FROM verified_users WHERE guild_id = $1 AND user_id = $2",
-                        guild_id, user_id
-                    )
+                # Reset XP data using Supabase
+                self.bot.db_manager.supabase.table('users').delete().eq('guild_id', guild_id).eq('user_id', user_id).execute()
+                
+                # Reset birthday data using Supabase
+                self.bot.db_manager.supabase.table('birthdays').delete().eq('guild_id', guild_id).eq('user_id', user_id).execute()
+                
+                # Reset warnings data using Supabase
+                self.bot.db_manager.supabase.table('warnings').delete().eq('guild_id', guild_id).eq('user_id', user_id).execute()
+                
+                # Reset verification data using Supabase
+                self.bot.db_manager.supabase.table('verified_users').delete().eq('guild_id', guild_id).eq('user_id', user_id).execute()
                 
                 self.logger.info(f"Reset all data for user {member.name} ({user_id}) who left {member.guild.name}")
             except Exception as e:

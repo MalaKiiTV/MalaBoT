@@ -483,8 +483,8 @@ The bot will start in safe mode to prevent further issues.
             )
 
             # Get recent audit logs for statistics
-            recent_logs = await self.db_manager.get_audit_logs(1000)
-            stats = await self.db_manager.get_daily_digest_stats()
+            recent_logs = await self.db_manager.get_audit_logs(guild_id, 1000)
+            stats = await self.db_manager.get_daily_digest_stats(guild_id)
 
             digest_data = {
                 "date": datetime.now().strftime("%Y-%m-%d"),
@@ -557,7 +557,7 @@ The bot will start in safe mode to prevent further issues.
 
             # Send to owner(s)
             for owner_id in settings.OWNER_IDS:
-                owner = self.get_user(owner_id)
+                owner = self.get_user(owner_id, interaction.guild.id)
                 if owner:
                     try:
                         await owner.send(embed=embed)

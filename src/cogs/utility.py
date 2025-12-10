@@ -138,7 +138,7 @@ class Utility(commands.Cog):
             # Get user data from database if available
             user_data = None
             if self.bot.db_manager and isinstance(target_user, discord.Member):
-                user_data = await self.bot.db_manager.get_user(target_user.id)
+                user_data = await self.bot.db_manager.get_user(target_user.id, interaction.guild.id)
 
             # Create userinfo embed
             embed = create_embed(

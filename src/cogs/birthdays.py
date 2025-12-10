@@ -88,13 +88,13 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                 )
                 return
             # Check if birthday already exists
-            existing_birthday = await self.bot.db_manager.get_user_birthday(interaction.user.id)
+            existing_birthday = await self.bot.db_manager.get_user_birthday(interaction.user.id, interaction.guild.id)
             is_new_birthday = existing_birthday is None
 
             # Store in database
             success = await self.bot.db_manager.set_user_birthday(  # type: ignore
                 interaction.user.id, birthday_str
-            )
+            , interaction.guild.id)
             if success:
                 # Remove Birthday Pending role if user has it
                 
@@ -187,16 +187,11 @@ class Birthdays(commands.Cog):
         """Clean up user data when they leave the server."""
         try:
             # Remove birthday data
-            await self.bot.db_manager.remove_user_birthday(member.id)
+            await self.bot.db_manager.remove_user_birthday(member.id, interaction.guild.id)
             self.logger.info(f"Removed birthday data for {member.name} ({member.id}) who left guild {member.guild.id}")
             
             # Remove XP data for this guild
-            async with self.bot.pool.acquire() as conn:
-                await conn.execute(
-                    "DELETE FROM user_xp WHERE user_id = $1 AND guild_id = $2",
-                    member.id,
-                    member.guild.id
-                )
+            self.bot.db_manager.supabase.table('users').delete().eq('user_id', member.id).eq('guild_id', member.guild.id).execute()
             self.logger.info(f"Removed XP data for {member.name} ({member.id}) in guild {member.guild.id}")
             
         except Exception as e:
@@ -229,7 +224,7 @@ class Birthdays(commands.Cog):
     async def _view_birthday(self, interaction: discord.Interaction):
         """View your birthday."""
         try:
-            birthday_data = await self.bot.db_manager.get_user_birthday(interaction.user.id)  # type: ignore
+            birthday_data = await self.bot.db_manager.get_user_birthday(interaction.user.id, interaction.guild.id)  # type: ignore
 
             if birthday_data:
                 birthday_str = str(
@@ -239,7 +234,7 @@ class Birthdays(commands.Cog):
                 # Check if birthday data is corrupted (doesn't contain a dash)
                 if "-" not in birthday_str or birthday_str.isdigit():
                     # Corrupted data - remove and notify user
-                    await self.bot.db_manager.remove_user_birthday(interaction.user.id)  # type: ignore
+                    await self.bot.db_manager.remove_user_birthday(interaction.user.id, interaction.guild.id)  # type: ignore
                     await interaction.response.send_message(
                         embed=create_embed(
                             "🔧 Data Corruption Fixed",
@@ -268,7 +263,7 @@ class Birthdays(commands.Cog):
                 # Validate month range before indexing
                 if not (1 <= month <= 12):
                     self.logger.error(f"Invalid month {month} for user {interaction.user.id}")
-                    await self.bot.db_manager.remove_user_birthday(interaction.user.id)  # type: ignore
+                    await self.bot.db_manager.remove_user_birthday(interaction.user.id, interaction.guild.id)  # type: ignore
                     await interaction.response.send_message(
                         embed=create_embed(
                             "🔧 Data Corruption Fixed",
@@ -336,7 +331,7 @@ class Birthdays(commands.Cog):
         """List all birthdays sorted by who's next."""
         try:
             # Get all birthdays from database
-            all_birthdays = await self.bot.db_manager.get_all_birthdays()  # type: ignore
+            all_birthdays = await self.bot.db_manager.get_all_birthdays(guild_id)  # type: ignore
 
             if not all_birthdays:
                 embed = create_embed(
@@ -502,7 +497,7 @@ class Birthdays(commands.Cog):
                     now = datetime.now(pytz.UTC)
                 
                 # Get today's unannounced birthdays (in the guild's timezone)
-                today_birthdays = await self.bot.db_manager.get_unannounced_birthdays(now.year)
+                today_birthdays = await self.bot.db_manager.get_unannounced_birthdays(guild_id, now.year)
                 
                 if not today_birthdays:
                     continue
@@ -531,7 +526,7 @@ class Birthdays(commands.Cog):
                         await channel.send(embed=embed)
                         
                         # Mark as announced for this year
-                        await self.bot.db_manager.mark_birthday_announced(user_id, now.year)
+                        await self.bot.db_manager.mark_birthday_announced(user_id, guild_id,  now.year)
                         
                         self.logger.info(f"Sent birthday message for user {user_id} in guild {guild_id} at {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
                         

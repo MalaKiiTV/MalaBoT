@@ -49,8 +49,8 @@ class XPGroup(app_commands.Group):
             target = user or interaction.user
 
             # Get user stats from database
-            xp = await self.cog.bot.db_manager.get_user_xp(target.id)
-            level = await self.cog.bot.db_manager.get_user_level(target.id)
+            xp = await self.cog.bot.db_manager.get_user_xp(target.id, interaction.guild.id)
+            level = await self.cog.bot.db_manager.get_user_level(target.id, interaction.guild.id)
 
             # Get rank
             rank = await self.cog.bot.db_manager.get_user_rank(
@@ -162,7 +162,7 @@ class XPGroup(app_commands.Group):
             today = datetime.datetime.now().date()
 
             # Check last checkin
-            row = await self.cog.bot.db_manager.get_daily_checkin(user_id)
+            row = await self.cog.bot.db_manager.get_daily_checkin(user_id, interaction.guild.id)
 
 
             if row:
@@ -196,7 +196,7 @@ class XPGroup(app_commands.Group):
                 await self.cog._check_level_up(interaction.user)
 
             # Update checkin record
-            await self.cog.bot.db_manager.update_daily_checkin(user_id, today.strftime("%Y-%m-%d"), streak)
+            await self.cog.bot.db_manager.update_daily_checkin(user_id, today.strftime("%Y-%m-%d", interaction.guild.id), streak)
 
 
             embed = create_embed(
@@ -369,9 +369,9 @@ class XPGroup(app_commands.Group):
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
         try:
-            old_level = await self.cog.bot.db_manager.get_user_level(user.id)
-            await self.cog.bot.db_manager.set_user_xp(user.id, amount)
-            new_level = await self.cog.bot.db_manager.get_user_level(user.id)
+            old_level = await self.cog.bot.db_manager.get_user_level(user.id, interaction.guild.id)
+            await self.cog.bot.db_manager.set_user_xp(user.id, amount, interaction.guild.id)
+            new_level = await self.cog.bot.db_manager.get_user_level(user.id, interaction.guild.id)
             
             # Check if leveled up
             if new_level > old_level:
@@ -404,7 +404,7 @@ class XPGroup(app_commands.Group):
             return
 
         try:
-            await self.cog.bot.db_manager.set_user_xp(user.id, 0)
+            await self.cog.bot.db_manager.set_user_xp(user.id, 0, interaction.guild.id)
             embed = create_embed(
                 title="✅ XP Reset",
                 description=f"Reset {user.mention}'s XP to **0**",
@@ -484,11 +484,11 @@ class XPGroup(app_commands.Group):
             # Reset all check-in streaks
             
             # Get count before deletion
-            count = await self.cog.bot.db_manager.get_checkin_count()
+            count = await self.cog.bot.db_manager.get_checkin_count(interaction.guild.id)
 
             
             # Delete all check-in records
-            await self.cog.bot.db_manager.reset_all_checkins()
+            await self.cog.bot.db_manager.reset_all_checkins(interaction.guild.id)
 
 
             embed = create_embed(
@@ -670,7 +670,7 @@ class XP(commands.Cog):
 
         try:
             # Get user's current level
-            current_level = await self.bot.db_manager.get_user_level(user.id)
+            current_level = await self.bot.db_manager.get_user_level(user.id, interaction.guild.id)
             self.logger.info(f"[LEVEL ROLE DEBUG] User {user.name} is level {current_level}")
 
             # Check if we already sent a level-up message for this level
