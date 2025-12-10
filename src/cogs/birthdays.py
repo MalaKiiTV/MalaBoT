@@ -191,12 +191,7 @@ class Birthdays(commands.Cog):
             self.logger.info(f"Removed birthday data for {member.name} ({member.id}) who left guild {member.guild.id}")
             
             # Remove XP data for this guild
-            async with self.bot.pool.acquire() as conn:
-                await conn.execute(
-                    "DELETE FROM user_xp WHERE user_id = $1 AND guild_id = $2",
-                    member.id,
-                    member.guild.id
-                )
+            self.bot.db_manager.supabase.table('users').delete().eq('user_id', member.id).eq('guild_id', member.guild.id).execute()
             self.logger.info(f"Removed XP data for {member.name} ({member.id}) in guild {member.guild.id}")
             
         except Exception as e:

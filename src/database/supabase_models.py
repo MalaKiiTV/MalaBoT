@@ -21,7 +21,7 @@ class DatabaseManager:
             os.getenv('SUPABASE_URL'),
             os.getenv('SUPABASE_KEY')
         )
-        self.guild_id = int(os.getenv('GUILD_ID', '542004156513255445'))
+        # Note: guild_id removed to ensure per-guild operations only
 
     async def get_connection(self):
         """Compatibility method - returns self since Supabase doesn't need connections."""
