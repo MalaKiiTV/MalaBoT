@@ -56,7 +56,7 @@ class DatabaseManager:
             # Create user if doesn't exist
             self.supabase.table('users').insert({
                 'user_id': user_id,
-                'guild_id': guild_id,
+                'guild_id': str(guild_id) if guild_id else None,
                 'username': 'Unknown',
                 'discriminator': '0',
                 'xp': 0,
@@ -81,7 +81,7 @@ class DatabaseManager:
         # Upsert user
         self.supabase.table('users').upsert({
             'user_id': user_id,
-            'guild_id': guild_id,
+            'guild_id': str(guild_id) if guild_id else None,
             'username': 'Unknown',
             'discriminator': '0',
             'xp': amount,
@@ -101,7 +101,7 @@ class DatabaseManager:
             # Create user
             self.supabase.table('users').insert({
                 'user_id': user_id,
-                'guild_id': guild_id,
+                'guild_id': str(guild_id) if guild_id else None,
                 'username': 'Unknown',
                 'discriminator': '0',
                 'xp': 0,
@@ -211,7 +211,7 @@ class DatabaseManager:
         """Update user daily checkin."""
         self.supabase.table('daily_checkins').upsert({
             'user_id': user_id,
-            'guild_id': guild_id,
+            'guild_id': str(guild_id) if guild_id else None,
             'last_checkin': last_checkin,
             'checkin_streak': streak
         }).execute()
@@ -362,11 +362,11 @@ class DatabaseManager:
         self.supabase.table('audit_log').insert({
             'category': category,
             'action': action,
-            'user_id': user_id,
-            'target_id': target_id,
-            'channel_id': channel_id,
+            'user_id': str(user_id) if user_id is not None else None,
+            'target_id': str(target_id) if target_id is not None else None,
+            'channel_id': str(channel_id) if channel_id is not None else None,
             'details': details,
-            'guild_id': guild_id
+            'guild_id': str(guild_id) if guild_id is not None else None
         }).execute()
 
     async def log_moderation_action(
@@ -385,7 +385,7 @@ class DatabaseManager:
             'user_id': target_id,
             'action': action,
             'reason': reason,
-            'guild_id': guild_id,
+            'guild_id': str(guild_id) if guild_id else None,
             'channel_id': channel_id,
             'message_count': message_count
         }).execute()
@@ -424,14 +424,14 @@ class DatabaseManager:
     async def get_setting(self, key: str, guild_id: Optional[int] = None) -> Optional[str]:
         """Get setting value."""
         # guild_id required parameter
-        result = self.supabase.table('settings').select('value').eq('setting_key', key).eq('guild_id', guild_id).execute()
+        result = self.supabase.table('settings').select('value').eq('setting_key', key).eq('guild_id', str(guild_id) if guild_id else None).execute()
         return result.data[0]['value'] if result.data else None
 
     async def set_setting(self, key: str, value: str, guild_id: Optional[int] = None) -> None:
         """Set setting value."""
         # guild_id required parameter
         self.supabase.table('settings').upsert({
-            'guild_id': guild_id,
+            'guild_id': str(guild_id) if guild_id else None,
             'setting_key': key,
             'value': value,
             'updated_at': datetime.now().isoformat()
@@ -499,7 +499,7 @@ class DatabaseManager:
             # Create user
             self.supabase.table('users').insert({
                 'user_id': user_id,
-                'guild_id': guild_id,
+                'guild_id': str(guild_id) if guild_id else None,
                 'username': 'Unknown',
                 'discriminator': '0',
                 'xp': xp_amount,
@@ -523,3 +523,5 @@ class DatabaseManager:
         }).eq('user_id', user_id).eq('guild_id', guild_id).execute()
         
         return new_xp, new_level
+
+

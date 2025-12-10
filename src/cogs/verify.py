@@ -289,6 +289,14 @@ class VerifyGroup(app_commands.Group):
             # Defer immediately to prevent timeout
             await interaction.response.defer(ephemeral=True, thinking=True)
 
+            # Check if in guild context
+            if not interaction.guild:
+                await interaction.followup.send(
+                    content="This command can only be used in a server.",
+                    ephemeral=True
+                )
+                return
+
             # Check staff permission (uses general mod role)
             from src.utils.helpers import check_mod_permission
 
@@ -298,10 +306,22 @@ class VerifyGroup(app_commands.Group):
             guild_id = interaction.guild.id
             decision_value = decision.value
 
+            # Debug logging for user parameter
+            log_system(f"[VERIFY_REVIEW_DEBUG] User parameter: {user}, User ID: {user.id if user else 'None'}")
+
             # Debug logging
             log_system(
                 f"[VERIFY_REVIEW_DEBUG] Notes received: '{notes}' (type: {type(notes)})"
             )
+
+            # Check if user is valid
+            if user is None or user.id is None:
+                await safe_send_message(
+                    interaction,
+                    content="Invalid user specified.",
+                    ephemeral=True,
+                )
+                return
 
             if decision_value not in ["verified", "cheater", "unverified"]:
                 await safe_send_message(
@@ -447,7 +467,7 @@ class VerifyGroup(app_commands.Group):
             await self.cog.db.log_event(
                 category="VERIFY",
                 action="REVIEW",
-                user_id=user.id,
+                user_id=user.id if user else None,
                 target_id=interaction.user.id,
                 details=f"{decision_value.upper()} - {notes or 'No notes'}",
             )
@@ -472,9 +492,12 @@ class VerifyGroup(app_commands.Group):
                     )
 
         except Exception as e:
+            import traceback
             log_system(f"Verification review error: {e}", level="error")
+            log_system(f"Full traceback:\n{traceback.format_exc()}", level="error")
             await safe_send_message(
                 interaction,
+
                 content="An error occurred while processing review.",
                 ephemeral=True,
             )

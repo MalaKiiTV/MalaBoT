@@ -45,6 +45,8 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
     async def on_submit(self, interaction: discord.Interaction):
         """Handle birthday submission."""
         try:
+            # Defer response to prevent timeout
+            await interaction.response.defer(ephemeral=True)
             # Parse birthday input
             birthday_str = self.birthday.value.strip()
             # Handle both MM-DD and YYYY-MM-DD formats
@@ -58,7 +60,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
 
             # Validate date
             if month < 1 or month > 12 or day < 1 or day > 31:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     embed=create_embed(
                         "❌ Invalid Date",
                         "Please enter a valid date in MM-DD format.",
@@ -78,7 +80,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                 (11, 31),  # 30-day months
             ]
             if (month, day) in invalid_dates:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     embed=create_embed(
                         "❌ Invalid Date",
                         "That date doesn't exist. Please enter a valid date.",
@@ -118,11 +120,16 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                         try:
                             xp_amount = int(birthday_xp)
                             # Use the proper add_xp method
-                            new_xp, new_level = await self.bot.db_manager.add_xp(
-                                interaction.user.id, guild_id, xp_amount
+                            new_xp, new_level, leveled_up = await self.bot.db_manager.update_user_xp(
+                                interaction.user.id, xp_amount, guild_id
                             )
                             xp_earned = xp_amount
                             get_logger("birthdays").info(f"Awarded {xp_amount} XP to {interaction.user.name} for setting birthday (Total: {new_xp}, Level: {new_level})")
+                            if leveled_up:
+                                # Import XP cog to trigger level-up
+                                xp_cog = self.bot.get_cog('XP')
+                                if xp_cog:
+                                    await xp_cog._check_level_up(interaction.user)
                         except (ValueError, TypeError) as e:
                             get_logger("birthdays").error(f"Invalid birthday_set_xp value: {birthday_xp}, error: {e}")
                         except Exception as e:
@@ -135,7 +142,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                         success_description += f"\n\nYou earned **{xp_earned} XP** for setting your birthday!"
                 else:
                     success_description = f"Your birthday has been updated to {birthday_str}."
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     embed=create_embed(
                         "🎂 Birthday Set!",
                         success_description,
@@ -144,7 +151,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                     ephemeral=True,
                 )
             else:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     embed=create_embed(
                         "❌ Database Error",
                         "There was an error saving your birthday. Please try again.",
@@ -154,7 +161,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                 )
 
         except ValueError:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "❌ Invalid Format",
                     "Please use MM-DD format (e.g., 12-25 for December 25th).",
@@ -164,7 +171,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
             )
         except Exception as e:
             get_logger("birthdays").error(f"Unexpected error in birthday modal: {e}", exc_info=True)
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=create_embed(
                     "❌ Error",
                     "An unexpected error occurred. Please try again.",
@@ -187,7 +194,7 @@ class Birthdays(commands.Cog):
         """Clean up user data when they leave the server."""
         try:
             # Remove birthday data
-            await self.bot.db_manager.remove_user_birthday(member.id, interaction.guild.id)
+            await self.bot.db_manager.remove_user_birthday(member.id, member.guild.id)
             self.logger.info(f"Removed birthday data for {member.name} ({member.id}) who left guild {member.guild.id}")
             
             # Remove XP data for this guild
@@ -234,7 +241,7 @@ class Birthdays(commands.Cog):
                 # Check if birthday data is corrupted (doesn't contain a dash)
                 if "-" not in birthday_str or birthday_str.isdigit():
                     # Corrupted data - remove and notify user
-                    await self.bot.db_manager.remove_user_birthday(interaction.user.id, interaction.guild.id)  # type: ignore
+                    await self.bot.db_manager.remove_user_birthday(interaction.user.id, member.guild.id)  # type: ignore
                     await interaction.response.send_message(
                         embed=create_embed(
                             "🔧 Data Corruption Fixed",
@@ -263,7 +270,7 @@ class Birthdays(commands.Cog):
                 # Validate month range before indexing
                 if not (1 <= month <= 12):
                     self.logger.error(f"Invalid month {month} for user {interaction.user.id}")
-                    await self.bot.db_manager.remove_user_birthday(interaction.user.id, interaction.guild.id)  # type: ignore
+                    await self.bot.db_manager.remove_user_birthday(interaction.user.id, member.guild.id)  # type: ignore
                     await interaction.response.send_message(
                         embed=create_embed(
                             "🔧 Data Corruption Fixed",

@@ -157,10 +157,9 @@ class Welcome(commands.Cog):
                 self.bot.db_manager.supabase.table('birthdays').delete().eq('guild_id', guild_id).eq('user_id', user_id).execute()
                 
                 # Reset warnings data using Supabase
-                self.bot.db_manager.supabase.table('warnings').delete().eq('guild_id', guild_id).eq('user_id', user_id).execute()
                 
                 # Reset verification data using Supabase
-                self.bot.db_manager.supabase.table('verified_users').delete().eq('guild_id', guild_id).eq('user_id', user_id).execute()
+                self.bot.db_manager.supabase.table('verifications').delete().eq('guild_id', guild_id).eq('user_id', user_id).execute()
                 
                 self.logger.info(f"Reset all data for user {member.name} ({user_id}) who left {member.guild.name}")
             except Exception as e:

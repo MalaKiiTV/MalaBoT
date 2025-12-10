@@ -332,14 +332,10 @@ class Appeal(commands.Cog):
     async def on_member_remove(self, member: discord.Member):
         """Cancel pending appeals when a user leaves the server"""
         try:
-            conn = await self.db.get_connection()
-
-            # Update any pending appeals to 'cancelled' status
-            await conn.execute(
-                "UPDATE appeals SET status = 'cancelled', reviewed_at = CURRENT_TIMESTAMP WHERE user_id = ? AND guild_id = ? AND status = 'pending'",
-                (member.id, member.guild.id),
-            )
-            await conn.commit()
+            # Update any pending appeals to cancelled status using Supabase
+            self.bot.db_manager.supabase.table('appeals').update({
+                'status': 'cancelled'
+            }).eq('user_id', str(member.id)).eq('guild_id', str(member.guild.id)).eq('status', 'pending').execute()
 
             log_system(
                 f"[APPEAL] Cancelled pending appeals for {member.name} (left server)"
