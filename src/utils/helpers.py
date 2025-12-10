@@ -297,7 +297,7 @@ async def is_mod(
                 return True
 
     # Fall back to general mod role
-    mod_role_id = await db_manager.get_setting(f"mod_role_{guild_id}")
+    mod_role_id = await db_manager.get_setting("mod_role", guild_id)
     if not mod_role_id:
         return False
 
@@ -340,7 +340,7 @@ async def check_mod_permission(
             if specific_role:
                 role_names.append(specific_role.name)
 
-    mod_role_id = await db_manager.get_setting(f"mod_role_{guild_id}")
+    mod_role_id = await db_manager.get_setting("mod_role", guild_id)
     if mod_role_id:
         mod_role = interaction.guild.get_role(int(mod_role_id))
         if mod_role:
