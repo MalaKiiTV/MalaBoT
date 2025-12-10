@@ -45,25 +45,21 @@ cls
 echo ================================================================================
 echo                          MalaBoT Development Tools
 echo ================================================================================
-echo.
 echo [LOCAL BOT MANAGEMENT]
-echo  1. Start Bot                    - Clear cache, validate config, start bot
-echo  2. Stop Bot                     - Stop all bot processes
-echo  3. Check Bot Status             - View status, logs, process info
-echo  4. View Live Logs               - Real-time log monitoring (Ctrl+C to exit)
-echo.
-echo [DROPLET MANAGEMENT]
-echo  5. Start Droplet Bot            - Deploy and start on production
-echo  6. Stop Droplet Bot             - Stop bot on droplet
-echo  7. Check Droplet Status         - View PM2 status on droplet
-echo  8. View Droplet Logs            - View live logs from droplet
+echo  1. Start Local Bot              - Clear cache, validate config, start bot
+echo  2. Stop Bot(s)                   - Stop all bot processes including droplet
+echo  3. Start Droplet Bot            - Deploy and start on production
+echo  4. Check Local Status           - View status, logs, process info
+echo  5. Check Droplet Status         - View PM2 status on droplet
+echo  6. View Live Logs               - Real-time log monitoring (Ctrl+C to exit)
+echo  7. View Droplet Logs            - View live logs from droplet
 echo.
 echo [GIT OPERATIONS]
-echo  9. Check Git Status             - View modified/staged files
-echo 10. Stage All Changes            - Stage all files for commit
-echo 11. Commit Changes               - Commit staged files with message
-echo 12. Preview GitHub Changes      - See what will be pulled before pulling
-echo 13. Pull from GitHub             - Get latest changes from remote
+echo  8. Check Git Status             - View modified/staged files
+echo  9. Stage All Changes            - Stage all files for commit
+echo 10. Commit Changes               - Commit staged files with message
+echo 11. Preview GitHub Changes       - See what will be pulled before pulling
+echo 12. Pull from GitHub             - Get latest changes from remote
 echo.
 echo [EXIT]
 echo  0. Exit                         - Close development tools
@@ -71,20 +67,19 @@ echo.
 echo ================================================================================
 set /p choice="Enter your choice: "
 
-if "%choice%"=="1" goto start
-if "%choice%"=="2" goto stop
-if "%choice%"=="3" goto status
-if "%choice%"=="4" goto logs
-if "%choice%"=="5" goto quick_deploy
-if "%choice%"=="6" goto droplet_stop
-if "%choice%"=="7" goto droplet_status
-if "%choice%"=="8" goto droplet_logs
-if "%choice%"=="9" goto gitstatus
-if "%choice%"=="10" goto gitstage
-if "%choice%"=="11" goto gitcommit
-if "%choice%"=="12" goto gitpreview
-if "%choice%"=="13" goto gitpull
-if "%choice%"=="0" goto exit
+if `"%choice%`"==`"1`" goto start
+if `"%choice%`"==`"2`" goto stop
+if `"%choice%`"==`"3`" goto quick_deploy
+if `"%choice%`"==`"4`" goto status
+if `"%choice%`"==`"5`" goto droplet_status
+if `"%choice%`"==`"6`" goto logs
+if `"%choice%`"==`"7`" goto droplet_logs
+if `"%choice%`"==`"8`" goto gitstatus
+if `"%choice%`"==`"9`" goto gitstage
+if `"%choice%`"==`"10`" goto gitcommit
+if `"%choice%`"==`"11`" goto gitpreview
+if `"%choice%`"==`"12`" goto gitpull
+if `"%choice%`"==`"0`" goto exit
 
 echo Invalid choice. Please try again.
 timeout /T 2 /NOBREAK >NUL
@@ -156,6 +151,16 @@ if %ERRORLEVEL% EQU 0 (
 )
 
 echo [SUCCESS] All bot processes stopped
+echo.
+echo [3/3] Stopping droplet bot...
+set DROPLET_USER=malabot
+set DROPLET_IP=165.232.156.230
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 stop malabot" 2>nul
+if 0 EQU 0 (
+    echo [SUCCESS] Droplet bot stopped
+) else (
+    echo [INFO] Droplet bot may not be running or already stopped
+)
 timeout /T 2 /NOBREAK >nul
 goto menu
 
@@ -394,37 +399,30 @@ if %ERRORLEVEL% EQU 0 (
 timeout /T 3 /NOBREAK >NUL
 goto menu
 
+
 :gitpreview
 echo.
-echo [INFO] Fetching latest changes from GitHub...
+echo ========================================
+echo Preview GitHub Changes
+echo ========================================
 call :get_current_branch
 if not defined current_branch (
     echo [ERROR] Could not determine the current Git branch.
     pause
     goto menu
 )
-echo [INFO] Comparing local branch with remote: %current_branch%
-echo.
-echo ========================================
-echo Changes that will be pulled:
-echo ========================================
+echo Fetching latest changes from GitHub...
 git fetch origin %current_branch%
-git log HEAD..origin/%current_branch% --oneline --decorate
-if 0 NEQ 0 (
-    echo [INFO] No new changes to pull or fetch failed.
-) else (
-    echo.
-    echo ========================================
-    echo Files that will be changed:
-    echo ========================================
-    git diff --name-status HEAD..origin/%current_branch%
-)
 echo.
-echo ========================================
+echo Changes that will be pulled:
+git log HEAD..origin/%current_branch% --oneline
+echo.
+echo Files that will be changed:
+git diff --name-status HEAD..origin/%current_branch%
+echo.
+set /p proceed=Pull these changes? (y/n): 
 if /i "%proceed%"=="y" goto gitpull
-if /i "%%proceed%%"=="y" goto gitpull
-echo [INFO] Pull cancelled.
-echo.
+echo [CANCELLED] Pull cancelled.
 pause
 goto menu
 
