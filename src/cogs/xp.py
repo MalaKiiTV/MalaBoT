@@ -196,7 +196,7 @@ class XPGroup(app_commands.Group):
                 await self.cog._check_level_up(interaction.user)
 
             # Update checkin record
-            await self.cog.bot.db_manager.update_daily_checkin(user_id, today.strftime("%Y-%m-%d"), interaction.guild.id, streak)
+            await self.cog.bot.db_manager.update_daily_checkin(user_id, today.strftime("%Y-%m-%d"), streak, interaction.guild.id)
 
 
             embed = create_embed(
