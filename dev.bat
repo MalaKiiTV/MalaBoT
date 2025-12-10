@@ -161,6 +161,13 @@ if 0 EQU 0 (
 ) else (
     echo [INFO] Droplet bot may not be running or already stopped
 )
+  echo [4/4] Flushing droplet PM2 logs...
+  ssh %DROPLET_USER%@%DROPLET_IP% "pm2 flush malabot" 2>nul
+  if 0 EQU 0 (
+      echo [SUCCESS] Droplet logs flushed
+  ) else (
+      echo [INFO] Could not flush logs
+  )
 timeout /T 2 /NOBREAK >nul
 goto menu
 
