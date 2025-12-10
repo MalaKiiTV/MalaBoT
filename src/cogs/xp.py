@@ -670,7 +670,6 @@ class XP(commands.Cog):
 
         try:
             current_level = await self.bot.db_manager.get_user_level(user.id, user.guild.id)
-            current_level = await self.bot.db_manager.get_user_level(user.id, interaction.guild.id)
             self.logger.info(f"[LEVEL ROLE DEBUG] User {user.name} is level {current_level}")
 
             # Check if we already sent a level-up message for this level
