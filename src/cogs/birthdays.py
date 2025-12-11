@@ -150,6 +150,28 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                     ),
                     ephemeral=True,
                 )
+
+                # Check if today is their birthday and announce immediately
+                try:
+                    from datetime import datetime
+                    import pytz
+                    birthday_time_str = await self.bot.db_manager.get_setting('birthday_time', guild_id)
+                    timezone_str = await self.bot.db_manager.get_setting('timezone', guild_id)
+                    birthday_channel_id = await self.bot.db_manager.get_setting('birthday_channel', guild_id)
+                    if birthday_time_str and birthday_channel_id:
+                        hour, minute = map(int, birthday_time_str.split(':'))
+                        tz = pytz.timezone(timezone_str) if timezone_str else pytz.UTC
+                        now = datetime.now(tz)
+                        announcement_time_today = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                        today_mmdd = now.strftime('%m-%d')
+                        if now >= announcement_time_today and birthday_str == today_mmdd:
+                            birthday_cog = self.bot.get_cog('Birthdays')
+                            if birthday_cog:
+                                channel = self.bot.get_channel(int(birthday_channel_id))
+                                if channel:
+                                    await birthday_cog._send_birthday_message(interaction.user.id, guild_id, channel, now)
+                except Exception as e:
+                    get_logger('birthdays').error(f'Error checking immediate birthday: {e}')
             else:
                 await interaction.followup.send(
                     embed=create_embed(
@@ -484,6 +506,21 @@ class Birthdays(commands.Cog):
                 birthday_message = await self.bot.db_manager.get_setting("birthday_message", guild_id)
                 timezone_str = await self.bot.db_manager.get_setting("timezone", guild_id)
                 
+
+                # Check if current time is past the configured announcement time
+                if birthday_time:
+                    try:
+                        hour, minute = map(int, birthday_time.split(":"))
+                        tz = pytz.timezone(timezone_str) if timezone_str else pytz.UTC
+                        now = datetime.now(tz)
+                        announcement_time_today = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                        
+                        # Skip if we haven't reached announcement time yet
+                        if now < announcement_time_today:
+                            continue
+                    except Exception as e:
+                        self.logger.error(f"Error parsing birthday time {birthday_time}: {e}")
+
                 if not birthday_channel_id:
                     continue
                 
@@ -505,8 +542,10 @@ class Birthdays(commands.Cog):
                     now = datetime.now(pytz.UTC)
                 
                 # Get today's unannounced birthdays (in the guild's timezone)
-                today_birthdays = await self.bot.db_manager.get_unannounced_birthdays(guild_id, now.year)
-                
+                self.logger.info(f"[Birthday Check] Checking guild {guild_id} at {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+                today_birthdays = await self.bot.db_manager.get_unannounced_birthdays(guild_id, now)
+
+                self.logger.info(f"[Birthday Check] Guild {guild_id}: Found {len(today_birthdays)} birthdays for {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
                 if not today_birthdays:
                     continue
                 
@@ -514,35 +553,50 @@ class Birthdays(commands.Cog):
                     user_id = user_data[0]
                     
                     try:
-                        # Get member from guild
-                        member = guild.get_member(user_id)
-                        if not member:
-                            continue
-                        
-                        # Format message
-                        message = birthday_message or "🎂 Happy Birthday {member}! Have a great day!"
-                        message = message.replace("{member}", member.mention)
-                        
-                        # Send birthday message
-                        embed = create_embed(
-                            "🎉 Happy Birthday! 🎂",
-                            message,
-                            discord.Color.magenta(),
-                        )
-                        embed.set_thumbnail(url=member.display_avatar.url if member.display_avatar else None)
-                        
-                        await channel.send(embed=embed)
-                        
-                        # Mark as announced for this year
-                        await self.bot.db_manager.mark_birthday_announced(user_id, guild_id,  now.year)
-                        
-                        self.logger.info(f"Sent birthday message for user {user_id} in guild {guild_id} at {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
-                        
+                        await self._send_birthday_message(user_id, guild_id, channel, now)
                     except Exception as e:
                         self.logger.error(f"Error processing birthday for user {user_id}: {e}")
                 
         except Exception as e:
             self.logger.error(f"Error in birthday check: {e}")
+
+
+    async def _send_birthday_message(self, user_id: int, guild_id: int, channel: discord.TextChannel, now: datetime):
+        """Helper method to send a birthday message for a user."""
+        try:
+            # Get member from guild
+            guild = self.bot.get_guild(guild_id)
+            if not guild:
+                return
+            
+            member = guild.get_member(user_id)
+            if not member:
+                return
+            
+            # Get birthday message template
+            birthday_message = await self.bot.db_manager.get_setting('birthday_message', guild_id)
+            
+            # Format message
+            message = birthday_message or "🎂 Happy Birthday {member}! Have a great day!"
+            message = message.replace("{member}", member.mention)
+            
+            # Send birthday message
+            embed = create_embed(
+                "🎉 Happy Birthday! 🎂",
+                message,
+                discord.Color.magenta(),
+            )
+            embed.set_thumbnail(url=member.display_avatar.url if member.display_avatar else None)
+            
+            await channel.send(embed=embed)
+            
+            # Mark as announced for this date
+            await self.bot.db_manager.mark_birthday_announced(user_id, guild_id, now.strftime('%Y-%m-%d'))
+            
+            self.logger.info(f"Sent birthday message for user {user_id} in guild {guild_id} at {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+            
+        except Exception as e:
+            self.logger.error(f"Error sending birthday message for user {user_id}: {e}")
 
     @check_birthdays.before_loop
     async def before_check_birthdays(self):

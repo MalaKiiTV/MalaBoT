@@ -313,28 +313,30 @@ class DatabaseManager:
             result = self.supabase.table('birthdays').select('user_id').eq('guild_id', guild_id).like('birthday', f'%{today}').execute()
         else:
             # Get current MM-DD
-            current_mmdd = datetime.now().strftime('%m-%d')
-            result = self.supabase.table('birthdays').select('user_id').eq('guild_id', guild_id).like('birthday', f'%{current_mmdd}').execute()
+            current_mmdd = (current_date or datetime.now()).strftime('%m-%d')
+            result = self.supabase.table('birthdays').select('user_id').eq('guild_id', guild_id).like('birthday::text', f'%{current_mmdd}').execute()
         
         return [(r['user_id'],) for r in result.data]
 
-    async def get_unannounced_birthdays(self, guild_id: int, current_year: int) -> list:
-        """Get birthdays that haven't been announced this year."""
-        current_mmdd = datetime.now().strftime('%m-%d')
-        result = self.supabase.table('birthdays').select('user_id, birthday').eq('guild_id', guild_id).like('birthday', f'%{current_mmdd}').execute()
-        
-        # Filter for unannounced
+    async def get_unannounced_birthdays(self, guild_id: int, current_date: datetime) -> list:
+        """Get birthdays that haven't been announced today."""
+        current_mmdd = current_date.strftime('%m-%d')
+        today_str = current_date.strftime('%Y-%m-%d')
+        result = self.supabase.table('birthdays').select('user_id, birthday, announced_date').eq('guild_id', guild_id).like('birthday::text', f'%{current_mmdd}').execute()
+
+        # Filter for unannounced today
         unannounced = []
         for r in result.data:
-            if r.get('announced_year') is None or r.get('announced_year') < current_year:
+            if r.get('announced_date') != today_str:
                 unannounced.append((r['user_id'], r['birthday']))
-        
+                unannounced.append((r['user_id'], r['birthday']))
+
         return unannounced
 
-    async def mark_birthday_announced(self, user_id: int, guild_id: int, year: int) -> None:
-        """Mark that a birthday has been announced for a specific year."""
+    async def mark_birthday_announced(self, user_id: int, guild_id: int, announced_date: str) -> None:
+        """Mark that a birthday has been announced for a specific date."""
         self.supabase.table('birthdays').update({
-            'announced_year': year
+            'announced_date': announced_date
         }).eq('user_id', user_id).eq('guild_id', guild_id).execute()
 
     # === LOGGING METHODS ===
