@@ -759,22 +759,14 @@
                 const originalValues = new Map();
                 const inputs = form.querySelectorAll('input, select, textarea');
                 
-
-                // Function to update original values
-                function updateOriginalValues() {
-                    originalValues.clear();
-                    inputs.forEach(input => {
-                        if (input.type === 'checkbox') {
-                            originalValues.set(input.name, input.checked);
-                        } else {
-                            originalValues.set(input.name, input.value);
-                        }
-                    });
-                }
-
-                // Initialize original values
-                updateOriginalValues();
-                                                                                
+                inputs.forEach(input => {
+                    if (input.type === 'checkbox') {
+                        originalValues.set(input.name, input.checked);
+                    } else {
+                        originalValues.set(input.name, input.value);
+                    }
+                });
+                
                 // Disable button initially
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'No Changes';
@@ -852,9 +844,6 @@
                             submitBtn.classList.add('btn-success');
                             
                             setTimeout(() => {
-                                                            // Update original values after save
-                                updateOriginalValues();
-                                
                                 submitBtn.textContent = 'No Changes';
                                 submitBtn.classList.remove('btn-success');
                                 submitBtn.classList.add('btn-primary');
