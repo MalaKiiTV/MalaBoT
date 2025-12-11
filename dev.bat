@@ -47,12 +47,19 @@ echo                          MalaBoT Development Tools
 echo ================================================================================
 echo [LOCAL BOT MANAGEMENT]
 echo  1. Start Local Bot              - Clear cache, validate config, start bot
-echo  2. Stop Bot(s)                   - Stop all bot processes including droplet
+echo  2. Stop All Python Processes    - Stop ALL bot and dashboard processes
 echo  3. Start Droplet Bot            - Deploy and start on production
 echo  4. Check Local Status           - View status, logs, process info
 echo  5. Check Droplet Status         - View PM2 status on droplet
 echo  6. View Live Logs               - Real-time log monitoring (Ctrl+C to exit)
 echo  7. View Droplet Logs            - View live logs from droplet
+echo.
+echo [DASHBOARD MANAGEMENT]
+echo 13. Start Local Dashboard        - Start dashboard on localhost:8080
+echo 14. Stop Dashboard Only          - Stop local dashboard (keeps bot running)
+echo 15. Deploy Dashboard             - Push dashboard changes to droplet
+echo 16. Check Dashboard Status       - View dashboard status on droplet
+echo 17. View Dashboard Logs          - View live dashboard logs from droplet
 echo.
 echo [GIT OPERATIONS]
 echo  8. Check Git Status             - View modified/staged files
@@ -67,19 +74,24 @@ echo.
 echo ================================================================================
 set /p choice="Enter your choice: "
 
-if `"%choice%`"==`"1`" goto start
-if `"%choice%`"==`"2`" goto stop
-if `"%choice%`"==`"3`" goto quick_deploy
-if `"%choice%`"==`"4`" goto status
-if `"%choice%`"==`"5`" goto droplet_status
-if `"%choice%`"==`"6`" goto logs
-if `"%choice%`"==`"7`" goto droplet_logs
-if `"%choice%`"==`"8`" goto gitstatus
-if `"%choice%`"==`"9`" goto gitstage
-if `"%choice%`"==`"10`" goto gitcommit
-if `"%choice%`"==`"11`" goto gitpreview
-if `"%choice%`"==`"12`" goto gitpull
-if `"%choice%`"==`"0`" goto exit
+if "%choice%"=="1" goto start
+if "%choice%"=="2" goto stop
+if "%choice%"=="3" goto quick_deploy
+if "%choice%"=="4" goto status
+if "%choice%"=="5" goto droplet_status
+if "%choice%"=="6" goto logs
+if "%choice%"=="7" goto droplet_logs
+if "%choice%"=="8" goto gitstatus
+if "%choice%"=="9" goto gitstage
+if "%choice%"=="10" goto gitcommit
+if "%choice%"=="11" goto gitpreview
+if "%choice%"=="12" goto gitpull
+if "%choice%"=="13" goto start_dashboard
+if "%choice%"=="14" goto stop_dashboard
+if "%choice%"=="15" goto deploy_dashboard
+if "%choice%"=="16" goto dashboard_status
+if "%choice%"=="17" goto dashboard_logs
+if "%choice%"=="0" goto exit
 
 echo Invalid choice. Please try again.
 timeout /T 2 /NOBREAK >NUL
@@ -130,10 +142,10 @@ goto menu
 
 :stop
 echo.
-echo [INFO] Stopping ALL MalaBoT processes...
+echo [INFO] Stopping ALL MalaBoT processes (Bot + Dashboard)...
 
 REM Kill ALL python.exe processes (including ghosts)
-echo [1/2] Terminating all Python processes...
+echo [1/3] Terminating all Python processes...
 taskkill /IM python.exe /F >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] All Python processes terminated
@@ -142,7 +154,7 @@ if %ERRORLEVEL% EQU 0 (
 )
 
 REM Double-check and kill any remaining bot processes
-echo [2/2] Verifying cleanup...
+echo [2/3] Verifying cleanup...
 timeout /T 1 /NOBREAK >nul
 tasklist /FI "IMAGENAME eq python.exe" >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
@@ -150,24 +162,25 @@ if %ERRORLEVEL% EQU 0 (
     taskkill /F /IM python.exe /T >nul 2>&1
 )
 
-echo [SUCCESS] All bot processes stopped
-echo.
+echo [SUCCESS] All local processes stopped
+
 echo [3/3] Stopping droplet bot...
 set DROPLET_USER=malabot
 set DROPLET_IP=165.232.156.230
 ssh %DROPLET_USER%@%DROPLET_IP% "pm2 stop malabot" 2>nul
-if 0 EQU 0 (
+if %ERRORLEVEL% EQU 0 (
     echo [SUCCESS] Droplet bot stopped
 ) else (
     echo [INFO] Droplet bot may not be running or already stopped
 )
-  echo [4/4] Flushing droplet PM2 logs...
-  ssh %DROPLET_USER%@%DROPLET_IP% "pm2 flush malabot" 2>nul
-  if 0 EQU 0 (
-      echo [SUCCESS] Droplet logs flushed
-  ) else (
-      echo [INFO] Could not flush logs
-  )
+
+echo [4/4] Flushing droplet PM2 logs...
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 flush malabot" 2>nul
+if %ERRORLEVEL% EQU 0 (
+    echo [SUCCESS] Droplet logs flushed
+) else (
+    echo [INFO] Could not flush logs
+)
 timeout /T 2 /NOBREAK >nul
 goto menu
 
@@ -241,7 +254,7 @@ goto menu
 :quick_deploy
 echo.
 echo ========================================
-echo Quick Deploy (All-in-One)
+echo Quick Deploy Bot (All-in-One)
 echo ========================================
 echo.
 echo This will:
@@ -312,34 +325,6 @@ echo.
 pause
 goto menu
 
-
-:droplet_stop
-echo.
-echo ========================================
-echo Stop Droplet Bot
-echo ========================================
-set DROPLET_USER=malabot
-set DROPLET_IP=165.232.156.230
-echo.
-echo WARNING: This will stop the bot on the droplet!
-set /p confirm="Are you sure? (y/n): "
-if /i not "%confirm%"=="y" (
-    echo Cancelled.
-    pause
-    goto menu
-)
-echo Stopping bot on droplet...
-ssh %DROPLET_USER%@%DROPLET_IP% "pm2 stop malabot"
-if %ERRORLEVEL% EQU 0 (
-    echo [SUCCESS] Bot stopped
-    ssh %DROPLET_USER%@%DROPLET_IP% "pm2 list"
-) else (
-    echo [ERROR] Failed to stop bot
-)
-echo.
-pause
-goto menu
-
 :droplet_status
 echo.
 echo ========================================
@@ -406,7 +391,6 @@ if %ERRORLEVEL% EQU 0 (
 timeout /T 3 /NOBREAK >NUL
 goto menu
 
-
 :gitpreview
 echo.
 echo ========================================
@@ -427,7 +411,7 @@ echo.
 echo Files that will be changed:
 git diff --name-status HEAD..origin/%current_branch%
 echo.
-set /p proceed=Pull these changes? (y/n): 
+set /p proceed=Pull these changes? (y/n):
 if /i "%proceed%"=="y" goto gitpull
 echo [CANCELLED] Pull cancelled.
 pause
@@ -455,6 +439,154 @@ if %ERRORLEVEL% EQU 0 (
 )
 echo.
 pause
+goto menu
+
+:start_dashboard
+echo.
+echo ========================================
+echo Starting Local Dashboard
+echo ========================================
+echo.
+echo [1/3] Checking dashboard .env file...
+if not exist "dashboard\.env" (
+    echo [ERROR] Dashboard .env file not found!
+    echo [INFO] Please create dashboard/.env with your configuration
+    echo.
+    echo Required variables:
+    echo   - DISCORD_CLIENT_ID
+    echo   - DISCORD_CLIENT_SECRET
+    echo   - DISCORD_TOKEN
+    echo   - DISCORD_REDIRECT_URI=http://localhost:8080/callback
+    echo   - FLASK_SECRET_KEY
+    echo   - DATABASE_URL
+    echo.
+    pause
+    goto menu
+)
+
+echo [2/3] Checking dashboard dependencies...
+pip show flask >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo [INFO] Installing dashboard dependencies...
+    cd dashboard
+    pip install flask flask-session flask-discord requests python-dotenv psycopg2-binary
+    cd ..
+)
+
+echo [3/3] Starting dashboard...
+start "MalaBot Dashboard" cmd /k "title MalaBot Dashboard && cd dashboard && python -u app.py"
+echo.
+echo [SUCCESS] Dashboard started!
+echo [INFO] Access at: http://localhost:8080
+echo [INFO] Use option 14 to stop dashboard only
+echo.
+timeout /T 3 /NOBREAK >NUL
+goto menu
+
+:stop_dashboard
+echo.
+echo [INFO] Stopping dashboard only (keeping bot running)...
+taskkill /FI "WINDOWTITLE eq MalaBot Dashboard" /F >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    echo [SUCCESS] Dashboard stopped
+) else (
+    echo [INFO] Dashboard was not running
+)
+timeout /T 2 /NOBREAK >NUL
+goto menu
+
+:deploy_dashboard
+echo.
+echo ========================================
+echo Deploy Dashboard to Droplet
+echo ========================================
+echo.
+echo This will:
+echo   1. Stage dashboard changes
+echo   2. Commit with your message
+echo   3. Push to GitHub
+echo   4. Deploy to droplet
+echo   5. Restart dashboard on droplet
+echo.
+set /p confirm="Continue? (y/n): "
+if /i not "%confirm%"=="y" (
+    echo [CANCELLED]
+    pause
+    goto menu
+)
+
+call :get_current_branch
+if not defined current_branch (
+    echo [ERROR] Could not determine the current Git branch.
+    pause
+    goto menu
+)
+
+echo [1/6] Staging dashboard changes...
+git add dashboard/
+
+echo [2/6] Enter commit message:
+set /p message="Commit message: "
+if "%message%"=="" set "message=Update dashboard"
+
+echo [3/6] Committing...
+git commit -m "%message%"
+if %ERRORLEVEL% NEQ 0 (
+    echo [WARNING] No changes to commit or commit failed
+)
+
+echo [4/6] Pushing to GitHub branch: %current_branch%...
+git push origin %current_branch%
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to push to GitHub!
+    pause
+    goto menu
+)
+
+echo [5/6] Deploying to droplet...
+set DROPLET_USER=malabot
+set DROPLET_IP=165.232.156.230
+set DROPLET_DIR=/home/malabot/MalaBoT
+
+ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR% && git pull origin %current_branch%"
+
+echo [6/6] Restarting dashboard on droplet...
+ssh %DROPLET_USER%@%DROPLET_IP% "cd %DROPLET_DIR%/dashboard && pip3 install -r requirements.txt --quiet && pm2 restart dashboard"
+
+echo.
+echo ========================================
+echo [SUCCESS] Dashboard Deployed!
+echo ========================================
+echo.
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 info dashboard"
+echo.
+pause
+goto menu
+
+:dashboard_status
+echo.
+echo ========================================
+echo Dashboard Status (Droplet)
+echo ========================================
+set DROPLET_USER=malabot
+set DROPLET_IP=165.232.156.230
+echo Checking dashboard status on droplet...
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 info dashboard && echo. && pm2 logs dashboard --lines 10 --nostream"
+echo.
+pause
+goto menu
+
+:dashboard_logs
+echo.
+echo ========================================
+echo Dashboard Logs (Live)
+echo ========================================
+set DROPLET_USER=malabot
+set DROPLET_IP=165.232.156.230
+echo Viewing live dashboard logs from droplet...
+echo Press Ctrl+C to stop viewing logs
+echo.
+ssh %DROPLET_USER%@%DROPLET_IP% "pm2 logs dashboard"
 goto menu
 
 :get_current_branch

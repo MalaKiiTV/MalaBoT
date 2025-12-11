@@ -17,7 +17,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-secret-key-here')
 app.config['DISCORD_CLIENT_ID'] = os.getenv('DISCORD_CLIENT_ID')
 app.config['DISCORD_CLIENT_SECRET'] = os.getenv('DISCORD_CLIENT_SECRET')
-app.config['DISCORD_REDIRECT_URI'] = 'http://165.232.156.230:8080/callback'
+app.config['DISCORD_REDIRECT_URI'] = os.getenv('DISCORD_REDIRECT_URI', 'http://localhost:8080/callback')
 app.config['DISCORD_BOT_TOKEN'] = os.getenv('DISCORD_TOKEN')
 
 discord_oauth = DiscordOAuth2Session(app)
@@ -305,4 +305,4 @@ if __name__ == '__main__':
     print("🚀 Starting MalaBot Dashboard on port 8080...")
     print("📡 Using Discord REST API to fetch guild data")
     print("⚠️  HTTP mode enabled (OAUTHLIB_INSECURE_TRANSPORT=1)")
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=8080, debug=True)

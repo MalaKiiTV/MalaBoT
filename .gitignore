@@ -83,3 +83,4 @@ dashboard/__pycache__/
 dashboard/*.backup*
 dashboard/*.db
 dashboard/.env
+dashboard/.env.production 
