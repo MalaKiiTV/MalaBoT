@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ guild.name }} - Settings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            /* Light mode (default) */
+            --bg-gradient-start: #667eea;
+            --bg-gradient-end: #764ba2;
+            --card-bg: #ffffff;
+            --section-bg: #f8f9fa;
+            --text-primary: #212529;
+            --text-secondary: #495057;
+            --text-muted: #6c757d;
+            --border-color: #e0e0e0;
+            --accent-color: #667eea;
+            --navbar-bg: rgba(255, 255, 255, 0.95);
+            --input-bg: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.2);
+        }
+
+        [data-theme="dark"] {
+            /* Dark mode (Ninja Agent inspired) */
+            --bg-gradient-start: #0f1419;
+            --bg-gradient-end: #1a1f2e;
+            --card-bg: #1e2433;
+            --section-bg: #151b28;
+            --text-primary: #e4e6eb;
+            --text-secondary: #b0b3b8;
+            --text-muted: #8a8d91;
+            --border-color: #2d3748;
+            --accent-color: #3b82f6;
+            --navbar-bg: rgba(30, 36, 51, 0.95);
+            --input-bg: #0f1419;
+            --shadow: rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+            color: var(--text-primary);
+        }
+        
+        .container {
+            max-width: 1200px;
+        }
+        
+        .settings-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px var(--shadow);
+        }
+        
+        .settings-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: var(--section-bg);
+            border-radius: 10px;
+            border-left: 4px solid var(--accent-color);
+        }
+        
+        .section-title {
+            color: var(--accent-color);
+            font-weight: bold;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            padding: 10px 15px;
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        
+        .help-text {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+        
+        .navbar {
+            background: var(--navbar-bg) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px var(--shadow);
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+
+        .navbar-text {
+            color: var(--text-primary) !important;
+        }
+        
+        .role-connection-item {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 2px solid var(--border-color);
+        }
+        
+        .variable-tag {
+            display: inline-block;
+            background: var(--accent-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin: 2px;
+        }
+
+        /* Dark mode toggle button */
+        .theme-toggle {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            margin-left: 1rem;
+        }
+
+        .theme-toggle:hover {
+            background-color: var(--section-bg);
+            border-color: var(--accent-color);
+            transform: scale(1.05);
+        }
+
+        /* Override Bootstrap select arrow for dark mode */
+        [data-theme="dark"] .form-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23e4e6eb' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <span class="navbar-text">⚙️ {{ guild.name }}</span>
+            <div class="d-flex align-items-center">
+                <a href="/dashboard" class="btn btn-secondary btn-sm me-2">← Back to Dashboard</a>
+                <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="settings-card">
+            <!-- General Settings -->
+            <div class="settings-section">
+                <h2 class="section-title">⚙️ General Settings</h2>
+                <form method="POST" action="/api/guild/{{ guild.id }}/settings">
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="general_enabled" name="general_enabled"
+                               {% if settings.get('general_enabled', 'true') == 'true' %}checked{% endif %}>
+                        <label class="form-check-label" for="general_enabled">
+                            Enable General Settings
+                        </label>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="prefix" class="form-label">Command Prefix</label>
+                            <input type="text" class="form-control" id="prefix" name="prefix" 
+                                   value="{{ settings.get('prefix', '!') }}" maxlength="5">
+                            <div class="help-text">The prefix for text commands (e.g., !help)</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="language" class="form-label">Language</label>
+                            <select class="form-select" id="language" name="language">
+                                <option value="en" {% if settings.get('language', 'en') == 'en' %}selected{% endif %}>English</option>
+                                <option value="es" {% if settings.get('language') == 'es' %}selected{% endif %}>Español</option>
+                                <option value="fr" {% if settings.get('language') == 'fr' %}selected{% endif %}>Français</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="mod-role" class="form-label">Moderator Role</label>
+                            <select class="form-select" id="mod-role" name="mod_role">
+                                <option value="">Select a role...</option>
+                                {% for role in roles %}
+                                <option value="{{ role.id }}" {% if settings.get('mod_role') == role.id|string %}selected{% endif %}>{{ role.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="help-text">Role with moderator permissions</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="admin-role" class="form-label">Admin Role</label>
+                            <select class="form-select" id="admin-role" name="admin_role">
+                                <option value="">Select a role...</option>
+                                {% for role in roles %}
+                                <option value="{{ role.id }}" {% if settings.get('admin_role') == role.id|string %}selected{% endif %}>{{ role.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="help-text">Role with administrator permissions</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="timezone" class="form-label">Server Timezone</label>
+                            <select class="form-select" id="timezone" name="timezone">
+                                <option value="America/Denver" {% if settings.get('timezone', 'America/Denver') == 'America/Denver' %}selected{% endif %}>Mountain Time (MT)</option>
+                                <option value="America/New_York" {% if settings.get('timezone') == 'America/New_York' %}selected{% endif %}>Eastern Time (ET)</option>
+                                <option value="America/Chicago" {% if settings.get('timezone') == 'America/Chicago' %}selected{% endif %}>Central Time (CT)</option>
+                                <option value="America/Los_Angeles" {% if settings.get('timezone') == 'America/Los_Angeles' %}selected{% endif %}>Pacific Time (PT)</option>
+                            </select>
+                            <div class="help-text">Used for birthday announcements and scheduled events</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="log-channel" class="form-label">Log Channel</label>
+                            <select class="form-select" id="log-channel" name="log_channel">
+                                <option value="">Select a channel...</option>
+                                {% for channel in channels %}
+                                <option value="{{ channel.id }}" {% if settings.get('log_channel') == channel.id|string %}selected{% endif %}>#{{ channel.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="help-text">Channel for bot activity logs</div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+
+            <!-- Verification System -->
+            <div class="settings-section">
+                <h2 class="section-title">✅ Verification System</h2>
+                <form method="POST" action="/api/guild/{{ guild_id }}/settings/verification">
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="verification_enabled" name="verification_enabled"
+                               {% if settings.get('verification_enabled') == 'true' %}checked{% endif %}>
+                        <label class="form-check-label" for="verification_enabled">
+                            Enable Verification System
+                        </label>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="verification-channel" class="form-label">Verification Channel</label>
+                            <select class="form-select" id="verification-channel" name="verification_channel">
+                                <option value="">Select a channel...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="verified-role" class="form-label">Verified Role</label>
+                            <select class="form-select" id="verified-role" name="verified_role">
+                                <option value="">Select a role...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+
+            <!-- Role Connections -->
+            <div class="settings-section">
+                <h2 class="section-title">🔗 Role Connections</h2>
+                <p class="help-text mb-3">Link Discord roles to external platforms for verification</p>
+                <div id="role-connections-list">
+                    <p class="text-muted">No role connections configured.</p>
+                </div>
+                <button type="button" class="btn btn-success mt-3" onclick="addRoleConnection()">
+                    ➕ Add Role Connection
+                </button>
+            </div>
+
+            <!-- Welcome System -->
+            <div class="settings-section">
+                <h2 class="section-title">🎉 Welcome System</h2>
+                <form method="POST" action="/api/guild/{{ guild_id }}/settings/welcome">
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="welcome_enabled" name="welcome_enabled"
+                               {% if settings.get('welcome_enabled') == 'true' %}checked{% endif %}>
+                        <label class="form-check-label" for="welcome_enabled">
+                            Enable Welcome Messages
+                        </label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="welcome_channel" class="form-label">Welcome Channel</label>
+                        <select class="form-select" id="welcome_channel" name="welcome_channel">
+                            <option value="">Select a channel...</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="welcome_title" class="form-label">Welcome Title</label>
+                        <input type="text" class="form-control" id="welcome_title" name="welcome_title"
+                               value="{{ settings.get('welcome_title', 'Welcome!') }}" maxlength="100">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="welcome_message" class="form-label">Welcome Message</label>
+                        <textarea class="form-control" id="welcome_message" name="welcome_message" rows="3">{{ settings.get('welcome_message', 'Welcome {member} to {server}!') }}</textarea>
+                        <div class="help-text">
+                            Available variables: 
+                            <span class="variable-tag">{member}</span>
+                            <span class="variable-tag">{member.name}</span>
+                            <span class="variable-tag">{server}</span>
+                            <span class="variable-tag">{member.count}</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="welcome_image" class="form-label">Welcome Image URL</label>
+                        <div class="input-group">
+                        <input type="url" class="form-control" id="welcome_image" name="welcome_image"
+                               value="{{ settings.get('welcome_image', '') }}" placeholder="https://i.imgur.com/example.png">
+                        <div class="help-text">Optional: Add a custom image to welcome messages</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+
+            <!-- Goodbye System -->
+            <div class="settings-section">
+                <h2 class="section-title">👋 Goodbye System</h2>
+                <form method="POST" action="/api/guild/{{ guild_id }}/settings/goodbye">
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="goodbye_enabled" name="goodbye_enabled"
+                               {% if settings.get('goodbye_enabled') == 'true' %}checked{% endif %}>
+                        <label class="form-check-label" for="goodbye_enabled">
+                            Enable Goodbye Messages
+                        </label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="goodbye_channel" class="form-label">Goodbye Channel</label>
+                        <select class="form-select" id="goodbye_channel" name="goodbye_channel">
+                            <option value="">Select a channel...</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="goodbye_title" class="form-label">Goodbye Title</label>
+                        <input type="text" class="form-control" id="goodbye_title" name="goodbye_title"
+                               value="{{ settings.get('goodbye_title', 'Goodbye!') }}" maxlength="100">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="goodbye_message" class="form-label">Goodbye Message</label>
+                        <textarea class="form-control" id="goodbye_message" name="goodbye_message" rows="3">{{ settings.get('goodbye_message', '{member.name} has left {server}') }}</textarea>
+                        <div class="help-text">
+                            Available variables: 
+                            <span class="variable-tag">{member}</span>
+                            <span class="variable-tag">{member.name}</span>
+                            <span class="variable-tag">{server}</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+
+            <!-- XP System -->
+            <div class="settings-section">
+                <h2 class="section-title">⭐ XP System</h2>
+                <form method="POST" action="/api/guild/{{ guild_id }}/settings/xp">
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="xp_enabled" name="xp_enabled"
+                               {% if settings.get('xp_enabled') == 'true' %}checked{% endif %}>
+                        <label class="form-check-label" for="xp_enabled">
+                            Enable XP System
+                        </label>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="xp_levelup_channel" class="form-label">Level-up Announcement Channel</label>
+                            <select class="form-select" id="xp_levelup_channel" name="xp_levelup_channel">
+                                <option value="">Select a channel...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="xp_progression_type" class="form-label">XP Progression Type</label>
+                            <select class="form-select" id="xp_progression_type" name="xp_progression_type">
+                                <option value="linear" {% if settings.get('xp_progression_type', 'linear') == 'linear' %}selected{% endif %}>Linear (100 XP per level)</option>
+                                <option value="exponential" {% if settings.get('xp_progression_type') == 'exponential' %}selected{% endif %}>Exponential (Gets harder fast)</option>
+                                <option value="hybrid" {% if settings.get('xp_progression_type') == 'hybrid' %}selected{% endif %}>Hybrid (Linear → Exponential)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="xp_per_message" class="form-label">XP Per Message</label>
+                            <input type="number" class="form-control" id="xp_per_message" name="xp_per_message"
+                                   value="{{ settings.get('xp_per_message', '10') }}" min="0" max="100">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="xp_message_enabled" name="xp_message_enabled"
+                                       {% if settings.get('xp_message_enabled', 'true') == 'true' %}checked{% endif %}>
+                                <label class="form-check-label" for="xp_message_enabled">Enable Message XP</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="xp_per_reaction" class="form-label">XP Per Reaction</label>
+                            <input type="number" class="form-control" id="xp_per_reaction" name="xp_per_reaction"
+                                   value="{{ settings.get('xp_per_reaction', '5') }}" min="0" max="50">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="xp_reaction_enabled" name="xp_reaction_enabled"
+                                       {% if settings.get('xp_reaction_enabled', 'true') == 'true' %}checked{% endif %}>
+                                <label class="form-check-label" for="xp_reaction_enabled">Enable Reaction XP</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="xp_per_voice_minute" class="form-label">XP Per Voice Minute</label>
+                            <input type="number" class="form-control" id="xp_per_voice_minute" name="xp_per_voice_minute"
+                                   value="{{ settings.get('xp_per_voice_minute', '2') }}" min="0" max="20">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="xp_voice_enabled" name="xp_voice_enabled"
+                                       {% if settings.get('xp_voice_enabled', 'true') == 'true' %}checked{% endif %}>
+                                <label class="form-check-label" for="xp_voice_enabled">Enable Voice XP</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="xp_cooldown" class="form-label">XP Cooldown (seconds)</label>
+                        <input type="number" class="form-control" id="xp_cooldown" name="xp_cooldown"
+                               value="{{ settings.get('xp_cooldown', '60') }}" min="0" max="300">
+                        <div class="help-text">Time between XP gains to prevent spam</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="xp_levelup_message" class="form-label">Level Up Message</label>
+                        <textarea class="form-control" id="xp_levelup_message" name="xp_levelup_message" rows="2">{{ settings.get('xp_levelup_message', '🎉 {member} reached level {level}!') }}</textarea>
+                        <div class="help-text">
+                            Available variables: 
+                            <span class="variable-tag">{member}</span>
+                            <span class="variable-tag">{level}</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+
+            <!-- Birthday System -->
+            <div class="settings-section">
+                <h2 class="section-title">🎂 Birthday System</h2>
+                <form method="POST" action="/api/guild/{{ guild_id }}/settings/birthday">
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="birthday_enabled" name="birthday_enabled"
+                               {% if settings.get('birthday_enabled') == 'true' %}checked{% endif %}>
+                        <label class="form-check-label" for="birthday_enabled">
+                            Enable Birthday Announcements
+                        </label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="birthday_channel" class="form-label">Birthday Channel</label>
+                        <select class="form-select" id="birthday_channel" name="birthday_channel">
+                            <option value="">Select a channel...</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="birthday_time" class="form-label">Announcement Time (24-hour format)</label>
+                        <input type="time" class="form-control" id="birthday_time" name="birthday_time"
+                               value="{{ settings.get('birthday_time', '09:00') }}">
+                        <div class="help-text">Time to send birthday announcements (server timezone)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="birthday_message" class="form-label">Birthday Message</label>
+                        <textarea class="form-control" id="birthday_message" name="birthday_message" rows="3">{{ settings.get('birthday_message', '🎂 Happy Birthday {member}! 🎉') }}</textarea>
+                        <div class="help-text">
+                            Available variables: 
+                            <span class="variable-tag">{member}</span>
+                            <span class="variable-tag">{member.name}</span>
+                            <span class="variable-tag">{age}</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="birthday_xp_bonus" class="form-label">Birthday XP Bonus</label>
+                        <input type="number" class="form-control" id="birthday_xp_bonus" name="birthday_xp_bonus"
+                               value="{{ settings.get('birthday_xp_bonus', '100') }}" min="0" max="1000">
+                        <div class="help-text">Bonus XP given on member's birthday</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const guildId = {{ guild_id }};
+
+        // Load guild data (channels and roles)
+        async function loadGuildData() {
+            try {
+                const response = await fetch(`/api/guild/${guildId}/data`);
+                const data = await response.json();
+                populateChannelDropdowns(data.channels);
+                populateRoleDropdowns(data.roles);
+                loadCurrentSettings();
+            } catch (error) {
+                console.error('Error loading guild data:', error);
+            }
+        }
+
+        function populateChannelDropdowns(channels) {
+            const channelSelects = [
+                'verification-channel',
+                'welcome_channel',
+                'goodbye_channel',
+                'xp_levelup_channel',
+                'birthday_channel'
+            ];
+
+            channelSelects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+                
+                // Keep the first option (placeholder)
+                const placeholder = select.options[0];
+                select.innerHTML = '';
+                select.appendChild(placeholder);
+                
+                channels.forEach(channel => {
+                    if (channel.type === 0) { // Text channel
+                        const option = document.createElement('option');
+                        option.value = channel.id;
+                        option.textContent = `# ${channel.name}`;
+                        select.appendChild(option);
+                    }
+                });
+            });
+        }
+
+        function populateRoleDropdowns(roles) {
+            const roleSelects = ['verified-role'];
+            
+            roleSelects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+                
+                const placeholder = select.options[0];
+                select.innerHTML = '';
+                select.appendChild(placeholder);
+                
+                roles.forEach(role => {
+                    if (role.name !== '@everyone') {
+                        const option = document.createElement('option');
+                        option.value = role.id;
+                        option.textContent = role.name;
+                        select.appendChild(option);
+                    }
+                });
+            });
+        }
+
+        function loadCurrentSettings() {
+            // Set selected values for channel dropdowns
+            const channelSettings = {
+                'verification-channel': '{{ settings.get("verification_channel", "") }}',
+                'welcome_channel': '{{ settings.get("welcome_channel", "") }}',
+                'goodbye_channel': '{{ settings.get("goodbye_channel", "") }}',
+                'xp_levelup_channel': '{{ settings.get("xp_levelup_channel", "") }}',
+                'birthday_channel': '{{ settings.get("birthday_channel", "") }}'
+            };
+
+            Object.entries(channelSettings).forEach(([id, value]) => {
+                const select = document.getElementById(id);
+                if (select && value) {
+                    select.value = value;
+                }
+            });
+
+            // Set selected values for role dropdowns
+            const roleSettings = {
+                'verified-role': '{{ settings.get("verified_role", "") }}'
+            };
+
+            Object.entries(roleSettings).forEach(([id, value]) => {
+                const select = document.getElementById(id);
+                if (select && value) {
+                    select.value = value;
+                }
+            });
+        }
+
+        async function loadRoleConnections() {
+            try {
+                const response = await fetch(`/api/guild/${guildId}/role-connections`);
+                const connections = await response.json();
+                
+                const container = document.getElementById('role-connections-list');
+                if (connections.length === 0) {
+                    container.innerHTML = '<p class="text-muted">No role connections configured.</p>';
+                    return;
+                }
+
+                container.innerHTML = connections.map(conn => `
+                    <div class="role-connection-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${conn.platform_name}</strong>
+                                <span class="text-muted">→</span>
+                                <span class="badge bg-primary">${conn.role_name}</span>
+                            </div>
+                            <button class="btn btn-danger btn-sm" onclick="deleteRoleConnection(${conn.id})">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading role connections:', error);
+            }
+        }
+
+        function addRoleConnection() {
+            // This would open a modal to add a new role connection
+            alert('Role connection modal would open here');
+        }
+
+        async function deleteRoleConnection(id) {
+            if (!confirm('Are you sure you want to delete this role connection?')) return;
+            
+            try {
+                await fetch(`/api/guild/${guildId}/role-connections/${id}`, {
+                    method: 'DELETE'
+                });
+                loadRoleConnections();
+            } catch (error) {
+                console.error('Error deleting role connection:', error);
+            }
+        }
+
+        // Handle form submissions
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData);
+                
+                // Convert checkboxes to true/false strings
+                form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    data[checkbox.name] = checkbox.checked ? 'true' : 'false';
+                });
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    if (response.ok) {
+                        // Show success message
+                        const btn = form.querySelector('button[type="submit"]');
+                        const originalText = btn.textContent;
+                        btn.textContent = '✓ Saved!';
+                        btn.classList.add('btn-success');
+                        btn.classList.remove('btn-primary');
+                        
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                            btn.classList.remove('btn-success');
+                            btn.classList.add('btn-primary');
+                        }, 2000);
+                    } else {
+                        alert('Error saving settings. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error saving settings:', error);
+                    alert('Error saving settings. Please try again.');
+                }
+            });
+        });
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGuildData();
+            loadRoleConnections();
+        });
+    </script>
+
+    <script>
+        // Smart Save Button - Disable until changes are made
+        document.addEventListener('DOMContentLoaded', () => {
+            const forms = document.querySelectorAll('form');
+            
+            forms.forEach(form => {
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (!submitBtn) return;
+                
+                const originalText = submitBtn.textContent;
+                
+                // Store original values
+                const originalValues = new Map();
+                const inputs = form.querySelectorAll('input, select, textarea');
+                
+                inputs.forEach(input => {
+                    if (input.type === 'checkbox') {
+                        originalValues.set(input.name, input.checked);
+                    } else {
+                        originalValues.set(input.name, input.value);
+                    }
+                });
+                
+                // Disable button initially
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'No Changes';
+                submitBtn.style.opacity = '0.5';
+                submitBtn.style.cursor = 'not-allowed';
+                
+                // Check for changes
+                function checkForChanges() {
+                    let hasChanges = false;
+                    
+                    inputs.forEach(input => {
+                        const currentValue = input.type === 'checkbox' ? input.checked : input.value;
+                        const originalValue = originalValues.get(input.name);
+                        
+                        if (currentValue !== originalValue) {
+                            hasChanges = true;
+                        }
+                    });
+                    
+                    submitBtn.disabled = !hasChanges;
+                    submitBtn.textContent = hasChanges ? originalText : 'No Changes';
+                    submitBtn.style.opacity = hasChanges ? '1' : '0.5';
+                    submitBtn.style.cursor = hasChanges ? 'pointer' : 'not-allowed';
+                }
+                
+                // Listen for changes
+                inputs.forEach(input => {
+                    input.addEventListener('input', checkForChanges);
+                    input.addEventListener('change', checkForChanges);
+                });
+            });
+        });
+
+
+        // AJAX Form Submission
+        document.addEventListener('DOMContentLoaded', () => {
+            const forms = document.querySelectorAll('form');
+            
+            forms.forEach(form => {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault(); // Prevent default form submission
+                    
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.textContent;
+                    
+                    // Show loading state
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Saving...';
+                    
+                    try {
+                        const formData = new FormData(form);
+                        const data = {};
+                        
+                        // Convert FormData to object
+                        for (let [key, value] of formData.entries()) {
+                            data[key] = value;
+                        }
+                        
+                        // Handle checkboxes (they won't be in FormData if unchecked)
+                        form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                            data[checkbox.name] = checkbox.checked ? 'true' : 'false';
+                        });
+                        
+                        const response = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(data)
+                        });
+                        
+                        if (response.ok) {
+                            submitBtn.textContent = '✓ Saved!';
+                            submitBtn.classList.remove('btn-primary');
+                            submitBtn.classList.add('btn-success');
+                            
+                            setTimeout(() => {
+                                submitBtn.textContent = 'No Changes';
+                                submitBtn.classList.remove('btn-success');
+                                submitBtn.classList.add('btn-primary');
+                                submitBtn.disabled = true;
+                                submitBtn.style.opacity = '0.5';
+                                submitBtn.style.cursor = 'not-allowed';
+                            }, 2000);
+                        } else {
+                            submitBtn.textContent = '✗ Error';
+                            submitBtn.classList.add('btn-danger');
+                            setTimeout(() => {
+                                submitBtn.textContent = originalText;
+                                submitBtn.classList.remove('btn-danger');
+                                submitBtn.disabled = false;
+                            }, 2000);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        submitBtn.textContent = '✗ Error';
+                        submitBtn.classList.add('btn-danger');
+                        setTimeout(() => {
+                            submitBtn.textContent = originalText;
+                            submitBtn.classList.remove('btn-danger');
+                            submitBtn.disabled = false;
+                        }, 2000);
+                    }
+                });
+            });
+        });
+
+        // Dark mode toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.querySelector('.theme-icon');
+        const html = document.documentElement;
+
+        // Check for saved theme preference or default to light mode
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', currentTheme);
+        updateThemeIcon(currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        });
+
+        function updateThemeIcon(theme) {
+            themeIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+    </script>
+</body>
+</html>
