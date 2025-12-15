@@ -214,7 +214,8 @@ class DatabaseManager:
             'guild_id': str(guild_id) if guild_id else None,
             'last_checkin': last_checkin,
             'checkin_streak': streak
-        }).execute()
+        }, on_conflict='user_id,guild_id').execute()
+
 
     async def reset_all_xp(self, guild_id: int) -> None:
         """Reset all XP for a guild."""
