@@ -1,4 +1,4 @@
-"""
+﻿"""
 Constants and configuration values for MalaBoT.
 Contains XP tables, colors, embed settings, and other static data.
 """
@@ -101,16 +101,16 @@ ROAST_TITLES = {
 # Birthday System Configuration
 DEFAULT_BIRTHDAY_POST_TIME = "08:00 AM"
 DEFAULT_TIMEZONE = "UTC-6"
-BIRTHDAY_ROLE_NAME = "Birthday 🎂"
+BIRTHDAY_ROLE_NAME = "Birthday "
 BIRTHDAY_CHECK_INTERVAL_HOURS = 1
 
 # Welcome System Configuration
-DEFAULT_WELCOME_TITLE = "👋 Welcome to the server!"
+DEFAULT_WELCOME_TITLE = " Welcome to the server!"
 DEFAULT_WELCOME_MESSAGE = "We're glad you're here, {member.mention}!"
 DEFAULT_WELCOME_IMAGE = None
 
 # Goodbye System Configuration
-DEFAULT_GOODBYE_TITLE = "👋 Goodbye!"
+DEFAULT_GOODBYE_TITLE = " Goodbye!"
 DEFAULT_GOODBYE_MESSAGE = "{member.name} has left the server. We'll miss you!"
 DEFAULT_GOODBYE_IMAGE = None
 
@@ -120,35 +120,35 @@ MAX_MESSAGES_DELETE = 100
 
 # Help System Configuration
 HELP_EMBED_COLOR = COLORS["primary"]
-HELP_EMBED_TITLE = "🤖 MalaBoT Command List"
-HELP_FOOTER = "MalaBoT • Multifunctional Discord Bot"
+HELP_EMBED_TITLE = " MalaBoT Command List"
+HELP_FOOTER = "MalaBoT  Multifunctional Discord Bot"
 
 # Bot Status Messages
 STARTUP_MESSAGES = [
-    "🟢 MalaBoT is now Locked in!",
-    "🚀 MalaBoT is ready to roll!",
-    "⚡ MalaBoT is online and kicking!",
-    "🎯 MalaBoT locked and loaded!",
+    " MalaBoT is now Locked in!",
+    " MalaBoT is ready to roll!",
+    " MalaBoT is online and kicking!",
+    " MalaBoT locked and loaded!",
 ]
 
 # Error Messages
 ERROR_MESSAGES = {
-    "permission_denied": "❌ You don't have permission to use this command.",
-    "cooldown_active": "⏱️ Please wait before using this command again.",
-    "invalid_user": "❌ Invalid user specified.",
-    "invalid_channel": "❌ Invalid channel specified.",
-    "database_error": "❌ A database error occurred. Please try again later.",
-    "api_error": "❌ An external API error occurred. Please try again later.",
-    "not_found": "❌ The requested resource was not found.",
-    "invalid_syntax": "❌ Invalid command syntax. Use `/help` for assistance.",
+    "permission_denied": " You don't have permission to use this command.",
+    "cooldown_active": " Please wait before using this command again.",
+    "invalid_user": " Invalid user specified.",
+    "invalid_channel": " Invalid channel specified.",
+    "database_error": " A database error occurred. Please try again later.",
+    "api_error": " An external API error occurred. Please try again later.",
+    "not_found": " The requested resource was not found.",
+    "invalid_syntax": " Invalid command syntax. Use `/help` for assistance.",
 }
 
 # Success Messages
 SUCCESS_MESSAGES = {
-    "command_complete": "✅ Command completed successfully.",
-    "data_saved": "✅ Data saved successfully.",
-    "settings_updated": "✅ Settings updated successfully.",
-    "user_updated": "✅ User data updated successfully.",
+    "command_complete": " Command completed successfully.",
+    "data_saved": " Data saved successfully.",
+    "settings_updated": " Settings updated successfully.",
+    "user_updated": " User data updated successfully.",
 }
 
 # Level Role Map (server owners should customize these)
@@ -185,10 +185,10 @@ BACKUP_RETENTION_DAYS = 30
 
 # Command Categories for Help System
 COMMAND_CATEGORIES = {
-    "🎮 Fun": ["joke", "fact", "roast", "8ball", "roll", "coinflip"],
-    "⚙️ Utility": ["help", "ping", "userinfo", "serverinfo", "about", "serverstats"],
-    "🎂 Birthdays": ["bday"],
-    "🏆 XP": [
+    " Fun": ["joke", "fact", "roast", "8ball", "roll", "coinflip"],
+    " Utility": ["help", "ping", "userinfo", "serverinfo", "about", "serverstats"],
+    " Birthdays": ["bday"],
+    " XP": [
         "xp rank",
         "xp leaderboard",
         "xp checkin",
@@ -197,10 +197,10 @@ COMMAND_CATEGORIES = {
         "xp set",
         "xp reset",
     ],
-    "🛡️ Admin": ["delete", "kick", "ban", "mute", "unmute", "setup"],
-    "✅ Verification": ["verify activision", "verify review"],
-    "📋 Appeals": ["appeal submit", "appeal review"],
-    "👑 Owner": ["owner", "clear-commands"],
+    " Admin": ["delete", "kick", "ban", "mute", "unmute", "setup"],
+    " Verification": ["verify activision", "verify review"],
+    " Appeals": ["appeal submit", "appeal review"],
+    " Owner": ["owner", "clear-commands"],
 }
 
 # Jokes Database (sample jokes)
@@ -281,3 +281,4 @@ MAX_EMBED_DESCRIPTION = 2048
 MAX_EMBED_TITLE = 256
 MAX_EMBED_FIELDS = 25
 MAX_EMBED_FIELD_VALUE = 1024
+

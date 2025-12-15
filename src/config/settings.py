@@ -1,4 +1,4 @@
-"""
+﻿"""
 Configuration settings loader for MalaBoT.
 Handles environment variables and provides centralized configuration access.
 """
@@ -130,3 +130,4 @@ class Settings:
 
 # Global settings instance
 settings = Settings()
+

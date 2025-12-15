@@ -1,4 +1,4 @@
-"""
+﻿"""
 Moderation system cog for MalaBoT.
 Handles message deletion, channel management, and moderation logging.
 """
@@ -58,15 +58,15 @@ class Moderation(commands.Cog):
 
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
-                    title="🚫 Permission Denied",
+                    title=" Permission Denied",
                     description=f"This command is only available to:\n\n"
-                    f"• Bot Owners\n"
-                    f"• Server Administrators\n"
-                    f"• Staff Members (configured role)\n\n"
+                    f" Bot Owners\n"
+                    f" Server Administrators\n"
+                    f" Staff Members (configured role)\n\n"
                     f"Your current permissions:\n"
-                    f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
-                    f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
-                    f"• Staff Role: {'✅' if has_staff_role else '❌'}",
+                    f" Bot Owner: {'' if is_bot_owner else ''}\n"
+                    f" Administrator: {'' if interaction.user.guild_permissions.administrator else ''}\n"
+                    f" Staff Role: {'' if has_staff_role else ''}",
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 self.logger.warning(
@@ -128,7 +128,7 @@ class Moderation(commands.Cog):
                 )
 
             embed = embed_helper.success_embed(
-                title="✅ Messages Deleted",
+                title=" Messages Deleted",
                 description=f"Successfully deleted {len(deleted)} messages.",
             )
 
@@ -143,7 +143,7 @@ class Moderation(commands.Cog):
 
 
             log_moderation(
-                f"🗑 {interaction.user.name} deleted {len(deleted)} messages in #{channel.name}"
+                f" {interaction.user.name} deleted {len(deleted)} messages in #{channel.name}"
             )
 
             if self.bot.db_manager:
@@ -154,7 +154,7 @@ class Moderation(commands.Cog):
                     mod_log_channel = self.bot.get_channel(mod_log_channel_id)
                     if mod_log_channel:
                         log_embed = create_embed(
-                            title="🗑 Messages Deleted",
+                            title=" Messages Deleted",
                             description=f"**Moderator:** {interaction.user.mention}\n"
                             f"**Channel:** {channel.mention}\n"
                             f"**Messages Deleted:** {len(deleted)}",
@@ -199,7 +199,7 @@ class Moderation(commands.Cog):
                 )
 
             embed = embed_helper.success_embed(
-                title="✅ Messages Deleted",
+                title=" Messages Deleted",
                 description=f"Successfully deleted {len(deleted)} messages.",
             )
 
@@ -214,7 +214,7 @@ class Moderation(commands.Cog):
 
 
             log_moderation(
-                f"🗑 {interaction.user.name} deleted {len(deleted)} messages in #{channel.name}"
+                f" {interaction.user.name} deleted {len(deleted)} messages in #{channel.name}"
             )
 
             if self.bot.db_manager:
@@ -225,7 +225,7 @@ class Moderation(commands.Cog):
                     mod_log_channel = self.bot.get_channel(mod_log_channel_id)
                     if mod_log_channel:
                         log_embed = create_embed(
-                            title="🗑 Messages Deleted",
+                            title=" Messages Deleted",
                             description=f"**Moderator:** {interaction.user.mention}\n"
                             f"**Channel:** {channel.mention}\n"
                             f"**Messages Deleted:** {len(deleted)}",
@@ -268,7 +268,7 @@ class Moderation(commands.Cog):
                 )
 
             embed = embed_helper.warning_embed(
-                title="⚠️ Channel Purged",
+                title=" Channel Purged",
                 description=f"This channel was purged by {interaction.user.mention}.\n\n"
                 f"All previous messages have been deleted.",
             )
@@ -276,7 +276,7 @@ class Moderation(commands.Cog):
             await safe_send_message(new_channel, embed=embed)
 
             log_moderation(
-                f"🗑 {interaction.user.name} purged channel #{new_channel.name}"
+                f" {interaction.user.name} purged channel #{new_channel.name}"
             )
 
             if self.bot.db_manager:
@@ -287,7 +287,7 @@ class Moderation(commands.Cog):
                     mod_log_channel = self.bot.get_channel(mod_log_channel_id)
                     if mod_log_channel:
                         log_embed = create_embed(
-                            title="🗑 Channel Purged",
+                            title=" Channel Purged",
                             description=f"**Moderator:** {interaction.user.mention}\n"
                             f"**Channel:** {new_channel.mention}\n"
                             f"**Action:** Full channel purge (all messages deleted)",
@@ -333,15 +333,15 @@ class Moderation(commands.Cog):
 
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
-                    title="⛔ Permission Denied",
+                    title=" Permission Denied",
                     description=f"This command is only available to:\n\n"
-                    f"• Bot Owners\n"
-                    f"• Server Administrators\n"
-                    f"• Staff Members (configured role)\n\n"
+                    f" Bot Owners\n"
+                    f" Server Administrators\n"
+                    f" Staff Members (configured role)\n\n"
                     f"Your current permissions:\n"
-                    f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
-                    f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
-                    f"• Staff Role: {'✅' if has_staff_role else '❌'}",
+                    f" Bot Owner: {'' if is_bot_owner else ''}\n"
+                    f" Administrator: {'' if interaction.user.guild_permissions.administrator else ''}\n"
+                    f" Staff Role: {'' if has_staff_role else ''}",
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 self.logger.warning(
@@ -374,7 +374,7 @@ class Moderation(commands.Cog):
 
             # Create success embed
             embed = embed_helper.success_embed(
-                title="👢 User Kicked",
+                title=" User Kicked",
                 description=f"{user.mention} has been kicked from the server.\n**Reason:** {reason}",
             )
 
@@ -392,7 +392,7 @@ class Moderation(commands.Cog):
                 )
 
             log_moderation(
-                f"👢 {interaction.user.name} kicked {user.name}#{user.discriminator} - Reason: {reason}"
+                f" {interaction.user.name} kicked {user.name}#{user.discriminator} - Reason: {reason}"
             )
 
         except discord.Forbidden:
@@ -430,15 +430,15 @@ class Moderation(commands.Cog):
 
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
-                    title="⛔ Permission Denied",
+                    title=" Permission Denied",
                     description=f"This command is only available to:\n\n"
-                    f"• Bot Owners\n"
-                    f"• Server Administrators\n"
-                    f"• Staff Members (configured role)\n\n"
+                    f" Bot Owners\n"
+                    f" Server Administrators\n"
+                    f" Staff Members (configured role)\n\n"
                     f"Your current permissions:\n"
-                    f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
-                    f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
-                    f"• Staff Role: {'✅' if has_staff_role else '❌'}",
+                    f" Bot Owner: {'' if is_bot_owner else ''}\n"
+                    f" Administrator: {'' if interaction.user.guild_permissions.administrator else ''}\n"
+                    f" Staff Role: {'' if has_staff_role else ''}",
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 self.logger.warning(
@@ -474,7 +474,7 @@ class Moderation(commands.Cog):
 
             # Create success embed
             embed = embed_helper.success_embed(
-                title="🔨 User Banned",
+                title=" User Banned",
                 description=f"{user.mention} has been banned from the server.\n**Reason:** {reason}",
             )
 
@@ -492,7 +492,7 @@ class Moderation(commands.Cog):
                 )
 
             log_moderation(
-                f"🔨 {interaction.user.name} banned {user.name}#{user.discriminator} - Reason: {reason}"
+                f" {interaction.user.name} banned {user.name}#{user.discriminator} - Reason: {reason}"
             )
 
         except discord.Forbidden:
@@ -535,15 +535,15 @@ class Moderation(commands.Cog):
 
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
-                    title="⛔ Permission Denied",
+                    title=" Permission Denied",
                     description=f"This command is only available to:\n\n"
-                    f"• Bot Owners\n"
-                    f"• Server Administrators\n"
-                    f"• Staff Members (configured role)\n\n"
+                    f" Bot Owners\n"
+                    f" Server Administrators\n"
+                    f" Staff Members (configured role)\n\n"
                     f"Your current permissions:\n"
-                    f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
-                    f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
-                    f"• Staff Role: {'✅' if has_staff_role else '❌'}",
+                    f" Bot Owner: {'' if is_bot_owner else ''}\n"
+                    f" Administrator: {'' if interaction.user.guild_permissions.administrator else ''}\n"
+                    f" Staff Role: {'' if has_staff_role else ''}",
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 self.logger.warning(
@@ -596,7 +596,7 @@ class Moderation(commands.Cog):
 
             # Create success embed
             embed = embed_helper.success_embed(
-                title="🔇 User Muted",
+                title=" User Muted",
                 description=f"{user.mention} has been muted for {duration} minutes.\n**Reason:** {reason}",
             )
 
@@ -614,7 +614,7 @@ class Moderation(commands.Cog):
                 )
 
             log_moderation(
-                f"🔇 {interaction.user.name} muted {user.name}#{user.discriminator} for {duration} minutes - Reason: {reason}"
+                f" {interaction.user.name} muted {user.name}#{user.discriminator} for {duration} minutes - Reason: {reason}"
             )
 
             # Schedule unmute
@@ -663,15 +663,15 @@ class Moderation(commands.Cog):
 
             if not (is_bot_owner or has_admin_perm or has_staff_role):
                 embed = embed_helper.error_embed(
-                    title="⛔ Permission Denied",
+                    title=" Permission Denied",
                     description=f"This command is only available to:\n\n"
-                    f"• Bot Owners\n"
-                    f"• Server Administrators\n"
-                    f"• Staff Members (configured role)\n\n"
+                    f" Bot Owners\n"
+                    f" Server Administrators\n"
+                    f" Staff Members (configured role)\n\n"
                     f"Your current permissions:\n"
-                    f"• Bot Owner: {'✅' if is_bot_owner else '❌'}\n"
-                    f"• Administrator: {'✅' if interaction.user.guild_permissions.administrator else '❌'}\n"
-                    f"• Staff Role: {'✅' if has_staff_role else '❌'}",
+                    f" Bot Owner: {'' if is_bot_owner else ''}\n"
+                    f" Administrator: {'' if interaction.user.guild_permissions.administrator else ''}\n"
+                    f" Staff Role: {'' if has_staff_role else ''}",
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 self.logger.warning(
@@ -705,7 +705,7 @@ class Moderation(commands.Cog):
 
             # Create success embed
             embed = embed_helper.success_embed(
-                title="🔊 User Unmuted",
+                title=" User Unmuted",
                 description=f"{user.mention} has been unmuted.\n**Reason:** {reason}",
             )
 
@@ -723,7 +723,7 @@ class Moderation(commands.Cog):
                 )
 
             log_moderation(
-                f"🔊 {interaction.user.name} unmuted {user.name}#{user.discriminator} - Reason: {reason}"
+                f" {interaction.user.name} unmuted {user.name}#{user.discriminator} - Reason: {reason}"
             )
 
         except discord.Forbidden:
@@ -759,3 +759,4 @@ async def setup(bot: commands.Bot):
     bot.tree.add_command(cog.ban, override=True)
     bot.tree.add_command(cog.mute, override=True)
     bot.tree.add_command(cog.unmute, override=True)
+

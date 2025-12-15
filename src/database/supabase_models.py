@@ -1,4 +1,4 @@
-"""
+﻿"""
 Supabase database models for MalaBoT.
 Drop-in replacement for SQLite models.
 """
@@ -526,5 +526,6 @@ class DatabaseManager:
         }).eq('user_id', user_id).eq('guild_id', guild_id).execute()
         
         return new_xp, new_level
+
 
 

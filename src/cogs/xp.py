@@ -1,4 +1,4 @@
-"""
+﻿"""
 XP and leveling system cog for MalaBoT.
 Handles user XP gains, level progression, and XP administration.
 """
@@ -71,10 +71,10 @@ class XPGroup(app_commands.Group):
 
             # Create progress bar
             progress = int((xp_progress / xp_total_needed) * 20)
-            progress_bar = "█" * progress + "░" * (20 - progress)
+            progress_bar = "" * progress + "" * (20 - progress)
 
             embed = create_embed(
-                title=f"📊 {target.display_name}'s Rank",
+                title=f" {target.display_name}'s Rank",
                 description=f"**Rank:** #{rank}\n**Level:** {level}\n**XP:** {xp:,} / {next_level_xp:,}\n\n{progress_bar}\n\n**XP Needed:** {xp_needed:,}",
                 color=COLORS["primary"],
             )
@@ -117,7 +117,7 @@ class XPGroup(app_commands.Group):
 
             if not rows:
                 embed = create_embed(
-                    title="🏆 XP Leaderboard",
+                    title=" XP Leaderboard",
                     description="No users have XP yet!",
                     color=COLORS["warning"],
                 )
@@ -130,17 +130,17 @@ class XPGroup(app_commands.Group):
                 if user:
                     medal = ""
                     if i == 1:
-                        medal = "🥇"
+                        medal = ""
                     elif i == 2:
-                        medal = "🥈"
+                        medal = ""
                     elif i == 3:
-                        medal = "🥉"
+                        medal = ""
                     description += (
                         f"{medal} **{i}.** {user.mention} - Level {level} ({xp:,} XP)\n"
                     )
 
             embed = create_embed(
-                title="🏆 XP Leaderboard",
+                title=" XP Leaderboard",
                 description=description,
                 color=COLORS["primary"],
             )
@@ -169,7 +169,7 @@ class XPGroup(app_commands.Group):
                 last_checkin = datetime.datetime.strptime(row[0], "%Y-%m-%d").date()
                 if last_checkin == today:
                     embed = create_embed(
-                        title="✅ Already Checked In",
+                        title=" Already Checked In",
                         description="You've already claimed your daily bonus today!",
                         color=COLORS["warning"],
                     )
@@ -200,7 +200,7 @@ class XPGroup(app_commands.Group):
 
 
             embed = create_embed(
-                title="✅ Daily Check-in Complete!",
+                title=" Daily Check-in Complete!",
                 description=f"You've received **{bonus:,} XP**!\nCurrent streak: **{streak}** days",
                 color=COLORS["success"],
             )
@@ -241,7 +241,7 @@ class XPGroup(app_commands.Group):
             if leveled_up:
                 await self.cog._check_level_up(user)
             embed = create_embed(
-                title="✅ XP Added",
+                title=" XP Added",
                 description=f"Added **{amount:,} XP** to {user.mention}",
                 color=COLORS["success"],
             )
@@ -296,7 +296,7 @@ class XPGroup(app_commands.Group):
                         await self.cog._check_level_up(member)
 
             embed = create_embed(
-                title="✅ XP Added to All Users",
+                title=" XP Added to All Users",
                 description=f"Added **{amount:,} XP** to all users in the server",
                 color=COLORS["success"],
             )
@@ -335,7 +335,7 @@ class XPGroup(app_commands.Group):
         try:
             await self.cog.bot.db_manager.remove_user_xp(user.id, amount, interaction.guild.id)
             embed = create_embed(
-                title="✅ XP Removed",
+                title=" XP Removed",
                 description=f"Removed **{amount:,} XP** from {user.mention}",
                 color=COLORS["success"],
             )
@@ -378,7 +378,7 @@ class XPGroup(app_commands.Group):
                 await self.cog._check_level_up(user)
             
             embed = create_embed(
-                title="✅ XP Set",
+                title=" XP Set",
                 description=f"Set {user.mention}'s XP to **{amount:,}**",
                 color=COLORS["success"],
             )
@@ -406,7 +406,7 @@ class XPGroup(app_commands.Group):
         try:
             await self.cog.bot.db_manager.set_user_xp(user.id, 0, interaction.guild.id)
             embed = create_embed(
-                title="✅ XP Reset",
+                title=" XP Reset",
                 description=f"Reset {user.mention}'s XP to **0**",
                 color=COLORS["success"],
             )
@@ -442,7 +442,7 @@ class XPGroup(app_commands.Group):
 
 
             embed = create_embed(
-                title="✅ All XP Reset",
+                title=" All XP Reset",
                 description=f"Successfully reset XP to 0 for **{count}** users in the database.",
                 color=COLORS["success"],
             )
@@ -492,7 +492,7 @@ class XPGroup(app_commands.Group):
 
 
             embed = create_embed(
-                title="✅ All Check-ins Reset",
+                title=" All Check-ins Reset",
                 description=f"Successfully reset check-in streaks for **{count}** users.\nAll users can now check in again and start fresh streaks.",
                 color=COLORS["success"],
             )
@@ -692,7 +692,7 @@ class XP(commands.Cog):
                     self.logger.info(f"[LEVEL ROLE DEBUG] Channel object: {channel}")
                     if channel:
                         # Format the message
-                        msg = levelup_message or "🎉 {member} reached level {level}!"
+                        msg = levelup_message or " {member} reached level {level}!"
                         msg = msg.replace("{member}", user.mention)
                         msg = msg.replace("{level}", str(current_level))
 
@@ -749,3 +749,4 @@ def calculate_level(xp: int) -> int:
             break
 
     return level
+

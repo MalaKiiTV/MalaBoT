@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 Setup Cog for MalaBoT
 Unified configuration system for all bot features
@@ -51,7 +51,7 @@ class VerifyChannelSelect(discord.ui.ChannelSelect):
             await interaction.response.send_message(
                 embed=create_embed(
                     "Review Channel Set",
-                    f"âœ… Verification submissions will be posted to {channel.mention}",
+                    f" Verification submissions will be posted to {channel.mention}",
                     COLORS["success"],
                 ),
                 ephemeral=True,
@@ -92,7 +92,7 @@ class RoleSelect(discord.ui.RoleSelect):
             await interaction.response.send_message(
                 embed=create_embed(
                     "Verified Role Set",
-                    f"âœ… Users will receive {role.mention} when verified",
+                    f" Users will receive {role.mention} when verified",
                     COLORS["success"],
                 ),
                 ephemeral=True,
@@ -133,7 +133,7 @@ class CheaterRoleSelect(discord.ui.RoleSelect):
             await interaction.response.send_message(
                 embed=create_embed(
                     "Cheater Role Set",
-                    f"âœ… Cheaters will receive {role.mention} and have all other roles removed",
+                    f" Cheaters will receive {role.mention} and have all other roles removed",
                     COLORS["success"],
                 ),
                 ephemeral=True,
@@ -170,7 +170,7 @@ class CheaterJailChannelSelect(discord.ui.ChannelSelect):
             await interaction.response.send_message(
                 embed=create_embed(
                     "Cheater Jail Channel Cleared",
-                    "âœ… Cheater jail channel has been cleared.",
+                    " Cheater jail channel has been cleared.",
                     COLORS["success"],
                 ),
                 ephemeral=True,
@@ -190,7 +190,7 @@ class CheaterJailChannelSelect(discord.ui.ChannelSelect):
             await interaction.response.send_message(
                 embed=create_embed(
                     "Cheater Jail Channel Set",
-                    f"âœ… Cheater jail channel set to {channel.mention}\n\n"
+                    f" Cheater jail channel set to {channel.mention}\n\n"
                     f"Users marked as cheaters will be moved here and have all other roles removed.",
                     COLORS["success"],
                 ),
@@ -223,8 +223,7 @@ class VerificationSetupView(View):
         self.add_item(CheaterJailChannelSelect(db_manager, guild.id))
 
     @discord.ui.button(
-        label="View Current Config", style=discord.ButtonStyle.secondary, emoji="ðŸ‘ï¸"
-    )
+        label="View Current Config", style=discord.ButtonStyle.secondary)
     async def view_config(self, interaction: discord.Interaction, button: Button):
         """View current verification configuration"""
         verify_channel_id = await self.db.get_setting("verify_channel", self.guild.id)
@@ -306,7 +305,7 @@ class TimezoneSelect(discord.ui.Select):
             # Show brief confirmation
             await interaction.response.edit_message(
                 embed=create_embed(
-                    "âœ… Timezone Set",
+                    " Timezone Set",
                     f"Timezone set to **{self.values[0]}**",
                     COLORS["success"],
                 ),
@@ -320,7 +319,7 @@ class TimezoneSelect(discord.ui.Select):
 
             general_view = GeneralSettingsView(self.db, self.guild_id)
             embed = discord.Embed(
-                title="âš™ï¸ General Settings",
+                title=" General Settings",
                 description="Click the buttons below to configure each setting.",
                 color=COLORS["primary"],
             )
@@ -330,7 +329,7 @@ class TimezoneSelect(discord.ui.Select):
             log_system(f"Error setting timezone: {e}", level="error")
             await interaction.response.edit_message(
                 embed=create_embed(
-                    "âŒ Error",
+                    " Error",
                     "Failed to set timezone.",
                     COLORS["error"],
                 ),
@@ -390,7 +389,7 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
             # Show brief confirmation
             await interaction.response.send_message(
                 embed=create_embed(
-                    "âœ… Online Message Set",
+                    " Online Message Set",
                     f"Message set in **#{channel_name}**",
                     COLORS["success"],
                 ),
@@ -404,7 +403,7 @@ class OnlineMessageModal(Modal, title="Set Bot Online Message"):
 
             general_view = GeneralSettingsView(self.db, self.guild_id)
             embed = discord.Embed(
-                title="âš™ï¸ General Settings",
+                title=" General Settings",
                 description="Click the buttons below to configure each setting.",
                 color=COLORS["primary"],
             )
@@ -439,7 +438,6 @@ class OnboardingRoleSelectView(View):
                 label=role.name,
                 value=str(role.id),
                 description=f"Position: {role.position}",
-                emoji="ðŸ“‹",
             )
             for role in roles
         ]
@@ -455,8 +453,7 @@ class OnboardingRoleSelectView(View):
 
         # Add cancel button
         cancel_button = Button(
-            label="Cancel", style=discord.ButtonStyle.secondary, emoji="âŒ"
-        )
+            label="Cancel", style=discord.ButtonStyle.secondary)
         cancel_button.callback = self.cancel
         self.add_item(cancel_button)
 
@@ -467,7 +464,7 @@ class OnboardingRoleSelectView(View):
     
         if not role:
             embed = discord.Embed(
-                title="âŒ Error",
+                title=" Error",
                 description="Could not find the selected role. Please try again.",
                 color=COLORS["error"],
             )
@@ -479,7 +476,7 @@ class OnboardingRoleSelectView(View):
     
         # Show confirmation
         embed = discord.Embed(
-            title="âœ… Onboarding Role Set",
+            title=" Onboarding Role Set",
             description=f"Members will receive {role.mention} until they complete onboarding",
             color=COLORS["success"],
         )
@@ -488,7 +485,7 @@ class OnboardingRoleSelectView(View):
         general_view = GeneralSettingsView(self.db, self.guild_id)
     
         embed = discord.Embed(
-            title="âš™ï¸ General Settings",
+            title=" General Settings",
             description="Click the buttons below to configure each setting.",
             color=COLORS["primary"],
         )
@@ -498,7 +495,7 @@ class OnboardingRoleSelectView(View):
     async def cancel(self, interaction: discord.Interaction):
         """Handle cancel button"""
         embed = discord.Embed(
-            title="Ã¢Å’ Cancelled",
+            title=" Cancelled",
             description="Onboarding role setup cancelled.",
             color=COLORS["error"],
         )
@@ -518,7 +515,7 @@ class GeneralSettingsView(View):
     ):
         """Show the general settings menu"""
         embed = discord.Embed(
-            title="âš™ï¸ General Settings",
+            title=" General Settings",
             description="Click the buttons below to configure each setting.",
             color=COLORS["primary"],
         )
@@ -528,23 +525,21 @@ class GeneralSettingsView(View):
         await interaction.message.edit(embed=embed, view=new_view)
 
     @discord.ui.button(
-        label="Set Timezone", style=discord.ButtonStyle.primary, emoji="ðŸŒ"
-    )
+        label="Set Timezone", style=discord.ButtonStyle.primary)
     async def set_timezone(self, interaction: discord.Interaction, button: Button):
         """Set server timezone"""
         view = discord.ui.View()
         view.add_item(TimezoneSelect(self.db, self.guild_id))
 
         embed = discord.Embed(
-            title="ðŸŒ Select Timezone",
+            title=" Select Timezone",
             description="Choose your server's timezone.",
             color=COLORS["primary"],
         )
         await interaction.response.edit_message(embed=embed, view=view)
 
     @discord.ui.button(
-        label="Set Online Message", style=discord.ButtonStyle.primary, emoji="ðŸ’¬"
-    )
+        label="Set Online Message", style=discord.ButtonStyle.primary)
     async def set_online_message(
         self, interaction: discord.Interaction, button: Button
     ):
@@ -553,15 +548,14 @@ class GeneralSettingsView(View):
         view.add_item(OnlineMessageChannelSelect(self.db, self.guild_id))
 
         embed = discord.Embed(
-            title="ðŸ’¬ Set Online Message",
+            title=" Set Online Message",
             description="Select a channel for the online message.",
             color=COLORS["primary"],
         )
         await interaction.response.edit_message(embed=embed, view=view)
 
     @discord.ui.button(
-        label="Set Mod Role", style=discord.ButtonStyle.primary, emoji="ðŸ›¡ï¸"
-    )
+        label="Set Mod Role", style=discord.ButtonStyle.primary)
     async def set_mod_role(self, interaction: discord.Interaction, button: Button):
         """Set mod role for command permissions"""
         select = discord.ui.RoleSelect(
@@ -574,27 +568,26 @@ class GeneralSettingsView(View):
 
             # Show brief confirmation
             embed = discord.Embed(
-                title="âœ… Mod Role Set",
+                title=" Mod Role Set",
                 description=f"Mod role set to {role.mention}",
                 color=COLORS["success"],
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        select.callback = role_callback  # âœ… CORRECT - Aligned with the function definition
+        select.callback = role_callback  #  CORRECT - Aligned with the function definition
 
         view = View(timeout=60)
         view.add_item(select)
 
         embed = discord.Embed(
-            title="ðŸ›¡ï¸ Select Mod Role",
+            title=" Select Mod Role",
             description="Choose the mod role.",
             color=COLORS["primary"],
         )
         await interaction.response.edit_message(embed=embed, view=view)
 
     @discord.ui.button(
-        label="View Current Config", style=discord.ButtonStyle.secondary, emoji="ðŸ‘ï¸"
-    )
+        label="View Current Config", style=discord.ButtonStyle.secondary)
     async def view_config(self, interaction: discord.Interaction, button: Button):
         """View current general settings"""
         timezone = await self.db.get_setting("timezone", self.guild_id)
@@ -641,14 +634,14 @@ class GeneralSettingsView(View):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @discord.ui.button(
-        label="Set Onboarding Role", style=discord.ButtonStyle.primary, emoji="ðŸ“‹", row=1
+        label="Set Onboarding Role", style=discord.ButtonStyle.primary, row=1
     )
     async def set_onboarding_role(self, interaction: discord.Interaction, button: Button):
         """Set role to auto-assign to members completing onboarding"""
         view = OnboardingRoleSelectView(self.db, self.guild_id, interaction.guild)
 
         embed = discord.Embed(
-            title="ðŸ“‹ Set Onboarding Role",
+            title=" Set Onboarding Role",
             description="Select a role from the dropdown below to auto-assign to members who haven't completed onboarding.\n\n"
             "**Note:** This role will be removed once they complete onboarding.",
             color=COLORS["primary"],
@@ -682,25 +675,21 @@ class RoleConnectionMainSelect(Select):
                 label="Add Connection",
                 value="add",
                 description="Create a new role connection rule",
-                emoji="âž•",
             ),
             discord.SelectOption(
                 label="Manage Connections",
                 value="manage",
                 description="View, edit, or delete existing connections",
-                emoji="ðŸ“",
             ),
             discord.SelectOption(
                 label="Protected Roles",
                 value="protected",
                 description="Manage roles exempt from connections",
-                emoji="ðŸ›¡ï¸",
             ),
             discord.SelectOption(
                 label="Back to Setup",
                 value="back",
                 description="Return to main setup menu",
-                emoji="â—€ï¸",
             ),
         ]
         super().__init__(
@@ -727,14 +716,14 @@ class RoleConnectionMainSelect(Select):
         view = AddConnectionView(self.manager, self.guild)
 
         embed = discord.Embed(
-            title="âž• Add Role Connection",
+            title=" Add Role Connection",
             description=(
                 "**Step 1: Select Target Role**\n"
                 "Choose the role that will be given or removed.\n\n"
                 "After selecting the role, you'll configure:\n"
-                "Ã¢â‚¬Â¢ Action (Give or Remove)\n"
-                "Ã¢â‚¬Â¢ Conditions (Has/Doesn't Have roles)\n"
-                "Ã¢â‚¬Â¢ Logic (AND/OR)"
+                " Action (Give or Remove)\n"
+                " Conditions (Has/Doesn't Have roles)\n"
+                " Logic (AND/OR)"
             ),
             color=COLORS["primary"],
         )
@@ -762,7 +751,7 @@ class RoleConnectionMainSelect(Select):
         view = ManageConnectionsView(self.manager, self.guild, connections)
 
         embed = discord.Embed(
-            title="ðŸ“ Manage Connections",
+            title=" Manage Connections",
             description="Select a connection to toggle, edit, or delete:",
             color=COLORS["primary"],
         )
@@ -770,7 +759,7 @@ class RoleConnectionMainSelect(Select):
         for i, conn in enumerate(connections[:25], 1):
             target_role = self.guild.get_role(conn.target_role_id)
             if target_role:
-                status = "âœ… Enabled" if conn.enabled else "âŒ Disabled"
+                status = " Enabled" if conn.enabled else " Disabled"
 
                 # Build condition text
                 cond_text = []
@@ -800,7 +789,7 @@ class RoleConnectionMainSelect(Select):
         view = ProtectedRolesView(self.manager, self.guild)
 
         embed = discord.Embed(
-            title="ðŸ›¡ï¸ Protected Roles",
+            title=" Protected Roles",
             description=(
                 "Users with protected roles are exempt from ALL role connection rules.\n\n"
                 "**Current Protected Roles:**"
@@ -814,7 +803,7 @@ class RoleConnectionMainSelect(Select):
             for role_id in protected:
                 role = self.guild.get_role(role_id)
                 if role:
-                    role_list.append(f"Ã¢â‚¬Â¢ {role.mention}")
+                    role_list.append(f" {role.mention}")
                 else:
                     deleted_roles.append(role_id)
             
@@ -839,7 +828,7 @@ class RoleConnectionMainSelect(Select):
         view = SetupView()
 
         embed = discord.Embed(
-            title="âš™ï¸ MalaBoT Setup",
+            title=" MalaBoT Setup",
             description="Select a system to configure:",
             color=COLORS["primary"],
         )
@@ -921,12 +910,12 @@ class SetupSelect(Select):
         view = VerificationSetupView(interaction.client.db_manager, interaction.guild)
 
         embed = discord.Embed(
-            title="âœ… Verification System Setup",
+            title=" Verification System Setup",
             description=(
                 "Configure your verification system using the dropdowns below:\n\n"
                 "**Required Settings:**\n"
-                "Ã¢â‚¬Â¢ Review Channel - Where staff sees verification submissions\n"
-                "Ã¢â‚¬Â¢ Verified Role - Role assigned when user is verified\n\n"
+                " Review Channel - Where staff sees verification submissions\n"
+                " Verified Role - Role assigned when user is verified\n\n"
                 "**User Workflow:**\n"
                 "1. User runs `/verify submit`\n"
                 "2. Enters Activision ID in modal\n"
@@ -934,9 +923,9 @@ class SetupSelect(Select):
                 "4. Selects platform from dropdown\n"
                 "5. Staff reviews with `/verify review @user verified/cheater/unverified`\n\n"
                 "**Review Decisions:**\n"
-                "Ã¢â‚¬Â¢ Verified - Assigns verified role\n"
-                "Ã¢â‚¬Â¢ Cheater - Bans user from server\n"
-                "Ã¢â‚¬Â¢ Unverified - Leaves user unverified"
+                " Verified - Assigns verified role\n"
+                " Cheater - Bans user from server\n"
+                " Unverified - Leaves user unverified"
             ),
             color=COLORS["info"],
         )
@@ -945,7 +934,7 @@ class SetupSelect(Select):
     async def setup_welcome(self, interaction: discord.Interaction):
         """Setup welcome system"""
         embed = discord.Embed(
-            title="ðŸ‘‹ Welcome System Setup",
+            title=" Welcome System Setup",
             description=(
                 "Configure your welcome and goodbye systems:\n\n"
                 "**Available Variables:**\n"
@@ -965,7 +954,7 @@ class SetupSelect(Select):
     async def setup_birthday(self, interaction: discord.Interaction):
         """Setup birthday system"""
         embed = discord.Embed(
-            title="ðŸŽ‚ Birthday System Setup",
+            title=" Birthday System Setup",
             description=(
                 "Configure your birthday system:\n\n"
                 "**Available Variables:**\n"
@@ -988,7 +977,7 @@ class SetupSelect(Select):
     async def setup_xp(self, interaction: discord.Interaction):
         """Setup XP system"""
         embed = discord.Embed(
-            title="ðŸ† XP System Setup",
+            title=" XP System Setup",
             description=(
                 "Configure your XP system:\n\n"
                 "**User Commands:**\n"
@@ -996,10 +985,10 @@ class SetupSelect(Select):
                 "`/xp leaderboard` - View server leaderboard\n"
                 "`/xp daily` - Claim daily XP bonus\n\n"
                 "**XP Sources:**\n"
-                "Ã¢â‚¬Â¢ Message XP - XP gained per message sent\n"
-                "Ã¢â‚¬Â¢ Reaction XP - XP gained per reaction received\n"
-                "Ã¢â‚¬Â¢ Voice XP - XP gained per minute in voice chat\n"
-                "Ã¢â‚¬Â¢ XP Cooldown - Time between XP gains\n\n"
+                " Message XP - XP gained per message sent\n"
+                " Reaction XP - XP gained per reaction received\n"
+                " Voice XP - XP gained per minute in voice chat\n"
+                " XP Cooldown - Time between XP gains\n\n"
                 "Click the buttons below to configure XP settings."
             ),
             color=COLORS["xp"],
@@ -1013,7 +1002,7 @@ class SetupSelect(Select):
         view = GeneralSettingsView(interaction.client.db_manager, interaction.guild.id)
 
         embed = discord.Embed(
-            title="âš™ï¸ General Settings",
+            title=" General Settings",
             description="Click the buttons below to configure each setting.",
             color=COLORS["primary"],
         )
@@ -1067,7 +1056,7 @@ class SetupSelect(Select):
         onboarding_role_id = await db.get_setting("onboarding_role", guild_id)
 
         embed = discord.Embed(
-            title="ðŸ“‹ Current Bot Configuration",
+            title=" Current Bot Configuration",
             description=f"Configuration for **{interaction.guild.name}**",
             color=COLORS["info"],
         )
@@ -1084,10 +1073,10 @@ class SetupSelect(Select):
             verify_text += f"Cheater Jail: <#{cheater_jail_id}>\n"
         if not verify_text:
             verify_text = "Not configured"
-        embed.add_field(name="âœ… Verification", value=verify_text, inline=False)
+        embed.add_field(name=" Verification", value=verify_text, inline=False)
 
         # Welcome settings
-        welcome_text = f"**Status:** {'âœ… Enabled' if welcome_enabled == 'true' else 'âŒ Disabled'}\n"
+        welcome_text = f"**Status:** {' Enabled' if welcome_enabled == 'true' else ' Disabled'}\n"
         if welcome_channel_id:
             welcome_text += f"Channel: <#{welcome_channel_id}>\n"
             if welcome_title:
@@ -1098,10 +1087,10 @@ class SetupSelect(Select):
                 welcome_text += f"Image: Set\n"
         else:
             welcome_text += "Channel: Not configured\n"
-        embed.add_field(name="ðŸ‘‹ Welcome", value=welcome_text, inline=False)
+        embed.add_field(name=" Welcome", value=welcome_text, inline=False)
 
         # Goodbye settings
-        goodbye_text = f"**Status:** {'âœ… Enabled' if goodbye_enabled == 'true' else 'âŒ Disabled'}\n"
+        goodbye_text = f"**Status:** {' Enabled' if goodbye_enabled == 'true' else ' Disabled'}\n"
         if goodbye_channel_id:
             goodbye_text += f"Channel: <#{goodbye_channel_id}>\n"
             if goodbye_title:
@@ -1112,11 +1101,11 @@ class SetupSelect(Select):
                 goodbye_text += f"Image: Set\n"
         else:
             goodbye_text += "Channel: Not configured\n"
-        embed.add_field(name="ðŸ‘‹ Goodbye", value=goodbye_text, inline=False)
+        embed.add_field(name=" Goodbye", value=goodbye_text, inline=False)
 
         # Birthday settings
-        birthday_text = f"**Announcements:** {'âœ… Enabled' if birthday_announcements_enabled == 'true' else 'âŒ Disabled'}\n"
-        birthday_text += f"**Pending System:** {'âœ… Enabled' if birthday_pending_enabled == 'true' else 'âŒ Disabled'}\n"
+        birthday_text = f"**Announcements:** {' Enabled' if birthday_announcements_enabled == 'true' else ' Disabled'}\n"
+        birthday_text += f"**Pending System:** {' Enabled' if birthday_pending_enabled == 'true' else ' Disabled'}\n"
         if birthday_channel_id:
             birthday_text += f"Channel: <#{birthday_channel_id}>\n"
             if birthday_time:
@@ -1132,12 +1121,12 @@ class SetupSelect(Select):
                 birthday_text += f"Pending Role: <@&{birthday_pending_role_id}>\n"
             if birthday_reminder_channel_id:
                 birthday_text += f"Reminder Channel: <#{birthday_reminder_channel_id}>\n"
-        embed.add_field(name="ðŸŽ‚ Birthday", value=birthday_text, inline=False)
+        embed.add_field(name=" Birthday", value=birthday_text, inline=False)
 
         # XP settings
-        xp_text = f"**Message XP:** {'âœ… Enabled' if xp_message_enabled == 'true' else 'âŒ Disabled'}\n"
-        xp_text += f"**Reaction XP:** {'âœ… Enabled' if xp_reaction_enabled == 'true' else 'âŒ Disabled'}\n"
-        xp_text += f"**Voice XP:** {'âœ… Enabled' if xp_voice_enabled == 'true' else 'âŒ Disabled'}\n"
+        xp_text = f"**Message XP:** {' Enabled' if xp_message_enabled == 'true' else ' Disabled'}\n"
+        xp_text += f"**Reaction XP:** {' Enabled' if xp_reaction_enabled == 'true' else ' Disabled'}\n"
+        xp_text += f"**Voice XP:** {' Enabled' if xp_voice_enabled == 'true' else ' Disabled'}\n"
         xp_text += "\n**Settings:**\n"
         if xp_channel_id:
             xp_text += f"Level-up Channel: <#{xp_channel_id}>\n"
@@ -1149,7 +1138,7 @@ class SetupSelect(Select):
             xp_text += f"Voice XP: {xp_per_voice}/min\n"
         if xp_cooldown:
             xp_text += f"Cooldown: {xp_cooldown}s\n"
-        embed.add_field(name="ðŸ† XP System", value=xp_text, inline=False)
+        embed.add_field(name=" XP System", value=xp_text, inline=False)
 
         # General settings
         general_text = f"**Timezone:** {timezone}\n"
@@ -1160,7 +1149,7 @@ class SetupSelect(Select):
             general_text += f"**Mod Role:** <@&{mod_role_id}>\n"
         if onboarding_role_id:
             general_text += f"**Onboarding Role:** <@&{onboarding_role_id}>\n"
-        embed.add_field(name="âš™ï¸ General", value=general_text, inline=False)
+        embed.add_field(name=" General", value=general_text, inline=False)
 
         # Role Connections settings
         role_conn_cog = interaction.client.get_cog("RoleConnections")
@@ -1180,7 +1169,7 @@ class SetupSelect(Select):
             role_conn_text += f"Protected Roles: {len(protected_roles)}"
 
             embed.add_field(
-                name="Ã°Å¸â€â€” Role Connections", value=role_conn_text, inline=False
+                name=" Role Connections", value=role_conn_text, inline=False
             )
 
         await interaction.edit_original_response(embed=embed, view=None)
@@ -1207,18 +1196,18 @@ class SetupSelect(Select):
         view = RoleConnectionSetupView(manager, interaction.guild)
 
         embed = discord.Embed(
-            title="Ã°Å¸â€â€” Role Connection System",
+            title=" Role Connection System",
             description=(
                 "Automatically assign or remove roles based on conditions.\n\n"
                 "**How it works:**\n"
-                "Ã¢â‚¬Â¢ Create rules that give/remove roles when conditions are met\n"
-                "Ã¢â‚¬Â¢ Conditions: User HAS or DOESN'T HAVE specific roles\n"
-                "Ã¢â‚¬Â¢ Logic: Combine conditions with AND/OR\n"
-                "Ã¢â‚¬Â¢ Protected Roles: Users with these roles are exempt from all rules\n\n"
+                " Create rules that give/remove roles when conditions are met\n"
+                " Conditions: User HAS or DOESN'T HAVE specific roles\n"
+                " Logic: Combine conditions with AND/OR\n"
+                " Protected Roles: Users with these roles are exempt from all rules\n\n"
                 "**Example Rules:**\n"
-                "Ã¢â‚¬Â¢ Give 'Sus' when user doesn't have 'Mala'\n"
-                "Ã¢â‚¬Â¢ Give 'VIP' when user has 'Subscriber' AND 'Active'\n"
-                "Ã¢â‚¬Â¢ Remove 'Guest' when user has 'Member'"
+                " Give 'Sus' when user doesn't have 'Mala'\n"
+                " Give 'VIP' when user has 'Subscriber' AND 'Active'\n"
+                " Remove 'Guest' when user has 'Member'"
             ),
             color=COLORS["primary"],
         )
@@ -1230,7 +1219,7 @@ class SetupSelect(Select):
             for i, conn in enumerate(connections[:10], 1):
                 target_role = interaction.guild.get_role(conn.target_role_id)
                 if target_role:
-                    status = "âœ…" if conn.enabled else "âŒ"
+                    status = "" if conn.enabled else ""
                     conn_text += (
                         f"{status} {i}. {conn.action.title()} **{target_role.name}**\n"
                     )
@@ -1245,7 +1234,7 @@ class SetupSelect(Select):
                 [f"<@&amp;{role_id}>" for role_id in protected[:10]]
             )
             embed.add_field(
-                name="ðŸ›¡ï¸ Protected Roles", value=protected_text, inline=False
+                name=" Protected Roles", value=protected_text, inline=False
             )
 
         await interaction.response.edit_message(embed=embed, view=view)
@@ -1263,7 +1252,7 @@ class WelcomeSetupView(View):
         self.guild_id = guild_id
         self.db_manager = db_manager
 
-    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="ðŸ“¢")
+    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary)
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set welcome channel"""
         # Defer immediately to prevent timeout
@@ -1283,7 +1272,7 @@ class WelcomeSetupView(View):
                 "welcome_channel", str(channel.id), self.guild_id
             )
             embed = discord.Embed(
-                title="âœ… Welcome Channel Set",
+                title=" Welcome Channel Set",
                 description=f"Welcome messages will be sent to {channel.mention}",
                 color=COLORS["success"],
             )
@@ -1293,13 +1282,13 @@ class WelcomeSetupView(View):
         view.add_item(select)
 
         embed = discord.Embed(
-            title="ðŸ“¢ Select Welcome Channel",
+            title=" Select Welcome Channel",
             description="Choose the channel where welcome messages will be sent.",
             color=COLORS["primary"],
         )
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
-    @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="ðŸ’¬")
+    @discord.ui.button(label="Set Message", style=ButtonStyle.primary)
     async def set_message(self, interaction: discord.Interaction, button: Button):
         """Set welcome message"""
         modal = Modal(title="Set Welcome Message")
@@ -1317,7 +1306,7 @@ class WelcomeSetupView(View):
                 "welcome_message", message_input.value, self.guild_id
             )
             embed = discord.Embed(
-                title="âœ… Welcome Message Set",
+                title=" Welcome Message Set",
                 description=f"Message: {message_input.value}",
                 color=COLORS["success"],
             )
@@ -1326,7 +1315,7 @@ class WelcomeSetupView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="Set Title", style=ButtonStyle.primary, emoji="ðŸ“")
+    @discord.ui.button(label="Set Title", style=ButtonStyle.primary)
     async def set_title(self, interaction: discord.Interaction, button: Button):
         """Set welcome title"""
         modal = Modal(title="Set Welcome Title")
@@ -1344,7 +1333,7 @@ class WelcomeSetupView(View):
                 "welcome_title", title_input.value, self.guild_id
             )
             embed = discord.Embed(
-                title="âœ… Welcome Title Set",
+                title=" Welcome Title Set",
                 description=f"Title: {title_input.value}",
                 color=COLORS["success"],
             )
@@ -1353,7 +1342,7 @@ class WelcomeSetupView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="Set Image", style=ButtonStyle.primary, emoji="ðŸ–¼ï¸")
+    @discord.ui.button(label="Set Image", style=ButtonStyle.primary)
     async def set_image(self, interaction: discord.Interaction, button: Button):
         """Set welcome image"""
         modal = Modal(title="Set Welcome Image")
@@ -1371,7 +1360,7 @@ class WelcomeSetupView(View):
                 "welcome_image", image_input.value or "", self.guild_id
             )
             embed = discord.Embed(
-                title="âœ… Welcome Image Set",
+                title=" Welcome Image Set",
                 description=f"Image URL: {image_input.value or 'None (removed)'}\n\n**Tip:** Upload your image to Discord, right-click it, and select 'Copy Link' to get a URL!",
                 color=COLORS["success"],
             )
@@ -1380,7 +1369,7 @@ class WelcomeSetupView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="Toggle System", style=ButtonStyle.success, emoji="ðŸ”„", row=1)
+    @discord.ui.button(label="Toggle System", style=ButtonStyle.success, row=1)
     async def toggle_welcome(self, interaction: discord.Interaction, button: Button):
         """Toggle welcome system on/off"""
         current = await self.db_manager.get_setting("welcome_enabled", self.guild_id)
@@ -1388,7 +1377,7 @@ class WelcomeSetupView(View):
         
         await self.db_manager.set_setting("welcome_enabled", new_state, self.guild_id)
         
-        status = "âœ… Enabled" if new_state == "true" else "âŒ Disabled"
+        status = " Enabled" if new_state == "true" else " Disabled"
         embed = discord.Embed(
             title=f"Welcome System {status}",
             description=f"System is now **{status.split()[1]}**",
@@ -1397,7 +1386,7 @@ class WelcomeSetupView(View):
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="ðŸ“‹", row=1)
+    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, row=1)
     async def view_welcome_config(self, interaction: discord.Interaction, button: Button):
         """View current welcome configuration"""
         welcome_channel_id = await self.db_manager.get_setting("welcome_channel", self.guild_id)
@@ -1428,10 +1417,10 @@ class WelcomeSetupView(View):
         else:
             config_text += "**Image:** Not set\n"
             
-        config_text += f"**Status:** {'âœ… Enabled' if welcome_enabled == 'true' else 'âŒ Disabled'}\n"
+        config_text += f"**Status:** {' Enabled' if welcome_enabled == 'true' else ' Disabled'}\n"
         
         embed = discord.Embed(
-            title="ðŸ“‹ Welcome System Configuration",
+            title=" Welcome System Configuration",
             description=config_text,
             color=COLORS["info"],
         )
@@ -1439,12 +1428,12 @@ class WelcomeSetupView(View):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @discord.ui.button(
-        label="Goodbye System", style=ButtonStyle.secondary, emoji="ðŸ‘‹", row=1
+        label="Goodbye System", style=ButtonStyle.secondary, row=1
     )
     async def goto_goodbye(self, interaction: discord.Interaction, button: Button):
         """Navigate to goodbye system setup"""
         embed = discord.Embed(
-            title="ðŸ‘‹ Goodbye System Setup",
+            title=" Goodbye System Setup",
             description=(
                 "Configure your goodbye system:\n\n"
                 "**Available Variables:**\n"
@@ -1467,7 +1456,7 @@ class GoodbyeSetupView(View):
         self.guild_id = guild_id
         self.db_manager = db_manager
 
-    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="ðŸ“¢")
+    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary)
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set goodbye channel"""
         # Defer immediately to prevent timeout
@@ -1487,7 +1476,7 @@ class GoodbyeSetupView(View):
                 "goodbye_channel", str(channel.id), self.guild_id
             )
             embed = discord.Embed(
-                title="âœ… Goodbye Channel Set",
+                title=" Goodbye Channel Set",
                 description=f"Goodbye messages will be sent to {channel.mention}",
                 color=COLORS["success"],
             )
@@ -1497,13 +1486,13 @@ class GoodbyeSetupView(View):
         view.add_item(select)
 
         embed = discord.Embed(
-            title="ðŸ“¢ Select Goodbye Channel",
+            title=" Select Goodbye Channel",
             description="Choose the channel where goodbye messages will be sent.",
             color=COLORS["primary"],
         )
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
-    @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="ðŸ’¬")
+    @discord.ui.button(label="Set Message", style=ButtonStyle.primary)
     async def set_message(self, interaction: discord.Interaction, button: Button):
         """Set goodbye message"""
         modal = Modal(title="Set Goodbye Message")
@@ -1521,7 +1510,7 @@ class GoodbyeSetupView(View):
                 "goodbye_message", message_input.value, self.guild_id
             )
             embed = discord.Embed(
-                title="âœ… Goodbye Message Set",
+                title=" Goodbye Message Set",
                 description=f"Message: {message_input.value}",
                 color=COLORS["success"],
             )
@@ -1530,7 +1519,7 @@ class GoodbyeSetupView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="Set Title", style=ButtonStyle.primary, emoji="ðŸ“")
+    @discord.ui.button(label="Set Title", style=ButtonStyle.primary)
     async def set_title(self, interaction: discord.Interaction, button: Button):
         """Set goodbye title"""
         modal = Modal(title="Set Goodbye Title")
@@ -1548,7 +1537,7 @@ class GoodbyeSetupView(View):
                 "goodbye_title", title_input.value, self.guild_id
             )
             embed = discord.Embed(
-                title="âœ… Goodbye Title Set",
+                title=" Goodbye Title Set",
                 description=f"Title: {title_input.value}",
                 color=COLORS["success"],
             )
@@ -1557,7 +1546,7 @@ class GoodbyeSetupView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="Set Image", style=ButtonStyle.primary, emoji="ðŸ–¼ï¸")
+    @discord.ui.button(label="Set Image", style=ButtonStyle.primary)
     async def set_image(self, interaction: discord.Interaction, button: Button):
         """Set goodbye image"""
         modal = Modal(title="Set Goodbye Image")
@@ -1575,7 +1564,7 @@ class GoodbyeSetupView(View):
                 "goodbye_image", image_input.value or "", self.guild_id
             )
             embed = discord.Embed(
-                title="âœ… Goodbye Image Set",
+                title=" Goodbye Image Set",
                 description=f"Image URL: {image_input.value or 'None (removed)'}\n\n**Tip:** Upload your image to Discord, right-click it, and select 'Copy Link' to get a URL!",
                 color=COLORS["success"],
             )
@@ -1584,7 +1573,7 @@ class GoodbyeSetupView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="Toggle System", style=ButtonStyle.success, emoji="ðŸ”„", row=1)
+    @discord.ui.button(label="Toggle System", style=ButtonStyle.success, row=1)
     async def toggle_goodbye(self, interaction: discord.Interaction, button: Button):
         """Toggle goodbye system on/off"""
         current = await self.db_manager.get_setting("goodbye_enabled", self.guild_id)
@@ -1592,7 +1581,7 @@ class GoodbyeSetupView(View):
         
         await self.db_manager.set_setting("goodbye_enabled", new_state, self.guild_id)
         
-        status = "âœ… Enabled" if new_state == "true" else "âŒ Disabled"
+        status = " Enabled" if new_state == "true" else " Disabled"
         embed = discord.Embed(
             title=f"Goodbye System {status}",
             description=f"System is now **{status.split()[1]}**",
@@ -1601,7 +1590,7 @@ class GoodbyeSetupView(View):
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="ðŸ“‹", row=1)
+    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, row=1)
     async def view_goodbye_config(self, interaction: discord.Interaction, button: Button):
         """View current goodbye configuration"""
         goodbye_channel_id = await self.db_manager.get_setting("goodbye_channel", self.guild_id)
@@ -1632,10 +1621,10 @@ class GoodbyeSetupView(View):
         else:
             config_text += "**Image:** Not set\n"
             
-        config_text += f"**Status:** {'âœ… Enabled' if goodbye_enabled == 'true' else 'âŒ Disabled'}\n"
+        config_text += f"**Status:** {' Enabled' if goodbye_enabled == 'true' else ' Disabled'}\n"
         
         embed = discord.Embed(
-            title="ðŸ“‹ Goodbye System Configuration",
+            title=" Goodbye System Configuration",
             description=config_text,
             color=COLORS["error"],
         )
@@ -1643,12 +1632,12 @@ class GoodbyeSetupView(View):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @discord.ui.button(
-        label="Back to Welcome", style=ButtonStyle.secondary, emoji="â—€ï¸", row=1
+        label="Back to Welcome", style=ButtonStyle.secondary, row=1
     )
     async def back_to_welcome(self, interaction: discord.Interaction, button: Button):
         """Navigate back to welcome system setup"""
         embed = discord.Embed(
-            title="ðŸ‘‹ Welcome System Setup",
+            title=" Welcome System Setup",
             description=(
                 "Configure your welcome and goodbye systems:\n\n"
                 "**Available Variables:**\n"
@@ -1672,7 +1661,7 @@ class BirthdaySetupView(View):
         self.guild_id = guild_id
         self.db_manager = db_manager
 
-    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="ðŸ“¢")
+    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary)
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set birthday announcement channel"""
         # Defer immediately to prevent timeout
@@ -1692,7 +1681,7 @@ class BirthdaySetupView(View):
                 "birthday_channel", str(channel.id), self.guild_id
             )
             embed = discord.Embed(
-                title="âœ… Birthday Channel Set",
+                title=" Birthday Channel Set",
                 description=f"Birthday announcements will be sent to {channel.mention}",
                 color=COLORS["success"],
             )
@@ -1702,13 +1691,13 @@ class BirthdaySetupView(View):
         view.add_item(select)
 
         embed = discord.Embed(
-            title="ðŸ“¢ Select Birthday Channel",
+            title=" Select Birthday Channel",
             description="Choose the channel where birthday announcements will be sent.",
             color=COLORS["primary"],
         )
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
-    @discord.ui.button(label="Set Time", style=ButtonStyle.primary, emoji="â°")
+    @discord.ui.button(label="Set Time", style=ButtonStyle.primary)
     async def set_time(self, interaction: discord.Interaction, button: Button):
         """Set birthday announcement time"""
         modal = Modal(title="Set Birthday Announcement Time")
@@ -1734,14 +1723,14 @@ class BirthdaySetupView(View):
                     "birthday_time", time_input.value, self.guild_id
                 )
                 embed = discord.Embed(
-                    title="âœ… Birthday Time Set",
+                    title=" Birthday Time Set",
                     description=f"Announcements will be posted at {time_input.value} (server timezone)",
                     color=COLORS["success"],
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
             except ValueError:
                 embed = discord.Embed(
-                    title="âŒ Invalid Time Format",
+                    title=" Invalid Time Format",
                     description="Please use 24-hour format (HH:MM), e.g., 08:00 or 14:30",
                     color=COLORS["error"],
                 )
@@ -1750,13 +1739,13 @@ class BirthdaySetupView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="Set Message", style=ButtonStyle.primary, emoji="ðŸ’¬")
+    @discord.ui.button(label="Set Message", style=ButtonStyle.primary)
     async def set_message(self, interaction: discord.Interaction, button: Button):
         """Set birthday message"""
         modal = Modal(title="Set Birthday Message")
         message_input = discord.ui.TextInput(
             label="Birthday Message",
-            default="ðŸŽ‚ Happy Birthday {member}! Have a great day!",
+            default=" Happy Birthday {member}! Have a great day!",
             style=discord.TextStyle.paragraph,
             required=True,
             max_length=500,
@@ -1768,7 +1757,7 @@ class BirthdaySetupView(View):
                 "birthday_message", message_input.value, self.guild_id
             )
             embed = discord.Embed(
-                title="âœ… Birthday Message Set",
+                title=" Birthday Message Set",
                 description=f"Message: {message_input.value}",
                 color=COLORS["success"],
             )
@@ -1777,7 +1766,7 @@ class BirthdaySetupView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="Toggle Announcements", style=ButtonStyle.success, emoji="ðŸ”„", row=1)
+    @discord.ui.button(label="Toggle Announcements", style=ButtonStyle.success, row=1)
     async def toggle_birthday_announcements(self, interaction: discord.Interaction, button: Button):
         """Toggle birthday announcements on/off"""
         current = await self.db_manager.get_setting("birthday_announcements_enabled", self.guild_id)
@@ -1785,7 +1774,7 @@ class BirthdaySetupView(View):
         
         await self.db_manager.set_setting("birthday_announcements_enabled", new_state, self.guild_id)
         
-        status = "âœ… Enabled" if new_state == "true" else "âŒ Disabled"
+        status = " Enabled" if new_state == "true" else " Disabled"
         embed = discord.Embed(
             title=f"Birthday Announcements {status}",
             description=f"System is now **{status.split()[1]}**",
@@ -1794,7 +1783,7 @@ class BirthdaySetupView(View):
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @discord.ui.button(label="Birthday Pending", style=ButtonStyle.secondary, emoji="ðŸŽ¯", row=1)
+    @discord.ui.button(label="Birthday Pending", style=ButtonStyle.secondary, row=1)
     async def birthday_pending_settings(self, interaction: discord.Interaction, button: Button):
         """Configure Birthday Pending system"""
         await interaction.response.defer(ephemeral=True)
@@ -1805,12 +1794,12 @@ class BirthdaySetupView(View):
         pending_role_id = await self.db_manager.get_setting("birthday_pending_role", self.guild_id)
         reminder_channel_id = await self.db_manager.get_setting("birthday_reminder_channel", self.guild_id)
         
-        status = "âœ… Enabled" if enabled == "true" else "âŒ Disabled"
+        status = " Enabled" if enabled == "true" else " Disabled"
         role_text = f"<@&amp;{pending_role_id}>" if pending_role_id else "Not set"
         channel_text = f"<#{reminder_channel_id}>" if reminder_channel_id else "Not set"
         
         embed = discord.Embed(
-            title="ðŸŽ¯ Birthday Pending System",
+            title=" Birthday Pending System",
             description=(
                 "Configure the Birthday Pending system.\n\n"
                 f"**Status:** {status}\n"
@@ -1825,7 +1814,7 @@ class BirthdaySetupView(View):
 # Code to insert into BirthdaySetupView class in cogs/setup.py
 # Insert this BEFORE the "View Config" button
 
-    @discord.ui.button(label="Set Birthday XP", style=ButtonStyle.primary, emoji="â­", row=1)
+    @discord.ui.button(label="Set Birthday XP", style=ButtonStyle.primary, row=1)
     async def set_birthday_xp(self, interaction: discord.Interaction, button: Button):
         """Set XP reward for setting birthday"""
         modal = Modal(title="Set Birthday XP Reward")
@@ -1848,14 +1837,14 @@ class BirthdaySetupView(View):
                     # Disable XP reward
                     await self.db_manager.set_setting("birthday_set_xp", "", self.guild_id)
                     embed = discord.Embed(
-                        title="âœ… Birthday XP Disabled",
+                        title=" Birthday XP Disabled",
                         description="Users will no longer receive XP for setting their birthday.",
                         color=COLORS["success"],
                     )
                 else:
                     await self.db_manager.set_setting("birthday_set_xp", str(xp_amount), self.guild_id)
                     embed = discord.Embed(
-                        title="âœ… Birthday XP Set",
+                        title=" Birthday XP Set",
                         description=f"Users will receive **{xp_amount} XP** when they set their birthday for the first time.",
                         color=COLORS["success"],
                     )
@@ -1863,7 +1852,7 @@ class BirthdaySetupView(View):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
             except ValueError:
                 embed = discord.Embed(
-                    title="âŒ Invalid XP Amount",
+                    title=" Invalid XP Amount",
                     description="Please enter a valid number (0 or positive integer).",
                     color=COLORS["error"],
                 )
@@ -1871,7 +1860,7 @@ class BirthdaySetupView(View):
 
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
-    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="ðŸ“‹", row=2)
+    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, row=2)
     async def view_birthday_config(self, interaction: discord.Interaction, button: Button):
         """View current birthday configuration"""
         birthday_channel_id = await self.db_manager.get_setting("birthday_channel", self.guild_id)
@@ -1899,12 +1888,12 @@ class BirthdaySetupView(View):
             config_text += "XP Reward: Not set (disabled)\n"
         
         config_text += "\n**Birthday Pending:**\n"
-        config_text += f"Status: {'âœ… Enabled' if pending_enabled == 'true' else 'âŒ Disabled'}\n"
+        config_text += f"Status: {' Enabled' if pending_enabled == 'true' else ' Disabled'}\n"
         config_text += f"Role: <@&amp;{pending_role_id}>\n" if pending_role_id else "Role: Not set\n"
         config_text += f"Channel: <#{reminder_channel_id}>\n" if reminder_channel_id else "Channel: Not set\n"
         
         embed = discord.Embed(
-            title="ðŸ“‹ Birthday Configuration",
+            title=" Birthday Configuration",
             description=config_text,
             color=COLORS["info"],
         )
@@ -1920,7 +1909,7 @@ class BirthdayPendingSetupView(View):
         self.guild_id = guild_id
         self.db_manager = db_manager
     
-    @discord.ui.button(label="Toggle System", style=ButtonStyle.success, emoji="ðŸ”„")
+    @discord.ui.button(label="Toggle System", style=ButtonStyle.success)
     async def toggle_system(self, interaction: discord.Interaction, button: Button):
         """Toggle Birthday Pending system"""
         current = await self.db_manager.get_setting("birthday_pending_enabled", self.guild_id)
@@ -1935,7 +1924,7 @@ class BirthdayPendingSetupView(View):
                 if role_conn_cog:
                     await role_conn_cog.manager.add_protected_role(self.guild_id, int(pending_role_id))
         
-        status = "âœ… Enabled" if new_state == "true" else "âŒ Disabled"
+        status = " Enabled" if new_state == "true" else " Disabled"
         embed = discord.Embed(
             title=f"Birthday Pending {status}",
             description=f"System is now **{status.split()[1]}**",
@@ -1944,7 +1933,7 @@ class BirthdayPendingSetupView(View):
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
     
-    @discord.ui.button(label="Set Role", style=ButtonStyle.primary, emoji="ðŸŽ­")
+    @discord.ui.button(label="Set Role", style=ButtonStyle.primary)
     async def set_pending_role(self, interaction: discord.Interaction, button: Button):
         """Set Birthday Pending role"""
         await interaction.response.defer(ephemeral=True)
@@ -1963,7 +1952,7 @@ class BirthdayPendingSetupView(View):
                     await role_conn_cog.manager.add_protected_role(self.guild_id, role.id)
             
             embed = discord.Embed(
-                title="âœ… Role Set",
+                title=" Role Set",
                 description=f"Birthday Pending role: {role.mention}",
                 color=COLORS["success"],
             )
@@ -1972,10 +1961,10 @@ class BirthdayPendingSetupView(View):
         select.callback = role_callback
         view.add_item(select)
         
-        embed = discord.Embed(title="ðŸŽ­ Select Role", color=COLORS["primary"])
+        embed = discord.Embed(title=" Select Role", color=COLORS["primary"])
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
     
-    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary, emoji="ðŸ“¢")
+    @discord.ui.button(label="Set Channel", style=ButtonStyle.primary)
     async def set_reminder_channel(self, interaction: discord.Interaction, button: Button):
         """Set reminder channel"""
         await interaction.response.defer(ephemeral=True)
@@ -1993,7 +1982,7 @@ class BirthdayPendingSetupView(View):
             await self.db_manager.set_setting("birthday_reminder_channel", str(channel.id), self.guild_id)
             
             embed = discord.Embed(
-                title="âœ… Channel Set",
+                title=" Channel Set",
                 description=f"Reminder channel: {channel.mention}",
                 color=COLORS["success"],
             )
@@ -2002,10 +1991,10 @@ class BirthdayPendingSetupView(View):
         select.callback = channel_callback
         view.add_item(select)
         
-        embed = discord.Embed(title="ðŸ“¢ Select Channel", color=COLORS["primary"])
+        embed = discord.Embed(title=" Select Channel", color=COLORS["primary"])
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
     
-    @discord.ui.button(label="Setup Message", style=ButtonStyle.success, emoji="ðŸ“", row=1)
+    @discord.ui.button(label="Setup Message", style=ButtonStyle.success, row=1)
     async def setup_reminder_message(self, interaction: discord.Interaction, button: Button):
         """Setup persistent reminder message"""
         await interaction.response.defer(ephemeral=True)
@@ -2014,7 +2003,7 @@ class BirthdayPendingSetupView(View):
         
         if not reminder_channel_id:
             embed = discord.Embed(
-                title="âŒ No Channel Set",
+                title=" No Channel Set",
                 description="Set a reminder channel first.",
                 color=COLORS["error"],
             )
@@ -2024,7 +2013,7 @@ class BirthdayPendingSetupView(View):
         channel = interaction.guild.get_channel(int(reminder_channel_id))
         if not channel:
             embed = discord.Embed(
-                title="âŒ Channel Not Found",
+                title=" Channel Not Found",
                 color=COLORS["error"],
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
@@ -2033,7 +2022,7 @@ class BirthdayPendingSetupView(View):
         birthdays_cog = interaction.client.get_cog("Birthdays")
         if not birthdays_cog:
             embed = discord.Embed(
-                title="âŒ Cog Not Loaded",
+                title=" Cog Not Loaded",
                 color=COLORS["error"],
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
@@ -2043,20 +2032,20 @@ class BirthdayPendingSetupView(View):
             await birthdays_cog.setup_birthday_reminder_message(self.guild_id, channel)
             
             embed = discord.Embed(
-                title="âœ… Setup Complete",
+                title=" Setup Complete",
                 description=f"Message posted in {channel.mention}",
                 color=COLORS["success"],
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
         except Exception as e:
             embed = discord.Embed(
-                title="âŒ Setup Failed",
+                title=" Setup Failed",
                 description=str(e),
                 color=COLORS["error"],
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
 
-    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="ðŸ“‹", row=2)
+    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, row=2)
     async def view_birthday_pending_config(self, interaction: discord.Interaction, button: Button):
         """View current Birthday Pending system configuration"""
         enabled = await self.db_manager.get_setting("birthday_pending_enabled", self.guild_id)
@@ -2064,7 +2053,7 @@ class BirthdayPendingSetupView(View):
         reminder_channel_id = await self.db_manager.get_setting("birthday_reminder_channel", self.guild_id)
         reminder_message_id = await self.db_manager.get_setting("birthday_reminder_message_id", self.guild_id)
         
-        config_text = f"**Status:** {'âœ… Enabled' if enabled == 'true' else 'âŒ Disabled'}\n"
+        config_text = f"**Status:** {' Enabled' if enabled == 'true' else ' Disabled'}\n"
         
         if pending_role_id:
             config_text += f"**Pending Role:** <@&{pending_role_id}>\n"
@@ -2082,7 +2071,7 @@ class BirthdayPendingSetupView(View):
             config_text += "**Reminder Message:** Not configured\n"
         
         embed = discord.Embed(
-            title="ðŸ“‹ Birthday Pending System Configuration",
+            title=" Birthday Pending System Configuration",
             description=config_text,
             color=COLORS["primary"],
         )
@@ -2096,7 +2085,7 @@ class LevelRolesView(View):
         self.guild_id = guild_id
         self.db_manager = db_manager
 
-    @discord.ui.button(label="Add Level Role", style=ButtonStyle.success, emoji="âž•")
+    @discord.ui.button(label="Add Level Role", style=ButtonStyle.success)
     async def add_level_role(self, interaction: discord.Interaction, button: Button):
         """Add a level role reward"""
         modal = Modal(title="Add Level Role")
@@ -2139,7 +2128,7 @@ class LevelRolesView(View):
 
                 if not role:
                     embed = discord.Embed(
-                        title="âŒ Role Not Found",
+                        title=" Role Not Found",
                         description=f"Could not find role: {role_input.value}",
                         color=COLORS["error"],
                     )
@@ -2165,7 +2154,7 @@ class LevelRolesView(View):
 
 
                 embed = discord.Embed(
-                    title="âœ… Level Role Added",
+                    title=" Level Role Added",
                     description=f"Users will receive {role.mention} when they reach **Level {level}**",
                     color=COLORS["success"],
                 )
@@ -2173,14 +2162,14 @@ class LevelRolesView(View):
 
             except ValueError as e:
                 embed = discord.Embed(
-                    title="âŒ Invalid Input", description=str(e), color=COLORS["error"]
+                    title=" Invalid Input", description=str(e), color=COLORS["error"]
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="Remove Level Role", style=ButtonStyle.danger, emoji="Ã¢Å¾â€“")
+    @discord.ui.button(label="Remove Level Role", style=ButtonStyle.danger)
     async def remove_level_role(self, interaction: discord.Interaction, button: Button):
         """Remove a level role reward"""
         modal = Modal(title="Remove Level Role")
@@ -2205,7 +2194,7 @@ class LevelRolesView(View):
 
                 if not level_roles:
                     embed = discord.Embed(
-                        title="âŒ No Level Roles",
+                        title=" No Level Roles",
                         description="There are no level roles configured.",
                         color=COLORS["error"],
                     )
@@ -2221,7 +2210,7 @@ class LevelRolesView(View):
 
                 if level not in roles_dict:
                     embed = discord.Embed(
-                        title="âŒ Level Not Found",
+                        title=" Level Not Found",
                         description=f"No role configured for Level {level}",
                         color=COLORS["error"],
                     )
@@ -2244,7 +2233,7 @@ class LevelRolesView(View):
                     await self.db_manager.set_setting("level_roles", "", self.guild_id)
 
                 embed = discord.Embed(
-                    title="âœ… Level Role Removed",
+                    title=" Level Role Removed",
                     description=f"Removed role reward for Level {level}",
                     color=COLORS["success"],
                 )
@@ -2252,7 +2241,7 @@ class LevelRolesView(View):
 
             except ValueError:
                 embed = discord.Embed(
-                    title="âŒ Invalid Level",
+                    title=" Invalid Level",
                     description="Please enter a valid level number.",
                     color=COLORS["error"],
                 )
@@ -2261,14 +2250,14 @@ class LevelRolesView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="ðŸ“‹")
+    @discord.ui.button(label="View Config", style=ButtonStyle.secondary)
     async def view_level_roles_config(self, interaction: discord.Interaction, button: Button):
         """View current level roles configuration"""
         level_roles_setting = await self.db_manager.get_setting("level_roles", self.guild_id)
         
         if not level_roles_setting:
             embed = discord.Embed(
-                title="ðŸ“‹ Level Roles Configuration",
+                title=" Level Roles Configuration",
                 description="**No level roles configured**\n\nUse the 'Add Level Role' button to add role rewards for specific levels.",
                 color=COLORS["info"],
             )
@@ -2292,20 +2281,20 @@ class LevelRolesView(View):
                     config_text += f"Level {level}: (Invalid role ID: {role_id})\n"
             
             embed = discord.Embed(
-                title="ðŸ“‹ Level Roles Configuration",
+                title=" Level Roles Configuration",
                 description=config_text,
                 color=COLORS["info"],
             )
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @discord.ui.button(label="Back to XP Setup", style=ButtonStyle.secondary, emoji="â—€ï¸")
+    @discord.ui.button(label="Back to XP Setup", style=ButtonStyle.secondary)
     async def back_button(self, interaction: discord.Interaction, button: Button):
         """Go back to XP setup"""
         await interaction.response.defer(ephemeral=True)
 
         embed = discord.Embed(
-            title="ðŸ† XP System Setup",
+            title=" XP System Setup",
             description="Configure the XP and leveling system for your server.",
             color=COLORS["primary"],
         )
@@ -2321,8 +2310,7 @@ class XPSetupView(View):
         self.db_manager = db_manager
 
     @discord.ui.button(
-        label="Set Level-up Channel", style=ButtonStyle.primary, emoji="ðŸ“¢"
-    )
+        label="Set Level-up Channel", style=ButtonStyle.primary)
     async def set_channel(self, interaction: discord.Interaction, button: Button):
         """Set level-up announcement channel"""
         # Defer immediately to prevent timeout
@@ -2342,7 +2330,7 @@ class XPSetupView(View):
                 "xp_channel", str(channel.id), self.guild_id
             )
             embed = discord.Embed(
-                title="âœ… Level-up Channel Set",
+                title=" Level-up Channel Set",
                 description=f"Level-up announcements will be sent to {channel.mention}",
                 color=COLORS["success"],
             )
@@ -2352,13 +2340,13 @@ class XPSetupView(View):
         view.add_item(select)
 
         embed = discord.Embed(
-            title="ðŸ“¢ Select Level-up Channel",
+            title=" Select Level-up Channel",
             description="Choose the channel where level-up announcements will be sent.",
             color=COLORS["primary"],
         )
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
-    @discord.ui.button(label="Message XP", style=ButtonStyle.primary, emoji="ðŸ’¬")
+    @discord.ui.button(label="Message XP", style=ButtonStyle.primary)
     async def set_message_xp(self, interaction: discord.Interaction, button: Button):
         """Set XP per message"""
         modal = Modal(title="Set Message XP")
@@ -2383,14 +2371,14 @@ class XPSetupView(View):
                 )
 
                 embed = discord.Embed(
-                    title="âœ… Message XP Set",
+                    title=" Message XP Set",
                     description=f"Users will gain {xp_val} XP per message",
                     color=COLORS["success"],
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
             except ValueError:
                 embed = discord.Embed(
-                    title="âŒ Invalid Value",
+                    title=" Invalid Value",
                     description="Please enter a valid number (minimum 1).",
                     color=COLORS["error"],
                 )
@@ -2399,7 +2387,7 @@ class XPSetupView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="Reaction XP", style=ButtonStyle.primary, emoji="Ã°Å¸â€˜Â")
+    @discord.ui.button(label="Reaction XP", style=ButtonStyle.primary)
     async def set_reaction_xp(self, interaction: discord.Interaction, button: Button):
         """Set XP per reaction received"""
         modal = Modal(title="Set Reaction XP")
@@ -2424,14 +2412,14 @@ class XPSetupView(View):
                 )
 
                 embed = discord.Embed(
-                    title="âœ… Reaction XP Set",
+                    title=" Reaction XP Set",
                     description=f"Users will gain {xp_val} XP per reaction received (0 to disable)",
                     color=COLORS["success"],
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
             except ValueError:
                 embed = discord.Embed(
-                    title="âŒ Invalid Value",
+                    title=" Invalid Value",
                     description="Please enter a valid number (0 or higher).",
                     color=COLORS["error"],
                 )
@@ -2465,14 +2453,14 @@ class XPSetupView(View):
                 )
 
                 embed = discord.Embed(
-                    title="âœ… Voice XP Set",
+                    title=" Voice XP Set",
                     description=f"Users will gain {xp_val} XP per minute in voice (0 to disable)",
                     color=COLORS["success"],
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
             except ValueError:
                 embed = discord.Embed(
-                    title="âŒ Invalid Value",
+                    title=" Invalid Value",
                     description="Please enter a valid number (0 or higher).",
                     color=COLORS["error"],
                 )
@@ -2481,7 +2469,7 @@ class XPSetupView(View):
         modal.on_submit = modal_callback
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="XP Cooldown", style=ButtonStyle.primary, emoji="Ã¢ÂÂ±Ã¯Â¸Â", row=1)
+    @discord.ui.button(label="XP Cooldown", style=ButtonStyle.primary, row=1)
     async def set_xp_cooldown(self, interaction: discord.Interaction, button: Button):
         """Set cooldown between XP gains"""
         modal = Modal(title="Set XP Cooldown")
@@ -2506,14 +2494,14 @@ class XPSetupView(View):
                 )
 
                 embed = discord.Embed(
-                    title="âœ… XP Cooldown Set",
+                    title=" XP Cooldown Set",
                     description=f"Users must wait {cooldown_val} seconds between XP gains",
                     color=COLORS["success"],
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
             except ValueError:
                 embed = discord.Embed(
-                    title="âŒ Invalid Value",
+                    title=" Invalid Value",
                     description="Please enter a valid number (0 or higher).",
                     color=COLORS["error"],
                 )
@@ -2523,7 +2511,7 @@ class XPSetupView(View):
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(
-        label="XP Progression Type", style=ButtonStyle.primary, emoji="âš™ï¸", row=1
+        label="XP Progression Type", style=ButtonStyle.primary, row=1
     )
     async def set_progression(self, interaction: discord.Interaction, button: Button):
         """Set XP progression type"""
@@ -2535,21 +2523,15 @@ class XPSetupView(View):
                 discord.SelectOption(
                     label="Linear (100 XP per level)",
                     value="basic",
-                    description="Steady: Level 10=1,000 XP, Level 50=5,000 XP, Level 100=10,000 XP",
-                    emoji="Ã°Å¸â€œÅ "
-                ),
+                    description="Steady: Level 10=1,000 XP, Level 50=5,000 XP, Level 100=10,000 XP"),
                 discord.SelectOption(
                     label="Exponential (Gets harder fast)",
                     value="gradual",
-                    description="Steep: Level 10=5,500 XP, Level 50=127,500 XP, Level 100=505,000 XP",
-                    emoji="Ã°Å¸â€œË†"
-                ),
+                    description="Steep: Level 10=5,500 XP, Level 50=127,500 XP, Level 100=505,000 XP"),
                 discord.SelectOption(
-                    label="Hybrid (Linear Ã¢â€ â€™ Exponential)",
+                    label="Hybrid (Linear  Exponential)",
                     value="custom",
-                    description="Balanced: Easy start, harder later. Level 10=1,900 XP, Level 50=160,000 XP",
-                    emoji="ðŸŽ¯"
-                )
+                    description="Balanced: Easy start, harder later. Level 10=1,900 XP, Level 50=160,000 XP")
             ]
         )
         
@@ -2560,11 +2542,11 @@ class XPSetupView(View):
             type_names = {
                 "basic": "Linear (100 XP per level)",
                 "gradual": "Exponential (Gets harder fast)",
-                "custom": "Hybrid (Linear Ã¢â€ â€™ Exponential)"
+                "custom": "Hybrid (Linear  Exponential)"
             }
             
             embed = discord.Embed(
-                title="âœ… XP Progression Set",
+                title=" XP Progression Set",
                 description=f"XP progression type set to: **{type_names[progression_type]}**",
                 color=COLORS["success"]
             )
@@ -2574,23 +2556,23 @@ class XPSetupView(View):
         view.add_item(select)
         
         embed = discord.Embed(
-            title="âš™ï¸ Select XP Progression Type",
+            title=" Select XP Progression Type",
             description=(
-                "**Ã°Å¸â€œÅ  Linear:** 100 XP per level (predictable, steady growth)\n"
-                "Ã¢â‚¬Â¢ Level 10 = 1,000 XP\n"
-                "Ã¢â‚¬Â¢ Level 50 = 5,000 XP\n"
-                "Ã¢â‚¬Â¢ Level 100 = 10,000 XP\n"
-                "Ã¢â‚¬Â¢ Best for: Casual servers, easy to understand\n\n"
-                "**Ã°Å¸â€œË† Exponential:** Gets much harder each level\n"
-                "Ã¢â‚¬Â¢ Level 10 = 5,500 XP\n"
-                "Ã¢â‚¬Â¢ Level 50 = 127,500 XP\n"
-                "Ã¢â‚¬Â¢ Level 100 = 505,000 XP\n"
-                "Ã¢â‚¬Â¢ Best for: Competitive servers, long-term engagement\n\n"
-                "**ðŸŽ¯ Hybrid:** Starts easy, becomes exponential\n"
-                "Ã¢â‚¬Â¢ Level 10 = 1,900 XP (easy early levels)\n"
-                "Ã¢â‚¬Â¢ Level 20 = 15,000 XP (moderate)\n"
-                "Ã¢â‚¬Â¢ Level 50 = 160,000 XP (challenging)\n"
-                "Ã¢â‚¬Â¢ Best for: Balanced progression, rewards dedication\n\n"
+                "** Linear:** 100 XP per level (predictable, steady growth)\n"
+                " Level 10 = 1,000 XP\n"
+                " Level 50 = 5,000 XP\n"
+                " Level 100 = 10,000 XP\n"
+                " Best for: Casual servers, easy to understand\n\n"
+                "** Exponential:** Gets much harder each level\n"
+                " Level 10 = 5,500 XP\n"
+                " Level 50 = 127,500 XP\n"
+                " Level 100 = 505,000 XP\n"
+                " Best for: Competitive servers, long-term engagement\n\n"
+                "** Hybrid:** Starts easy, becomes exponential\n"
+                " Level 10 = 1,900 XP (easy early levels)\n"
+                " Level 20 = 15,000 XP (moderate)\n"
+                " Level 50 = 160,000 XP (challenging)\n"
+                " Best for: Balanced progression, rewards dedication\n\n"
                 "Choose the progression that fits your server!"
             ),
             color=COLORS["primary"]
@@ -2599,7 +2581,7 @@ class XPSetupView(View):
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     @discord.ui.button(
-        label="Manage Level Roles", style=ButtonStyle.secondary, emoji="ðŸŽ­", row=2
+        label="Manage Level Roles", style=ButtonStyle.secondary, row=2
     )
     async def manage_level_roles(
         self, interaction: discord.Interaction, button: Button
@@ -2620,10 +2602,10 @@ class XPSetupView(View):
         else:
             description = "No level roles configured yet.\n\n"
 
-        description += "\n**Actions:**\nÃ¢â‚¬Â¢ Add Level Role - Assign a role at a specific level\nÃ¢â‚¬Â¢ Remove Level Role - Remove a level role reward\nÃ¢â‚¬Â¢ Back - Return to XP setup"
+        description += "\n**Actions:**\n Add Level Role - Assign a role at a specific level\n Remove Level Role - Remove a level role reward\n Back - Return to XP setup"
 
         embed = discord.Embed(
-            title="ðŸŽ­ Manage Level Roles",
+            title=" Manage Level Roles",
             description=description,
             color=COLORS["primary"],
         )
@@ -2632,7 +2614,7 @@ class XPSetupView(View):
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     @discord.ui.button(
-        label="Toggle Message XP", style=ButtonStyle.secondary, emoji="ðŸ’¬", row=1
+        label="Toggle Message XP", style=ButtonStyle.secondary, row=1
     )
     async def toggle_message_xp(self, interaction: discord.Interaction, button: Button):
         """Toggle message XP on/off"""
@@ -2645,7 +2627,7 @@ class XPSetupView(View):
             
         await self.db_manager.set_setting("xp_message_enabled", new_state, self.guild_id)
         
-        status = "âœ… Enabled" if new_state == "true" else "âŒ Disabled"
+        status = " Enabled" if new_state == "true" else " Disabled"
         embed = discord.Embed(
             title=f"Message XP {status}",
             description=f"Message XP is now **{status.split()[1]}**",
@@ -2667,7 +2649,7 @@ class XPSetupView(View):
             
         await self.db_manager.set_setting("xp_reaction_enabled", new_state, self.guild_id)
         
-        status = "âœ… Enabled" if new_state == "true" else "âŒ Disabled"
+        status = " Enabled" if new_state == "true" else " Disabled"
         embed = discord.Embed(
             title=f"Reaction XP {status}",
             description=f"Reaction XP is now **{status.split()[1]}**",
@@ -2676,7 +2658,7 @@ class XPSetupView(View):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @discord.ui.button(
-        label="Toggle Voice XP", style=ButtonStyle.secondary, emoji="Ã°Å¸Å½â„¢Ã¯Â¸Â", row=2
+        label="Toggle Voice XP", style=ButtonStyle.secondary, row=2
     )
     async def toggle_voice_xp(self, interaction: discord.Interaction, button: Button):
         """Toggle voice XP on/off"""
@@ -2689,7 +2671,7 @@ class XPSetupView(View):
             
         await self.db_manager.set_setting("xp_voice_enabled", new_state, self.guild_id)
         
-        status = "âœ… Enabled" if new_state == "true" else "âŒ Disabled"
+        status = " Enabled" if new_state == "true" else " Disabled"
         embed = discord.Embed(
             title=f"Voice XP {status}",
             description=f"Voice XP is now **{status.split()[1]}**",
@@ -2697,7 +2679,7 @@ class XPSetupView(View):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, emoji="ðŸ“‹", row=2)
+    @discord.ui.button(label="View Config", style=ButtonStyle.secondary, row=2)
     async def view_xp_config(self, interaction: discord.Interaction, button: Button):
         """View current XP system configuration"""
         xp_channel_id = await self.db_manager.get_setting("xp_channel", self.guild_id)
@@ -2710,9 +2692,9 @@ class XPSetupView(View):
         voice_enabled = await self.db_manager.get_setting("xp_voice_enabled", self.guild_id)
         
         config_text = "**Toggles:**\n"
-        config_text += f"Message XP: {'âœ… Enabled' if message_enabled == 'true' else 'âŒ Disabled'}\n"
-        config_text += f"Reaction XP: {'âœ… Enabled' if reaction_enabled == 'true' else 'âŒ Disabled'}\n"
-        config_text += f"Voice XP: {'âœ… Enabled' if voice_enabled == 'true' else 'âŒ Disabled'}\n\n"
+        config_text += f"Message XP: {' Enabled' if message_enabled == 'true' else ' Disabled'}\n"
+        config_text += f"Reaction XP: {' Enabled' if reaction_enabled == 'true' else ' Disabled'}\n"
+        config_text += f"Voice XP: {' Enabled' if voice_enabled == 'true' else ' Disabled'}\n\n"
         
         config_text += "**Settings:**\n"
         if xp_channel_id:
@@ -2741,7 +2723,7 @@ class XPSetupView(View):
             config_text += "XP Cooldown: Not set\n"
         
         embed = discord.Embed(
-            title="ðŸ“‹ XP System Configuration",
+            title=" XP System Configuration",
             description=config_text,
             color=COLORS["primary"],
         )
@@ -2762,7 +2744,7 @@ class Setup(commands.Cog):
         # Check if user is server owner BEFORE any async operations
         if interaction.guild.owner_id != interaction.user.id:
             embed = discord.Embed(
-                title="Ã°Å¸Å¡Â« Permission Denied",
+                title=" Permission Denied",
                 description="This command is only available to the server owner.",
                 color=COLORS["error"],
             )
@@ -2770,17 +2752,17 @@ class Setup(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="Ã°Å¸Â¤â€“ MalaBoT Setup",
+            title=" MalaBoT Setup",
             description=(
                 "Welcome to the MalaBoT configuration system!\n\n"
                 "Select a system below to configure it. Each system has its own set of commands and settings.\n\n"
                 "**Available Systems:**\n"
-                "âœ… Verification - User verification system\n"
-                "ðŸ‘‹ Welcome - Welcome messages for new members\n"
-                "ðŸŽ‚ Birthday - Birthday announcements\n"
-                "ðŸ† XP - Experience and leveling system\n"
-                "âš™ï¸ General - Timezone, online message, and other settings\n"
-                "ðŸ“‹ View Config - See current configuration"
+                " Verification - User verification system\n"
+                " Welcome - Welcome messages for new members\n"
+                " Birthday - Birthday announcements\n"
+                " XP - Experience and leveling system\n"
+                " General - Timezone, online message, and other settings\n"
+                " View Config - See current configuration"
             ),
             color=COLORS["primary"],
         )
@@ -2797,7 +2779,7 @@ class Setup(commands.Cog):
         """Sync onboarding role to all pending members"""
         if interaction.guild.owner_id != interaction.user.id:
             embed = discord.Embed(
-                title="Ã°Å¸Å¡Â« Permission Denied",
+                title=" Permission Denied",
                 description="This command is only available to the server owner.",
                 color=COLORS["error"],
             )
@@ -2810,8 +2792,8 @@ class Setup(commands.Cog):
         
         if not onboarding_role_id:
             embed = discord.Embed(
-                title="âŒ No Onboarding Role Set",
-                description="Please set an onboarding role first using `/setup` Ã¢â€ â€™ General Settings Ã¢â€ â€™ Set Onboarding Role",
+                title=" No Onboarding Role Set",
+                description="Please set an onboarding role first using `/setup`  General Settings  Set Onboarding Role",
                 color=COLORS["error"],
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
@@ -2821,7 +2803,7 @@ class Setup(commands.Cog):
         
         if not onboarding_role:
             embed = discord.Embed(
-                title="âŒ Onboarding Role Not Found",
+                title=" Onboarding Role Not Found",
                 description=f"The configured onboarding role (ID: {onboarding_role_id}) no longer exists.",
                 color=COLORS["error"],
             )
@@ -2833,7 +2815,7 @@ class Setup(commands.Cog):
         
         if not pending_members:
             embed = discord.Embed(
-                title="âœ… No Pending Members",
+                title=" No Pending Members",
                 description="There are no members currently completing onboarding.",
                 color=COLORS["success"],
             )
@@ -2856,11 +2838,11 @@ class Setup(commands.Cog):
                     fail_count += 1
 
         embed = discord.Embed(
-            title="âœ… Onboarding Sync Complete",
+            title=" Onboarding Sync Complete",
             description=(
                 f"**Assigned {onboarding_role.mention} to {success_count} pending member(s)**\n\n"
-                f"âœ… Success: {success_count}\n"
-                f"âŒ Failed: {fail_count}\n\n"
+                f" Success: {success_count}\n"
+                f" Failed: {fail_count}\n\n"
                 f"Total pending members: {len(pending_members)}"
             ),
             color=COLORS["success"],
@@ -2872,3 +2854,7 @@ async def setup(bot: commands.Bot):
     setup_cog = Setup(bot)
     await bot.add_cog(setup_cog)
     # Commands are automatically registered when cog is loaded
+
+
+
+

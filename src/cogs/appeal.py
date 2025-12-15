@@ -1,4 +1,4 @@
-"""
+﻿"""
 Appeal Cog for MalaBoT
 Allows cheaters in jail to submit ONE appeal
 Command: /appeal (submit and review)
@@ -41,7 +41,7 @@ class AppealGroup(app_commands.Group):
                 await interaction.response.send_message(
                     embed=create_embed(
                         "Not in Cheater Jail",
-                        "❌ You can only submit an appeal if you're in cheater jail.",
+                        " You can only submit an appeal if you're in cheater jail.",
                         COLORS["error"],
                     ),
                     ephemeral=True,
@@ -54,7 +54,7 @@ class AppealGroup(app_commands.Group):
             await interaction.response.send_message(
                 embed=create_embed(
                     "Wrong Channel",
-                    f"❌ You can only submit appeals in {cheater_channel.mention}",
+                    f" You can only submit appeals in {cheater_channel.mention}",
                     COLORS["error"],
                 ),
                 ephemeral=True,
@@ -109,7 +109,7 @@ class AppealGroup(app_commands.Group):
             if not appeal_data:
                 await safe_send_message(
                     interaction,
-                    content=f"❌ No appeal found for {user.mention}",
+                    content=f" No appeal found for {user.mention}",
                     ephemeral=True,
                 )
                 return
@@ -119,7 +119,7 @@ class AppealGroup(app_commands.Group):
             if current_status != "pending":
                 await safe_send_message(
                     interaction,
-                    content=f"❌ This appeal has already been {current_status}",
+                    content=f" This appeal has already been {current_status}",
                     ephemeral=True,
                 )
                 return
@@ -148,13 +148,13 @@ class AppealGroup(app_commands.Group):
                 await conn.commit()
 
                 result_text = (
-                    f"✅ Approved {member.mention}'s appeal and removed cheater role."
+                    f" Approved {member.mention}'s appeal and removed cheater role."
                 )
 
                 # DM user
                 try:
                     dm_embed = create_embed(
-                        "Appeal Approved ✅",
+                        "Appeal Approved ",
                         f"Your appeal has been **APPROVED**.\n\n"
                         f"**Reason:** {reason or 'None provided'}\n\n"
                         f"You have been released from cheater jail. Welcome back!",
@@ -175,13 +175,13 @@ class AppealGroup(app_commands.Group):
                 await conn.commit()
 
                 result_text = (
-                    f"❌ Denied {user.mention}'s appeal. They remain in cheater jail."
+                    f" Denied {user.mention}'s appeal. They remain in cheater jail."
                 )
 
                 # DM user
                 try:
                     dm_embed = create_embed(
-                        "Appeal Denied ❌",
+                        "Appeal Denied ",
                         f"Your appeal has been **DENIED**.\n\n"
                         f"**Reason:** {reason or 'None provided'}\n\n"
                         f"You will remain in cheater jail.",
@@ -248,7 +248,7 @@ class AppealModal(Modal, title="Submit Appeal"):
                 await interaction.response.send_message(
                     embed=create_embed(
                         "Appeal Already Submitted",
-                        "❌ You have already submitted an appeal. You can only appeal once per jail session.\n\n"
+                        " You have already submitted an appeal. You can only appeal once per jail session.\n\n"
                         "Please wait for staff to review your appeal.",
                         COLORS["error"],
                     ),
@@ -265,7 +265,7 @@ class AppealModal(Modal, title="Submit Appeal"):
 
             await interaction.response.send_message(
                 embed=create_embed(
-                    "Appeal Submitted ✅",
+                    "Appeal Submitted ",
                     "Your appeal has been submitted to staff for review.\n\n"
                     "You will be notified once a decision is made.",
                     COLORS["success"],
@@ -281,7 +281,7 @@ class AppealModal(Modal, title="Submit Appeal"):
                 review_channel = interaction.guild.get_channel(int(review_channel_id))
                 if review_channel:
                     embed = discord.Embed(
-                        title="📝 New Appeal Submitted",
+                        title=" New Appeal Submitted",
                         description=(
                             f"**User:** {interaction.user.mention}\n"
                             f"**User ID:** `{user_id}`\n"
@@ -350,3 +350,4 @@ async def setup(bot: commands.Bot):
     appeal_group = AppealGroup(appeal_cog)
     appeal_cog._appeal_group = appeal_group  # Store reference for cleanup
     bot.tree.add_command(appeal_group)
+

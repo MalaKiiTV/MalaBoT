@@ -1,4 +1,4 @@
-"""
+﻿"""
 MalaBoT - Multifunctional Discord Bot
 Main entry point and core bot framework.
 """
@@ -525,34 +525,34 @@ The bot will start in safe mode to prevent further issues.
 
             # Create digest embed
             embed = create_embed(
-                title="🧩 MalaBoT Daily Digest",
+                title=" MalaBoT Daily Digest",
                 description=f"Summary for {digest_data['date']}",
                 color=discord.Color.blue(),
             )
 
-            embed.add_field(name="🕐 Uptime", value=digest_data["uptime"], inline=True)
+            embed.add_field(name=" Uptime", value=digest_data["uptime"], inline=True)
             embed.add_field(
-                name="🧠 Memory", value=f"{digest_data['memory']}", inline=True
+                name=" Memory", value=f"{digest_data['memory']}", inline=True
             )
             embed.add_field(
-                name="📈 XP Gained", value=str(digest_data["total_xp"]), inline=True
+                name=" XP Gained", value=str(digest_data["total_xp"]), inline=True
             )
             embed.add_field(
-                name="🎂 Birthdays", value=str(digest_data["birthdays"]), inline=True
+                name=" Birthdays", value=str(digest_data["birthdays"]), inline=True
             )
             embed.add_field(
-                name="♻️ Restarts", value=str(digest_data["restarts"]), inline=True
+                name=" Restarts", value=str(digest_data["restarts"]), inline=True
             )
             embed.add_field(
-                name="⚙️ Errors", value=str(digest_data["errors"]), inline=True
+                name=" Errors", value=str(digest_data["errors"]), inline=True
             )
-            embed.add_field(name="🔢 Version", value=settings.BOT_VERSION, inline=True)
+            embed.add_field(name=" Version", value=settings.BOT_VERSION, inline=True)
             embed.add_field(
-                name="💾 DB Size", value=digest_data["db_size"], inline=True
+                name=" DB Size", value=digest_data["db_size"], inline=True
             )
 
             embed.set_footer(
-                text=f"Report generated automatically • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                text=f"Report generated automatically  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             )
 
             # Send to owner(s)
@@ -576,16 +576,16 @@ The bot will start in safe mode to prevent further issues.
         await self._sync_commands()
 
         # Log ready message
-        startup_message = f"🟢 MalaBoT is now Locked in! — Locked in as {self.user} (ID: {self.user.id})"
+        startup_message = f" MalaBoT is now Locked in!  Locked in as {self.user} (ID: {self.user.id})"
         self.logger.info(startup_message)
 
         if self.safe_mode:
-            self.logger.warning("⚠️ Running in Safe Mode - limited functionality")
+            self.logger.warning(" Running in Safe Mode - limited functionality")
 
         # Set bot status
         await self.change_presence(
             activity=discord.Activity(
-                type=discord.ActivityType.watching, name="your server • /help"
+                type=discord.ActivityType.watching, name="your server  /help"
             )
         )
 
@@ -596,7 +596,7 @@ The bot will start in safe mode to prevent further issues.
             # This prevents duplicate commands (guild + global)
             if settings.DEBUG_GUILDS:
                 self.logger.info(
-                    "🔧 DEBUG MODE: Syncing only to debug guilds (no global sync)"
+                    " DEBUG MODE: Syncing only to debug guilds (no global sync)"
                 )
 
                 for guild_id in settings.DEBUG_GUILDS:
@@ -611,20 +611,20 @@ The bot will start in safe mode to prevent further issues.
                         )
                         synced = await self.tree.sync(guild=guild)
                         self.logger.info(
-                            f"✅ Synced {len(synced)} commands to debug guild: {guild_id}"
+                            f" Synced {len(synced)} commands to debug guild: {guild_id}"
                         )
                     except Exception as e:
                         self.logger.error(
-                            f"❌ Failed to sync to debug guild {guild_id}: {e}"
+                            f" Failed to sync to debug guild {guild_id}: {e}"
                         )
             else:
                 # No DEBUG_GUILDS set = Production mode = Global sync only
-                self.logger.info("🌐 PRODUCTION MODE: Syncing globally")
+                self.logger.info(" PRODUCTION MODE: Syncing globally")
                 synced = await self.tree.sync()
-                self.logger.info(f"✅ Synced {len(synced)} global commands")
+                self.logger.info(f" Synced {len(synced)} global commands")
 
         except Exception as e:
-            self.logger.error(f"❌ Command sync failed: {e}")
+            self.logger.error(f" Command sync failed: {e}")
 
     async def on_guild_join(self, guild: discord.Guild):
         """Called when bot joins a new guild."""
@@ -776,3 +776,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

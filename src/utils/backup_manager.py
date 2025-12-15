@@ -1,4 +1,4 @@
-"""Automatic Backup Manager
+﻿"""Automatic Backup Manager
 Handles Supabase data backups, verification, and recovery
 """
 
@@ -65,7 +65,7 @@ class BackupManager:
 
             # Verify backup
             if self.verify_backup(backup_path):
-                logger.info(f"✅ Backup created successfully: {backup_filename}")
+                logger.info(f" Backup created successfully: {backup_filename}")
 
                 # Create metadata file
                 self._create_metadata(backup_path, backup_type)
@@ -75,12 +75,12 @@ class BackupManager:
 
                 return backup_path
             else:
-                logger.error(f"❌ Backup verification failed: {backup_filename}")
+                logger.error(f" Backup verification failed: {backup_filename}")
                 os.remove(backup_path)
                 return None
 
         except Exception as e:
-            logger.error(f"❌ Backup creation failed: {e}")
+            logger.error(f" Backup creation failed: {e}")
             return None
 
     def verify_backup(self, backup_path: str) -> bool:
@@ -154,17 +154,17 @@ class BackupManager:
                         # Clear existing data and insert backup data
                         db.supabase.table(table_name).delete().neq('id', -1).execute()  # Delete all
                         db.supabase.table(table_name).insert(records).execute()
-                        logger.info(f"✅ Restored {len(records)} records to {table_name}")
+                        logger.info(f" Restored {len(records)} records to {table_name}")
                     else:
-                        logger.info(f"⚠️ No records to restore for {table_name}")
+                        logger.info(f" No records to restore for {table_name}")
                 except Exception as e:
-                    logger.error(f"❌ Failed to restore table {table_name}: {e}")
+                    logger.error(f" Failed to restore table {table_name}: {e}")
 
-            logger.info(f"✅ Database restored from: {backup_path}")
+            logger.info(f" Database restored from: {backup_path}")
             return True
 
         except Exception as e:
-            logger.error(f"❌ Restore failed: {e}")
+            logger.error(f" Restore failed: {e}")
             return False
 
     def list_backups(self) -> list:
@@ -293,3 +293,4 @@ def list_backups() -> list:
     """List all available backups"""
     manager = BackupManager()
     return manager.list_backups()
+

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Owner commands cog for MalaBoT.
 Contains administrative commands for bot owners only.
 """
@@ -107,13 +107,13 @@ class Owner(commands.Cog):
             uptime_str = self._format_duration(uptime_seconds)
 
             embed = embed_helper.create_embed(
-                title="🔧 Bot Status Report",
+                title=" Bot Status Report",
                 description="Bot status information",
                 color=COLORS["info"],
             )
 
             embed.add_field(
-                name="🤖 Bot Information",
+                name=" Bot Information",
                 value=f"Name: {self.bot.user}\n"
                 f"ID: {self.bot.user.id}\n"
                 f"Version: {settings.BOT_VERSION}\n"
@@ -124,7 +124,7 @@ class Owner(commands.Cog):
 
             if sys_info:
                 embed.add_field(
-                    name="💻 System Resources",
+                    name=" System Resources",
                     value=f"CPU: {sys_info.get('cpu_percent', 0)}%\n"
                     f"Memory: {sys_info.get('memory_used_mb', 0)} MB ({sys_info.get('memory_percent', 0)}%)\n"
                     f"Disk: {sys_info.get('disk_free_gb', 0)} GB free\n"
@@ -137,7 +137,7 @@ class Owner(commands.Cog):
             total_channels = sum(len(guild.channels) for guild in self.bot.guilds)
 
             embed.add_field(
-                name="📊 Bot Statistics",
+                name=" Bot Statistics",
                 value=f"Servers: {total_guilds}\n"
                 f"Total Users: {total_users:,}\n"
                 f"Total Channels: {total_channels:,}\n"
@@ -161,7 +161,7 @@ class Owner(commands.Cog):
         """Restart the bot."""
         try:
             embed = embed_helper.warning_embed(
-                title="🔄 Restarting Bot",
+                title=" Restarting Bot",
                 description="The bot will restart now. This may take up to 60 seconds.",
             )
 
@@ -185,7 +185,7 @@ class Owner(commands.Cog):
         """Shutdown the bot."""
         try:
             embed = embed_helper.error_embed(
-                title="🛑 Shutting Down Bot", description="The bot will shutdown now."
+                title=" Shutting Down Bot", description="The bot will shutdown now."
             )
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -207,7 +207,7 @@ class Owner(commands.Cog):
                 await self.bot.db_manager.clear_flag("crash_detected")
 
                 embed = embed_helper.success_embed(
-                    title="🧹 Crash Flags Cleared",
+                    title=" Crash Flags Cleared",
                     description="All crash flags have been cleared.",
                 )
 
@@ -298,13 +298,13 @@ class Owner(commands.Cog):
                         channel = self.cog.bot.get_channel(self.channel_id)
                         if channel:
                             embed = embed_helper.success_embed(
-                                title="🟢 Bot Online Message Set",
+                                title=" Bot Online Message Set",
                                 description=self.message.value,
                             )
                             await channel.send(embed=embed)
 
                             embed = embed_helper.success_embed(
-                                title="✅ Online Message Configured",
+                                title=" Online Message Configured",
                                 description=f"Message will be sent to {channel.mention} whenever the bot starts up.",
                             )
                             await interaction.response.send_message(
@@ -330,7 +330,7 @@ class Owner(commands.Cog):
 
             view = OnlineChannelSelectView(self)
             embed = embed_helper.info_embed(
-                title="📢 Select Online Message Channel",
+                title=" Select Online Message Channel",
                 description="Select the channel where the online message should be sent when the bot starts.",
             )
             await interaction.response.send_message(
@@ -361,7 +361,7 @@ class Owner(commands.Cog):
                     channel = self.bot.get_channel(int(online_channel_id))
                     if channel:
                         embed = embed_helper.success_embed(
-                            title="🟢 Bot Online", description=online_message
+                            title=" Bot Online", description=online_message
                         )
                         await channel.send(embed=embed)
                         self.logger.info(
@@ -424,7 +424,7 @@ class Owner(commands.Cog):
                 )
             else:
                 await interaction.followup.send(
-                    "❌ No guilds available for syncing. Bot must be in at least one server.",
+                    " No guilds available for syncing. Bot must be in at least one server.",
                     ephemeral=True,
                 )
                 return
@@ -463,17 +463,17 @@ class Owner(commands.Cog):
             self.logger.info(f"Re-synced {len(synced)} commands")
 
             # List synced commands
-            command_list = "\n".join([f"• {cmd.name}" for cmd in synced[:20]])
+            command_list = "\n".join([f" {cmd.name}" for cmd in synced[:20]])
             if len(synced) > 20:
                 command_list += f"\n... and {len(synced) - 20} more"
 
             embed = embed_helper.success_embed(
                 title="Commands Cleared & Re-synced",
                 description=(
-                    f"✅ Removed {len(current_commands)} old commands\n"
-                    f"✅ Cleared from Discord\n"
-                    f"✅ Copied commands from cogs\n"
-                    f"✅ Synced {len(synced)} new commands\n\n"
+                    f" Removed {len(current_commands)} old commands\n"
+                    f" Cleared from Discord\n"
+                    f" Copied commands from cogs\n"
+                    f" Synced {len(synced)} new commands\n\n"
                     f"**Commands:**\n{command_list}"
                 ),
             )
@@ -493,3 +493,4 @@ async def setup(bot: commands.Bot):
     owner_cog = Owner(bot)
     await bot.add_cog(owner_cog)
     # Commands are automatically registered when cog is loaded
+

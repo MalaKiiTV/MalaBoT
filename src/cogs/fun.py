@@ -1,4 +1,4 @@
-"""
+﻿"""
 Fun commands cog for MalaBoT.
 Contains joke, fact, and roast commands with entertainment features.
 """
@@ -56,14 +56,14 @@ class Fun(commands.Cog):
 
             # Create joke embed
             embed = embed_helper.create_embed(
-                title="😄 Random Joke",
+                title=" Random Joke",
                 description=joke_content,
                 color=random.choice(
                     [COLORS["success"], COLORS["info"], COLORS["primary"]]
                 ),
             )
 
-            embed.set_footer(text="Hope that made you smile! 😊")
+            embed.set_footer(text="Hope that made you smile! ")
 
             await interaction.response.send_message(embed=embed)
 
@@ -106,10 +106,10 @@ class Fun(commands.Cog):
 
             # Create fact embed
             embed = embed_helper.create_embed(
-                title="🧠 Did You Know?", description=fact_content, color=COLORS["info"]
+                title=" Did You Know?", description=fact_content, color=COLORS["info"]
             )
 
-            embed.set_footer(text="Knowledge is power! 📚")
+            embed.set_footer(text="Knowledge is power! ")
 
             await interaction.response.send_message(embed=embed)
 
@@ -159,16 +159,16 @@ class Fun(commands.Cog):
             elif target == interaction.user:
                 # User trying to roast themselves
                 embed = embed_helper.create_embed(
-                    title="🔥 Self-Roast Detected!",
-                    description="Don't be so hard on yourself! You're amazing! ✨",
+                    title=" Self-Roast Detected!",
+                    description="Don't be so hard on yourself! You're amazing! ",
                     color=COLORS["success"],
                 )
                 await interaction.response.send_message(embed=embed)
             elif target.bot:
                 # User trying to roast another bot
                 embed = embed_helper.create_embed(
-                    title="🤖 Bot Protection",
-                    description=f"I can't let you roast {target.mention}. Bots stick together! 💪",
+                    title=" Bot Protection",
+                    description=f"I can't let you roast {target.mention}. Bots stick together! ",
                     color=COLORS["warning"],
                 )
                 await interaction.response.send_message(embed=embed)
@@ -185,16 +185,16 @@ class Fun(commands.Cog):
         try:
             # Select a comeback roast
             comeback_roasts = [
-                "Oh, you think you can roast me? That's cute! I'm powered by electricity and sarcasm. ⚡",
-                "Nice try! I've been roasted by code bugs more painful than that. 💻",
-                "Your roast has the same impact as a DIV not centering. Devastating, I know. 😏",
-                "I'd clap back, but my processing power is reserved for actual important tasks. Like calculating pi. π",
-                "Did you program that roast yourself? Because it has a few bugs... 🐛",
-                "You're about as threatening as a '404 Not Found' page. 📄",
-                "I've seen better roasts on a breadcrumb. 🍞",
-                "Your roast is like Windows Vista - looked good on paper but failed in execution. 🪟",
-                "I'd be offended, but I'm too busy being awesome. And you're too busy... well, you. 🤷",
-                "Your mom jokes are so 2010. Step up your game! 📅",
+                "Oh, you think you can roast me? That's cute! I'm powered by electricity and sarcasm. ",
+                "Nice try! I've been roasted by code bugs more painful than that. ",
+                "Your roast has the same impact as a DIV not centering. Devastating, I know. ",
+                "I'd clap back, but my processing power is reserved for actual important tasks. Like calculating pi. ",
+                "Did you program that roast yourself? Because it has a few bugs... ",
+                "You're about as threatening as a '404 Not Found' page. ",
+                "I've seen better roasts on a breadcrumb. ",
+                "Your roast is like Windows Vista - looked good on paper but failed in execution. ",
+                "I'd be offended, but I'm too busy being awesome. And you're too busy... well, you. ",
+                "Your mom jokes are so 2010. Step up your game! ",
             ]
 
             roast_content = random.choice(comeback_roasts)
@@ -220,19 +220,19 @@ class Fun(commands.Cog):
                     # Add level up info to roast
                     if xp_gained >= 10:  # Show XP gain for good roasts
                         roast_content += (
-                            f"\n\n*+{xp_gained} Roast XP • {current_title}*"
+                            f"\n\n*+{xp_gained} Roast XP  {current_title}*"
                         )
 
             # Create roast embed
             embed = embed_helper.roast_embed(
-                title="🔥 Comeback!",
+                title=" Comeback!",
                 description=f"{interaction.user.mention} {roast_content}",
             )
 
             embed.set_thumbnail(
                 url=self.bot.user.avatar.url if self.bot.user.avatar else None
             )
-            embed.set_footer(text="Roast battles make us stronger! 💪")
+            embed.set_footer(text="Roast battles make us stronger! ")
 
             await interaction.response.send_message(embed=embed)
 
@@ -273,10 +273,10 @@ class Fun(commands.Cog):
 
             # Create roast embed
             embed = embed_helper.roast_embed(
-                title="🔥 Roast Battle!", description=roast_content
+                title=" Roast Battle!", description=roast_content
             )
 
-            embed.set_footer(text="All in good fun! 😄 • Don't take it personally!")
+            embed.set_footer(text="All in good fun!   Don't take it personally!")
 
             await interaction.response.send_message(embed=embed)
 
@@ -356,19 +356,19 @@ class Fun(commands.Cog):
 
             # Create 8-ball embed
             embed = embed_helper.create_embed(
-                title="🎱 Magic 8-Ball",
+                title=" Magic 8-Ball",
                 description=f"**Question:** {question}\n\n**Answer:** *{response_text}*",
                 color=colors[response_type],
             )
 
             # Add 8-ball emoji based on response
-            emoji = {"positive": "✅", "neutral": "⚖️", "negative": "❌"}
+            emoji = {"positive": "", "neutral": "", "negative": ""}
 
             embed.set_thumbnail(
                 url="https://i.imgur.com/8QnHfRz.png"
             )  # Magic 8-ball image
             embed.set_footer(
-                text=f"The 8-ball has spoken! {emoji.get(response_type, '🎱')}"
+                text=f"The 8-ball has spoken! {emoji.get(response_type, '')}"
             )
 
             await interaction.response.send_message(embed=embed)
@@ -423,14 +423,14 @@ class Fun(commands.Cog):
             # Create embed
             if count == 1:
                 embed = embed_helper.create_embed(
-                    title="🎲 Dice Roll",
+                    title=" Dice Roll",
                     description=f"You rolled a **{sides}**-sided die and got: **{rolls[0]}**",
                     color=COLORS["primary"],
                 )
             else:
                 rolls_text = ", ".join(map(str, rolls))
                 embed = embed_helper.create_embed(
-                    title=f"🎲 {count} Dice Rolls",
+                    title=f" {count} Dice Rolls",
                     description=f"Rolling {count} **{sides}**-sided dice:\n\n"
                     f"**Rolls:** {rolls_text}\n"
                     f"**Total:** {total}\n"
@@ -439,13 +439,13 @@ class Fun(commands.Cog):
                 )
 
             # Add dice visual
-            dice_emojis = {1: "⚀", 2: "⚁", 3: "⚂", 4: "⚃", 5: "⚄", 6: "⚅"}
+            dice_emojis = {1: "", 2: "", 3: "", 4: "", 5: "", 6: ""}
 
             if sides == 6 and count <= 6:
-                dice_visual = " ".join(dice_emojis.get(roll, "🎲") for roll in rolls)
-                embed.add_field(name="🎲 Visual", value=dice_visual, inline=False)
+                dice_visual = " ".join(dice_emojis.get(roll, "") for roll in rolls)
+                embed.add_field(name=" Visual", value=dice_visual, inline=False)
 
-            embed.set_footer(text="May the odds be ever in your favor! 🍀")
+            embed.set_footer(text="May the odds be ever in your favor! ")
 
             await interaction.response.send_message(embed=embed)
 
@@ -472,18 +472,18 @@ class Fun(commands.Cog):
             result = random.choice(["heads", "tails"])
 
             # Coin visuals
-            coin_visuals = {"heads": "🪙 Heads", "tails": "🪙 Tails"}
+            coin_visuals = {"heads": " Heads", "tails": " Tails"}
 
             # Create embed
             embed = embed_helper.create_embed(
-                title="🪙 Coin Flip",
+                title=" Coin Flip",
                 description=f"The coin landed on: **{result.title()}**!",
                 color=COLORS["success"],
             )
 
             embed.add_field(name="Result", value=coin_visuals[result], inline=False)
             embed.set_thumbnail(url="https://i.imgur.com/j4YqVg5.png")  # Coin image
-            embed.set_footer(text="50/50 chance! Was it fate? 🤔")
+            embed.set_footer(text="50/50 chance! Was it fate? ")
 
             await interaction.response.send_message(embed=embed)
 
@@ -519,3 +519,4 @@ async def setup(bot: commands.Bot):
     fun_cog = Fun(bot)
     await bot.add_cog(fun_cog)
     # Commands are automatically registered when cog is loaded
+

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Safe Database Wrapper
 Ensures all database operations are safe, verified, and logged
 """
@@ -254,15 +254,15 @@ class RoleConnectionSafeDB:
 
             if success:
                 logger.info(
-                    f"✅ Saved {len(connections)} role connections for guild {guild_id}"
+                    f" Saved {len(connections)} role connections for guild {guild_id}"
                 )
             else:
-                logger.error(f"❌ Failed to save role connections for guild {guild_id}")
+                logger.error(f" Failed to save role connections for guild {guild_id}")
 
             return success
 
         except Exception as e:
-            logger.error(f"❌ Error saving role connections: {e}")
+            logger.error(f" Error saving role connections: {e}")
             return False
 
     async def load_connections(self, guild_id: int) -> list:
@@ -282,7 +282,7 @@ class RoleConnectionSafeDB:
 
             if data:
                 logger.info(
-                    f"✅ Loaded {len(data)} role connections for guild {guild_id}"
+                    f" Loaded {len(data)} role connections for guild {guild_id}"
                 )
             else:
                 logger.debug(f"No role connections found for guild {guild_id}")
@@ -290,7 +290,7 @@ class RoleConnectionSafeDB:
             return data
 
         except Exception as e:
-            logger.error(f"❌ Error loading role connections: {e}")
+            logger.error(f" Error loading role connections: {e}")
             return []
 
     async def verify_connections_exist(self, guild_id: int) -> bool:
@@ -336,3 +336,4 @@ class RoleConnectionSafeDB:
         """
         key = f"protected_roles_{guild_id}"
         return await self.safe_db.load_json_setting(key, default=[])
+

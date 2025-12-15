@@ -1,4 +1,4 @@
-"""Audit logging utilities"""
+﻿"""Audit logging utilities"""
 
 import discord
 from datetime import datetime
@@ -22,11 +22,11 @@ async def log_audit(bot, guild_id: int, user_id: int, action: str, details: str)
     user_mention = user.mention if user else f"User ID: {user_id}"
     
     action_emojis = {
-        "appeal_submitted": "📝",
-        "appeal_approved": "✅",
-        "appeal_denied": "❌",
-        "appeal_withdrawn": "↩️",
-        "appeal_cancelled": "🚫"
+        "appeal_submitted": "",
+        "appeal_approved": "",
+        "appeal_denied": "",
+        "appeal_withdrawn": "",
+        "appeal_cancelled": ""
     }
     
     action_colors = {
@@ -37,7 +37,7 @@ async def log_audit(bot, guild_id: int, user_id: int, action: str, details: str)
         "appeal_cancelled": 0x808080
     }
     
-    emoji = action_emojis.get(action, "📋")
+    emoji = action_emojis.get(action, "")
     color = action_colors.get(action, 0x0099ff)
     
     embed = discord.Embed(
@@ -52,3 +52,4 @@ async def log_audit(bot, guild_id: int, user_id: int, action: str, details: str)
         log_system(f"[AUDIT] {action} for user {user_id}")
     except Exception as e:
         log_system(f"[AUDIT] Failed: {e}", level="error")
+

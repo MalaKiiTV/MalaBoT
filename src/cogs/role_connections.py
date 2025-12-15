@@ -1,4 +1,4 @@
-import json
+﻿import json
 import logging
 
 import discord
@@ -354,3 +354,4 @@ class RoleConnections(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(RoleConnections(bot))
+

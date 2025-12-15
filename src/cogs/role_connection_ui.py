@@ -1,4 +1,4 @@
-"""
+﻿"""
 Role Connection UI Components
 Supporting views and modals for role connection management
 """
@@ -85,7 +85,7 @@ class AddConnectionRoleSelect(Select):
         )
 
         embed = discord.Embed(
-            title="➕ Add Role Connection",
+            title=" Add Role Connection",
             description=f"**Step 2: Select Action**\n\nTarget Role: {self.parent_view.target_role.mention}\n\nWhat should happen with this role?",
             color=COLORS["primary"],
         )
@@ -104,11 +104,11 @@ class SelectActionView(View):
         self.conditions = []
         self.logic = "AND"
 
-    @discord.ui.button(label="Give Role", style=discord.ButtonStyle.green, emoji="➕")
+    @discord.ui.button(label="Give Role", style=discord.ButtonStyle.green)
     async def give_role(self, interaction: discord.Interaction, button: Button):
         await self.select_conditions(interaction, "give")
 
-    @discord.ui.button(label="Remove Role", style=discord.ButtonStyle.red, emoji="➖")
+    @discord.ui.button(label="Remove Role", style=discord.ButtonStyle.red)
     async def remove_role(self, interaction: discord.Interaction, button: Button):
         await self.select_conditions(interaction, "remove")
 
@@ -117,7 +117,7 @@ class SelectActionView(View):
         view = AddConditionView(self.manager, self.guild, self.target_role, action)
 
         embed = discord.Embed(
-            title="➕ Add Role Connection",
+            title=" Add Role Connection",
             description=(
                 f"**Step 3: Add Conditions**\n\n"
                 f"Target Role: {self.target_role.mention}\n"
@@ -159,13 +159,11 @@ class ConditionTypeSelect(Select):
                 label="User HAS role",
                 value="has",
                 description="Condition is met when user has the role",
-                emoji="✅",
             ),
             discord.SelectOption(
                 label="User DOESN'T HAVE role",
                 value="doesnt_have",
                 description="Condition is met when user lacks the role",
-                emoji="❌",
             ),
         ]
         super().__init__(
@@ -195,7 +193,7 @@ class ConditionTypeSelect(Select):
         )
 
         embed = discord.Embed(
-            title="➕ Add Role Connection",
+            title=" Add Role Connection",
             description=(
                 f"**Step 4: Select Condition Role**\n\n"
                 f"Target Role: {self.parent_view.target_role.mention}\n"
@@ -304,10 +302,10 @@ class ConditionRoleSelect(Select):
             role = self.parent_view.guild.get_role(cond["role_id"])
             if role:
                 cond_type = "HAS" if cond["type"] == "has" else "DOESN'T HAVE"
-                cond_text.append(f"• User {cond_type} {role.mention}")
+                cond_text.append(f" User {cond_type} {role.mention}")
 
         embed = discord.Embed(
-            title="➕ Add Role Connection",
+            title=" Add Role Connection",
             description=(
                 f"**Step 5: Finalize Connection**\n\n"
                 f"Target Role: {self.parent_view.target_role.mention}\n"
@@ -344,15 +342,14 @@ class FinalizeConnectionView(View):
         self.logic = logic
 
     @discord.ui.button(
-        label="Add Another Condition", style=discord.ButtonStyle.blurple, emoji="➕"
-    )
+        label="Add Another Condition", style=discord.ButtonStyle.blurple)
     async def add_condition(self, interaction: discord.Interaction, button: Button):
         view = AddConditionView(self.manager, self.guild, self.target_role, self.action)
         view.conditions = self.conditions
         view.logic = self.logic
 
         embed = discord.Embed(
-            title="➕ Add Role Connection",
+            title=" Add Role Connection",
             description=(
                 f"**Add Another Condition**\n\n"
                 f"Target Role: {self.target_role.mention}\n"
@@ -365,8 +362,7 @@ class FinalizeConnectionView(View):
         await interaction.response.edit_message(embed=embed, view=view)
 
     @discord.ui.button(
-        label="Change Logic (AND/OR)", style=discord.ButtonStyle.gray, emoji="🔀"
-    )
+        label="Change Logic (AND/OR)", style=discord.ButtonStyle.gray)
     async def toggle_logic(self, interaction: discord.Interaction, button: Button):
         self.logic = "OR" if self.logic == "AND" else "AND"
 
@@ -376,10 +372,10 @@ class FinalizeConnectionView(View):
             role = self.guild.get_role(cond["role_id"])
             if role:
                 cond_type = "HAS" if cond["type"] == "has" else "DOESN'T HAVE"
-                cond_text.append(f"• User {cond_type} {role.mention}")
+                cond_text.append(f" User {cond_type} {role.mention}")
 
         embed = discord.Embed(
-            title="➕ Add Role Connection",
+            title=" Add Role Connection",
             description=(
                 f"**Step 5: Finalize Connection**\n\n"
                 f"Target Role: {self.target_role.mention}\n"
@@ -393,8 +389,7 @@ class FinalizeConnectionView(View):
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(
-        label="Save Connection", style=discord.ButtonStyle.green, emoji="💾"
-    )
+        label="Save Connection", style=discord.ButtonStyle.green)
     async def save_connection(self, interaction: discord.Interaction, button: Button):
         # Defer immediately
         await interaction.response.defer()
@@ -415,10 +410,10 @@ class FinalizeConnectionView(View):
                 role = self.guild.get_role(cond["role_id"])
                 if role:
                     cond_type = "HAS" if cond["type"] == "has" else "DOESN'T HAVE"
-                    cond_text.append(f"• User {cond_type} {role.name}")
+                    cond_text.append(f" User {cond_type} {role.name}")
 
             embed = create_embed(
-                "✅ Connection Created",
+                " Connection Created",
                 (
                     f"**{self.action.title()} {self.target_role.mention}**\n\n"
                     f"When ({self.logic}):\n" + "\n".join(cond_text)
@@ -443,14 +438,14 @@ class FinalizeConnectionView(View):
             connections = self.manager.connections_cache.get(self.guild.id, [])
 
             embed = discord.Embed(
-                title="🔗 Role Connection System",
+                title=" Role Connection System",
                 description=(
                     "Automatically assign or remove roles based on conditions.\n\n"
                     "**How it works:**\n"
-                    "• Create rules that give/remove roles when conditions are met\n"
-                    "• Conditions: User HAS or DOESN'T HAVE specific roles\n"
-                    "• Logic: Combine conditions with AND/OR\n"
-                    "• Protected Roles: Users with these roles are exempt from all rules"
+                    " Create rules that give/remove roles when conditions are met\n"
+                    " Conditions: User HAS or DOESN'T HAVE specific roles\n"
+                    " Logic: Combine conditions with AND/OR\n"
+                    " Protected Roles: Users with these roles are exempt from all rules"
                 ),
                 color=COLORS["primary"],
             )
@@ -461,7 +456,7 @@ class FinalizeConnectionView(View):
                 for i, conn in enumerate(connections[:10], 1):
                     target_role = self.guild.get_role(conn.target_role_id)
                     if target_role:
-                        status = "✅" if conn.enabled else "❌"
+                        status = "" if conn.enabled else ""
                         conn_text += f"{status} {i}. {conn.action.title()} **{target_role.name}**\n"
                 embed.add_field(
                     name="Active Connections", value=conn_text or "None", inline=False
@@ -503,7 +498,7 @@ class ManageConnectionSelect(Select):
         for i, conn in enumerate(connections[:25], 1):
             target_role = guild.get_role(conn.target_role_id)
             if target_role:
-                status = "✅" if conn.enabled else "❌"
+                status = "" if conn.enabled else ""
                 options.append(
                     discord.SelectOption(
                         label=f"{status} {conn.action.title()} {target_role.name}",
@@ -545,9 +540,9 @@ class ManageConnectionSelect(Select):
             role = self.guild.get_role(cond["role_id"])
             if role:
                 cond_type = "HAS" if cond["type"] == "has" else "DOESN'T HAVE"
-                cond_text.append(f"• User {cond_type} {role.mention}")
+                cond_text.append(f" User {cond_type} {role.mention}")
 
-        status = "✅ Enabled" if connection.enabled else "❌ Disabled"
+        status = " Enabled" if connection.enabled else " Disabled"
 
         embed = discord.Embed(
             title=f"Manage Connection #{connection.id}",
@@ -572,8 +567,7 @@ class ConnectionActionsView(View):
         self.connection = connection
 
     @discord.ui.button(
-        label="Toggle On/Off", style=discord.ButtonStyle.blurple, emoji="🔄"
-    )
+        label="Toggle On/Off", style=discord.ButtonStyle.blurple)
     async def toggle(self, interaction: discord.Interaction, button: Button):
         await self.manager.toggle_connection(self.guild.id, self.connection.id)
         self.connection.enabled = not self.connection.enabled
@@ -589,7 +583,7 @@ class ConnectionActionsView(View):
             ephemeral=True,
         )
 
-    @discord.ui.button(label="Edit Logic", style=discord.ButtonStyle.gray, emoji="✏️")
+    @discord.ui.button(label="Edit Logic", style=discord.ButtonStyle.gray)
     async def edit_logic(self, interaction: discord.Interaction, button: Button):
         view = EditConnectionLogicView(self.manager, self.guild, self.connection)
 
@@ -600,10 +594,10 @@ class ConnectionActionsView(View):
             role = self.guild.get_role(cond["role_id"])
             if role:
                 cond_type = "HAS" if cond["type"] == "has" else "DOESN'T HAVE"
-                cond_text.append(f"• User {cond_type} {role.mention}")
+                cond_text.append(f" User {cond_type} {role.mention}")
 
         embed = discord.Embed(
-            title="✏️ Edit Connection Logic",
+            title=" Edit Connection Logic",
             description=(
                 f"**Connection #{self.connection.id}**\n\n"
                 f"Target Role: {target_role.mention if target_role else 'Unknown'}\n"
@@ -618,7 +612,7 @@ class ConnectionActionsView(View):
 
         await interaction.response.edit_message(embed=embed, view=view)
 
-    @discord.ui.button(label="Delete", style=discord.ButtonStyle.red, emoji="🗑️")
+    @discord.ui.button(label="Delete", style=discord.ButtonStyle.red)
     async def delete(self, interaction: discord.Interaction, button: Button):
         await self.manager.remove_connection(self.guild.id, self.connection.id)
 
@@ -642,8 +636,7 @@ class EditConnectionLogicView(View):
         self.connection = connection
 
     @discord.ui.button(
-        label="Toggle Logic (AND ↔ OR)", style=discord.ButtonStyle.blurple, emoji="🔀"
-    )
+        label="Toggle Logic (AND  OR)", style=discord.ButtonStyle.blurple)
     async def toggle_logic(self, interaction: discord.Interaction, button: Button):
         # Toggle the logic
         new_logic = "OR" if self.connection.logic == "AND" else "AND"
@@ -661,10 +654,10 @@ class EditConnectionLogicView(View):
             role = self.guild.get_role(cond["role_id"])
             if role:
                 cond_type = "HAS" if cond["type"] == "has" else "DOESN'T HAVE"
-                cond_text.append(f"• User {cond_type} {role.mention}")
+                cond_text.append(f" User {cond_type} {role.mention}")
 
         embed = discord.Embed(
-            title="✅ Logic Updated",
+            title=" Logic Updated",
             description=(
                 f"**Connection #{self.connection.id}**\n\n"
                 f"Target Role: {target_role.mention if target_role else 'Unknown'}\n"
@@ -680,8 +673,7 @@ class EditConnectionLogicView(View):
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(
-        label="Back to Connections", style=discord.ButtonStyle.gray, emoji="◀️"
-    )
+        label="Back to Connections", style=discord.ButtonStyle.gray)
     async def back(self, interaction: discord.Interaction, button: Button):
         # Return to role connections menu
         from cogs.setup import RoleConnectionSetupView
@@ -693,14 +685,14 @@ class EditConnectionLogicView(View):
         connections = self.manager.connections_cache.get(self.guild.id, [])
 
         embed = discord.Embed(
-            title="🔗 Role Connection System",
+            title=" Role Connection System",
             description=(
                 "Automatically assign or remove roles based on conditions.\n\n"
                 "**How it works:**\n"
-                "• Create rules that give/remove roles when conditions are met\n"
-                "• Conditions: User HAS or DOESN'T HAVE specific roles\n"
-                "• Logic: Combine conditions with AND/OR\n"
-                "• Protected Roles: Users with these roles are exempt from all rules"
+                " Create rules that give/remove roles when conditions are met\n"
+                " Conditions: User HAS or DOESN'T HAVE specific roles\n"
+                " Logic: Combine conditions with AND/OR\n"
+                " Protected Roles: Users with these roles are exempt from all rules"
             ),
             color=COLORS["primary"],
         )
@@ -711,7 +703,7 @@ class EditConnectionLogicView(View):
             for i, conn in enumerate(connections[:10], 1):
                 target_role = self.guild.get_role(conn.target_role_id)
                 if target_role:
-                    status = "✅" if conn.enabled else "❌"
+                    status = "" if conn.enabled else ""
                     conn_text += (
                         f"{status} {i}. {conn.action.title()} **{target_role.name}**\n"
                     )
@@ -731,13 +723,12 @@ class ProtectedRolesView(View):
         self.guild = guild
 
     @discord.ui.button(
-        label="Add Protected Role", style=discord.ButtonStyle.green, emoji="➕"
-    )
+        label="Add Protected Role", style=discord.ButtonStyle.green)
     async def add_protected(self, interaction: discord.Interaction, button: Button):
         view = AddProtectedRoleView(self.manager, self.guild)
 
         embed = discord.Embed(
-            title="🛡️ Add Protected Role",
+            title=" Add Protected Role",
             description="Select a role to protect from role connections:",
             color=COLORS["primary"],
         )
@@ -745,8 +736,7 @@ class ProtectedRolesView(View):
         await interaction.response.edit_message(embed=embed, view=view)
 
     @discord.ui.button(
-        label="Remove Protected Role", style=discord.ButtonStyle.red, emoji="➖"
-    )
+        label="Remove Protected Role", style=discord.ButtonStyle.red)
     async def remove_protected(self, interaction: discord.Interaction, button: Button):
         await self.manager.load_protected_roles(self.guild.id)
         protected = self.manager.protected_roles_cache.get(self.guild.id, [])
@@ -765,7 +755,7 @@ class ProtectedRolesView(View):
         view = RemoveProtectedRoleView(self.manager, self.guild, protected)
 
         embed = discord.Embed(
-            title="🛡️ Remove Protected Role",
+            title=" Remove Protected Role",
             description="Select a role to remove from protection:",
             color=COLORS["primary"],
         )
@@ -867,7 +857,7 @@ class RemoveProtectedRoleSelect(Select):
             role = guild.get_role(role_id)
             if role:
                 options.append(
-                    discord.SelectOption(label=role.name, value=str(role_id), emoji="🛡️")
+                    discord.SelectOption(label=role.name, value=str(role_id))
                 )
 
         super().__init__(
@@ -899,3 +889,6 @@ class RemoveProtectedRoleSelect(Select):
             ),
             ephemeral=True,
         )
+
+
+

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Birthday system cog for MalaBoT.
 Handles user birthday tracking and celebrations.
 """
@@ -20,7 +20,7 @@ class BirthdayReminderView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
     
-    @discord.ui.button(label="Set Your Birthday", style=discord.ButtonStyle.primary, emoji="🎂", custom_id="birthday_reminder_button")
+    @discord.ui.button(label="Set Your Birthday", style=discord.ButtonStyle.primary, custom_id="birthday_reminder_button")
     async def set_birthday_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Handle birthday button click"""
         modal = BirthdayModal(interaction.client)
@@ -62,7 +62,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
             if month < 1 or month > 12 or day < 1 or day > 31:
                 await interaction.followup.send(
                     embed=create_embed(
-                        "❌ Invalid Date",
+                        " Invalid Date",
                         "Please enter a valid date in MM-DD format.",
                         discord.Color.red(),
                     ),
@@ -82,7 +82,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
             if (month, day) in invalid_dates:
                 await interaction.followup.send(
                     embed=create_embed(
-                        "❌ Invalid Date",
+                        " Invalid Date",
                         "That date doesn't exist. Please enter a valid date.",
                         discord.Color.red(),
                     ),
@@ -144,7 +144,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
                     success_description = f"Your birthday has been updated to {birthday_str}."
                 await interaction.followup.send(
                     embed=create_embed(
-                        "🎂 Birthday Set!",
+                        " Birthday Set!",
                         success_description,
                         discord.Color.green(),
                     ),
@@ -175,7 +175,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
             else:
                 await interaction.followup.send(
                     embed=create_embed(
-                        "❌ Database Error",
+                        " Database Error",
                         "There was an error saving your birthday. Please try again.",
                         discord.Color.red(),
                     ),
@@ -185,7 +185,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
         except ValueError:
             await interaction.followup.send(
                 embed=create_embed(
-                    "❌ Invalid Format",
+                    " Invalid Format",
                     "Please use MM-DD format (e.g., 12-25 for December 25th).",
                     discord.Color.red(),
                 ),
@@ -195,7 +195,7 @@ class BirthdayModal(discord.ui.Modal, title="Set Your Birthday"):
             get_logger("birthdays").error(f"Unexpected error in birthday modal: {e}", exc_info=True)
             await interaction.followup.send(
                 embed=create_embed(
-                    "❌ Error",
+                    " Error",
                     "An unexpected error occurred. Please try again.",
                     discord.Color.red(),
                 ),
@@ -266,7 +266,7 @@ class Birthdays(commands.Cog):
                     await self.bot.db_manager.remove_user_birthday(interaction.user.id, member.guild.id)  # type: ignore
                     await interaction.response.send_message(
                         embed=create_embed(
-                            "🔧 Data Corruption Fixed",
+                            " Data Corruption Fixed",
                             "We found corrupted birthday data and cleaned it up. Please set your birthday again using `/bday set`.",
                             discord.Color.orange(),
                         ),
@@ -295,7 +295,7 @@ class Birthdays(commands.Cog):
                     await self.bot.db_manager.remove_user_birthday(interaction.user.id, member.guild.id)  # type: ignore
                     await interaction.response.send_message(
                         embed=create_embed(
-                            "🔧 Data Corruption Fixed",
+                            " Data Corruption Fixed",
                             "We found corrupted birthday data and cleaned it up. Please set your birthday again using `/bday set`.",
                             discord.Color.orange(),
                         ),
@@ -322,7 +322,7 @@ class Birthdays(commands.Cog):
                 )
 
                 embed = create_embed(
-                    "🎂 Your Birthday",
+                    " Your Birthday",
                     f"Your birthday is set to **{formatted_date}**",
 
                     discord.Color.blue(),
@@ -335,7 +335,7 @@ class Birthdays(commands.Cog):
                 )
             else:
                 embed = create_embed(
-                    "❌ No Birthday Set",
+                    " No Birthday Set",
                     "You haven't set your birthday yet!\n\n"
                     "Use `/bday set` to set your birthday and get special messages on your special day!",
                     discord.Color.orange(),
@@ -349,7 +349,7 @@ class Birthdays(commands.Cog):
             )
             await interaction.response.send_message(
                 embed=create_embed(
-                    "❌ Error",
+                    " Error",
                     "There was an error retrieving your birthday. Please try again.",
                     discord.Color.red(),
                 ),
@@ -365,8 +365,8 @@ class Birthdays(commands.Cog):
 
             if not all_birthdays:
                 embed = create_embed(
-                    "🎂 No Birthdays Set",
-                    "No one has set their birthday yet! 🎈\n\nUse `/bday set` to add yours!",
+                    " No Birthdays Set",
+                    "No one has set their birthday yet! \n\nUse `/bday set` to add yours!",
                     discord.Color.blue(),
                 )
                 await interaction.response.send_message(embed=embed)
@@ -440,7 +440,7 @@ class Birthdays(commands.Cog):
                 days = bday["days_until"]
                 
                 if days == 0:
-                    status = "🎉 **TODAY!**"
+                    status = " **TODAY!**"
                 elif days == 1:
                     status = "Tomorrow"
                 elif days <= 7:
@@ -448,14 +448,14 @@ class Birthdays(commands.Cog):
                 else:
                     status = f"In {days} days"
                 
-                # Format: #1 • Name • Date • Status
-                birthday_list.append(f"`#{i:2d}` • **{bday['name']}** • {bday['date']} • {status}")
+                # Format: #1  Name  Date  Status
+                birthday_list.append(f"`#{i:2d}`  **{bday['name']}**  {bday['date']}  {status}")
             
             # Build embed with list
             description = "\n".join(birthday_list)
             
             embed = create_embed(
-                "🎂 Upcoming Birthdays",
+                " Upcoming Birthdays",
                 description,
                 discord.Color.magenta(),
             )
@@ -463,7 +463,7 @@ class Birthdays(commands.Cog):
             if len(birthday_data) > 25:
                 embed.set_footer(text=f"Showing first 25 of {len(birthday_data)} birthdays")
             else:
-                embed.set_footer(text=f"Total: {len(birthday_data)} birthday{'s' if len(birthday_data) != 1 else ''} • Use /bday set to add yours!")
+                embed.set_footer(text=f"Total: {len(birthday_data)} birthday{'s' if len(birthday_data) != 1 else ''}  Use /bday set to add yours!")
 
             await interaction.response.send_message(embed=embed)
 
@@ -471,7 +471,7 @@ class Birthdays(commands.Cog):
             self.logger.error(f"Error listing birthdays: {e}")
             await interaction.response.send_message(
                 embed=create_embed(
-                    "❌ Error",
+                    " Error",
                     "There was an error retrieving birthdays. Please try again.",
                     discord.Color.red(),
                 ),
@@ -577,12 +577,12 @@ class Birthdays(commands.Cog):
             birthday_message = await self.bot.db_manager.get_setting('birthday_message', guild_id)
             
             # Format message
-            message = birthday_message or "🎂 Happy Birthday {member}! Have a great day!"
+            message = birthday_message or " Happy Birthday {member}! Have a great day!"
             message = message.replace("{member}", member.mention)
             
             # Send birthday message
             embed = create_embed(
-                "🎉 Happy Birthday! 🎂",
+                " Happy Birthday! ",
                 message,
                 discord.Color.magenta(),
             )
@@ -659,13 +659,13 @@ class Birthdays(commands.Cog):
         try:
             # Create embed
             embed = discord.Embed(
-                title="🎂 Set Your Birthday!",
+                title=" Set Your Birthday!",
                 description=(
                     "Click the button below to set your birthday!\n\n"
                     "**Why set your birthday?**\n"
-                    "• Get a special birthday announcement\n"
-                    "• Receive birthday wishes from the community\n"
-                    "• Unlock full server access\n\n"
+                    " Get a special birthday announcement\n"
+                    " Receive birthday wishes from the community\n"
+                    " Unlock full server access\n\n"
                     "**Privacy:** Only the month and day are stored, not your birth year."
                 ),
                 color=discord.Color.gold(),
@@ -689,3 +689,6 @@ class Birthdays(commands.Cog):
 async def setup(bot: commands.Bot):
     """Setup function for the birthdays cog."""
     await bot.add_cog(Birthdays(bot))
+
+
+

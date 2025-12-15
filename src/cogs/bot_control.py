@@ -1,4 +1,4 @@
-"""
+﻿"""
 Bot Control Cog for MalaBoT
 Owner-only commands to control bot features
 """
@@ -35,7 +35,7 @@ class SendMessageModal(Modal, title="Send Message as Bot"):
 
             # Confirm to the user
             embed = create_embed(
-                "✅ Message Sent",
+                " Message Sent",
                 f"Message sent to {self.channel.mention}\n\n**Content:**\n{self.message_content.value[:100]}{'...' if len(self.message_content.value) > 100 else ''}",
                 COLORS["success"],
             )
@@ -47,14 +47,14 @@ class SendMessageModal(Modal, title="Send Message as Bot"):
 
         except discord.Forbidden:
             embed = create_embed(
-                "❌ Permission Error",
+                " Permission Error",
                 f"I don't have permission to send messages in {self.channel.mention}",
                 COLORS["error"],
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
         except Exception as e:
             embed = create_embed(
-                "❌ Error", f"Failed to send message: {str(e)}", COLORS["error"]
+                " Error", f"Failed to send message: {str(e)}", COLORS["error"]
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -97,7 +97,7 @@ class BotControlGroup(app_commands.Group):
         # Check server owner permissions
         if interaction.guild.owner_id != interaction.user.id:
             embed = create_embed(
-                "🚫 Permission Denied",
+                " Permission Denied",
                 "This command is only available to the server owner.",
                 COLORS["error"],
             )
@@ -113,7 +113,7 @@ class BotControlGroup(app_commands.Group):
             channel_obj = interaction.guild.get_channel(int(channel))
         except ValueError:
             embed = create_embed(
-                "❌ Error", "Invalid channel ID.", COLORS["error"]
+                " Error", "Invalid channel ID.", COLORS["error"]
             )
             if interaction.response.is_done():
                 await interaction.followup.send(embed=embed, ephemeral=True)
@@ -123,7 +123,7 @@ class BotControlGroup(app_commands.Group):
             
         if not channel_obj or not isinstance(channel_obj, discord.TextChannel):
             embed = create_embed(
-                "❌ Error", "Invalid channel selected.", COLORS["error"]
+                " Error", "Invalid channel selected.", COLORS["error"]
             )
             if interaction.response.is_done():
                 await interaction.followup.send(embed=embed, ephemeral=True)
@@ -154,3 +154,4 @@ class BotControl(commands.Cog):
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(BotControl(bot))
+

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Utility commands cog for MalaBoT.
 Contains help, ping, userinfo, serverinfo, about, and serverstats commands.
 """
@@ -39,7 +39,7 @@ class Utility(commands.Cog):
         try:
             # Create main help embed
             embed = create_embed(
-                title="🤖 MalaBoT Command List",
+                title=" MalaBoT Command List",
                 description="Here are all available commands organized by category:",
                 color=COLORS["primary"],
             )
@@ -52,12 +52,12 @@ class Utility(commands.Cog):
 
             # Add additional info
             embed.add_field(
-                name="📖 Usage Tips",
+                name=" Usage Tips",
                 value=(
-                    "• Most commands support user mentions (e.g., `/userinfo @user`)\n"
-                    "• Admin commands require appropriate permissions\n"
-                    "• Use `/about` to see bot information\n"
-                    "• Commands are automatically synced when the bot restarts"
+                    " Most commands support user mentions (e.g., `/userinfo @user`)\n"
+                    " Admin commands require appropriate permissions\n"
+                    " Use `/about` to see bot information\n"
+                    " Commands are automatically synced when the bot restarts"
                 ),
                 inline=False,
             )
@@ -96,14 +96,14 @@ class Utility(commands.Cog):
 
             # Create ping embed
             embed = embed_helper.info_embed(
-                title="🏓 Pong!",
+                title=" Pong!",
                 description=f"Latency: **{latency_ms}ms**\nUptime: **{uptime_str}**",
             )
 
             # Add additional info
             embed.add_field(name="WebSocket Ping", value=f"{latency_ms}ms", inline=True)
-            embed.add_field(name="API Response", value="✅ Online", inline=True)
-            embed.add_field(name="Status", value="🟢 Healthy", inline=True)
+            embed.add_field(name="API Response", value=" Online", inline=True)
+            embed.add_field(name="Status", value=" Healthy", inline=True)
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -142,16 +142,16 @@ class Utility(commands.Cog):
 
             # Create userinfo embed
             embed = create_embed(
-                title=f"👤 User Information: {target_user.display_name}",
+                title=f" User Information: {target_user.display_name}",
                 color=target_user.color if target_user.color else COLORS["primary"],
                 thumbnail=target_user.avatar.url if target_user.avatar else None,
             )
 
             # Basic information
-            embed.add_field(name="🆔 User ID", value=f"`{target_user.id}`", inline=True)
+            embed.add_field(name=" User ID", value=f"`{target_user.id}`", inline=True)
 
             embed.add_field(
-                name="🏷️ Username",
+                name=" Username",
                 value=f"{target_user.name}#{target_user.discriminator}",
                 inline=True,
             )
@@ -159,13 +159,13 @@ class Utility(commands.Cog):
             # Member-specific information
             if isinstance(target_user, discord.Member):
                 embed.add_field(
-                    name="📅 Joined Server",
+                    name=" Joined Server",
                     value=time_helper.get_discord_timestamp(target_user.joined_at, "R"),
                     inline=True,
                 )
 
                 embed.add_field(
-                    name="🎭 Roles",
+                    name=" Roles",
                     value=(
                         f"{len(target_user.roles)} roles"
                         if target_user.roles
@@ -178,7 +178,7 @@ class Utility(commands.Cog):
                 if target_user.roles:
                     top_role = target_user.roles[-1]
                     embed.add_field(
-                        name="👑 Top Role",
+                        name=" Top Role",
                         value=(
                             top_role.mention
                             if top_role.name != "@everyone"
@@ -190,16 +190,16 @@ class Utility(commands.Cog):
                 # Add permissions info
                 if target_user.guild_permissions.administrator:
                     embed.add_field(
-                        name="⚡ Permissions", value="🛡️ Administrator", inline=True
+                        name=" Permissions", value=" Administrator", inline=True
                     )
                 elif target_user.guild_permissions.manage_guild:
                     embed.add_field(
-                        name="⚡ Permissions", value="🔧 Server Manager", inline=True
+                        name=" Permissions", value=" Server Manager", inline=True
                     )
 
             # Account creation date
             embed.add_field(
-                name="🌍 Account Created",
+                name=" Account Created",
                 value=time_helper.get_discord_timestamp(target_user.created_at, "R"),
                 inline=True,
             )
@@ -207,15 +207,15 @@ class Utility(commands.Cog):
             # Add XP information if available
             if user_data:
                 embed.add_field(
-                    name="🏆 XP & Level",
-                    value=f"Level {user_data['level']} • {user_data['xp']} XP\n"
+                    name=" XP & Level",
+                    value=f"Level {user_data['level']}  {user_data['xp']} XP\n"
                     f"Messages: {user_data['total_messages']}",
                     inline=True,
                 )
 
                 if user_data["daily_streak"] > 0:
                     embed.add_field(
-                        name="🔥 Daily Streak",
+                        name=" Daily Streak",
                         value=f"{user_data['daily_streak']} days",
                         inline=True,
                     )
@@ -223,21 +223,21 @@ class Utility(commands.Cog):
             # Bot status
             if target_user.bot:
                 embed.add_field(
-                    name="🤖 Bot Status", value="This user is a bot", inline=True
+                    name=" Bot Status", value="This user is a bot", inline=True
                 )
 
             # Status information
             if isinstance(target_user, discord.Member):
                 status_emoji = {
-                    discord.Status.online: "🟢",
-                    discord.Status.idle: "🟡",
-                    discord.Status.dnd: "🔴",
-                    discord.Status.offline: "⚫",
-                }.get(target_user.status, "❓")
+                    discord.Status.online: "",
+                    discord.Status.idle: "",
+                    discord.Status.dnd: "",
+                    discord.Status.offline: "",
+                }.get(target_user.status, "")
 
                 status_text = target_user.status.name.title()
                 embed.add_field(
-                    name="💬 Status", value=f"{status_emoji} {status_text}", inline=True
+                    name=" Status", value=f"{status_emoji} {status_text}", inline=True
                 )
 
             # Add activities if member
@@ -245,17 +245,17 @@ class Utility(commands.Cog):
                 activities = []
                 for activity in target_user.activities:
                     if isinstance(activity, discord.Game):
-                        activities.append(f"🎮 Playing {activity.name}")
+                        activities.append(f" Playing {activity.name}")
                     elif isinstance(activity, discord.Streaming):
-                        activities.append(f"📺 Streaming {activity.name}")
+                        activities.append(f" Streaming {activity.name}")
                     elif isinstance(activity, discord.Spotify):
-                        activities.append(f"🎵 Listening to {activity.title}")
+                        activities.append(f" Listening to {activity.title}")
                     elif isinstance(activity, discord.Activity):
-                        activities.append(f"📝 {activity.name}")
+                        activities.append(f" {activity.name}")
 
                 if activities:
                     embed.add_field(
-                        name="🎯 Activities",
+                        name=" Activities",
                         value="\n".join(activities[:3]),  # Limit to 3 activities
                         inline=False,
                     )
@@ -292,22 +292,22 @@ class Utility(commands.Cog):
 
             # Create serverinfo embed
             embed = create_embed(
-                title=f"🖥️ Server Information: {guild.name}",
+                title=f" Server Information: {guild.name}",
                 color=COLORS["primary"],
                 thumbnail=guild.icon.url if guild.icon else None,
             )
 
             # Basic server information
-            embed.add_field(name="🆔 Server ID", value=f"`{guild.id}`", inline=True)
+            embed.add_field(name=" Server ID", value=f"`{guild.id}`", inline=True)
 
             embed.add_field(
-                name="👑 Server Owner",
+                name=" Server Owner",
                 value=guild.owner.mention if guild.owner else "Unknown",
                 inline=True,
             )
 
             embed.add_field(
-                name="📅 Created On",
+                name=" Created On",
                 value=time_helper.get_discord_timestamp(guild.created_at, "R"),
                 inline=True,
             )
@@ -318,7 +318,7 @@ class Utility(commands.Cog):
             humans = total_members - bots
 
             embed.add_field(
-                name="👥 Members",
+                name=" Members",
                 value=f"Total: {total_members:,}\n"
                 f"Humans: {humans:,}\n"
                 f"Bots: {bots:,}",
@@ -330,7 +330,7 @@ class Utility(commands.Cog):
             boost_count = guild.premium_subscription_count or 0
 
             embed.add_field(
-                name="✨ Server Boosts",
+                name=" Server Boosts",
                 value=f"Level: {boost_level}\n" f"Boosts: {boost_count:,}",
                 inline=True,
             )
@@ -341,7 +341,7 @@ class Utility(commands.Cog):
             categories = len(guild.categories)
 
             embed.add_field(
-                name="📢 Channels",
+                name=" Channels",
                 value=f"Text: {text_channels}\n"
                 f"Voice: {voice_channels}\n"
                 f"Categories: {categories}",
@@ -350,7 +350,7 @@ class Utility(commands.Cog):
 
             # Role and emoji information
             embed.add_field(
-                name="🎭 Roles & Emojis",
+                name=" Roles & Emojis",
                 value=f"Roles: {len(guild.roles)}\n" f"Emojis: {len(guild.emojis)}",
                 inline=True,
             )
@@ -361,7 +361,7 @@ class Utility(commands.Cog):
                 if len(guild.features) > 3:
                     features += f" +{len(guild.features) - 3} more"
 
-                embed.add_field(name="⚡ Features", value=features, inline=True)
+                embed.add_field(name=" Features", value=features, inline=True)
 
             # Verification level
             verification_levels = {
@@ -373,7 +373,7 @@ class Utility(commands.Cog):
             }
 
             embed.add_field(
-                name="🔒 Verification Level",
+                name=" Verification Level",
                 value=verification_levels.get(guild.verification_level, "Unknown"),
                 inline=True,
             )
@@ -386,7 +386,7 @@ class Utility(commands.Cog):
             }
 
             embed.add_field(
-                name="🛡️ Content Filter",
+                name=" Content Filter",
                 value=filter_levels.get(guild.explicit_content_filter, "Unknown"),
                 inline=True,
             )
@@ -420,29 +420,29 @@ class Utility(commands.Cog):
 
             # Create about embed
             embed = create_embed(
-                title=f"🤖 About {settings.BOT_NAME}",
+                title=f" About {settings.BOT_NAME}",
                 description=f"{settings.BOT_NAME} is a multifunctional Discord bot designed to enhance your server experience with XP systems, moderation tools, fun commands, and more!",
                 color=COLORS["primary"],
             )
 
             # Basic information
-            embed.add_field(name="🏷️ Bot Name", value=settings.BOT_NAME, inline=True)
+            embed.add_field(name=" Bot Name", value=settings.BOT_NAME, inline=True)
             embed.add_field(
-                name="📦 Version", value=f"v{settings.BOT_VERSION}", inline=True
+                name=" Version", value=f"v{settings.BOT_VERSION}", inline=True
             )
-            embed.add_field(name="⏱️ Uptime", value=uptime_str, inline=True)
+            embed.add_field(name=" Uptime", value=uptime_str, inline=True)
 
             # Developer information
             embed.add_field(
-                name="👨‍💻 Developer",
-                value="Built with ❤️ using discord.py",
+                name=" Developer",
+                value="Built with  using discord.py",
                 inline=True,
             )
 
-            embed.add_field(name="🔧 Library", value="discord.py 2.x", inline=True)
+            embed.add_field(name=" Library", value="discord.py 2.x", inline=True)
 
             embed.add_field(
-                name="🌐 Hosting", value="DigitalOcean Droplet", inline=True
+                name=" Hosting", value="DigitalOcean Droplet", inline=True
             )
 
             # System information
@@ -450,7 +450,7 @@ class Utility(commands.Cog):
                 disk_info = sys_info.get("disk_usage")
                 disk_free_gb = disk_info.free / (1024**3) if disk_info else 0
                 embed.add_field(
-                    name="💻 System Info",
+                    name=" System Info",
                     value=f"CPU: {sys_info.get('cpu_usage', 0)}%\n"
                     f"Memory: {sys_info.get('memory_usage', 0):.2f} MB\n"
                     f"Disk: {disk_free_gb:.2f} GB free",
@@ -459,16 +459,16 @@ class Utility(commands.Cog):
 
             # Feature list
             features = [
-                "🏆 XP & Leveling System",
-                "🎂 Birthday Celebrations",
-                "🔥 Roast XP System",
-                "👋 Welcome Messages",
-                "🛡️ Moderation Tools",
-                "🎮 Fun Commands",
-                "⚙️ Utility Commands",
+                " XP & Leveling System",
+                " Birthday Celebrations",
+                " Roast XP System",
+                " Welcome Messages",
+                " Moderation Tools",
+                " Fun Commands",
+                " Utility Commands",
             ]
 
-            embed.add_field(name="✨ Features", value="\n".join(features), inline=False)
+            embed.add_field(name=" Features", value="\n".join(features), inline=False)
 
             # Statistics (if database is available)
             if self.bot.db_manager:
@@ -476,10 +476,10 @@ class Utility(commands.Cog):
                     # Get user count from database
                     # This would need to be implemented in the database models
                     embed.add_field(
-                        name="📊 Statistics",
+                        name=" Statistics",
                         value=f"Serving {interaction.guild.member_count if interaction.guild else 0}+ users\n"
                         f"Commands executed: Many!\n"
-                        f"System healthy: ✅",
+                        f"System healthy: ",
                         inline=True,
                     )
                 except Exception as e:
@@ -487,7 +487,7 @@ class Utility(commands.Cog):
 
             # Footer with invite link
             embed.set_footer(
-                text=f"Thank you for using {settings.BOT_NAME}! • Made with ❤️"
+                text=f"Thank you for using {settings.BOT_NAME}!  Made with "
             )
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -537,12 +537,12 @@ class Utility(commands.Cog):
 
             # Create serverstats embed
             embed = create_embed(
-                title=f"📊 Server Statistics: {guild.name}", color=COLORS["info"]
+                title=f" Server Statistics: {guild.name}", color=COLORS["info"]
             )
 
             # Member statistics
             embed.add_field(
-                name="👥 Member Statistics",
+                name=" Member Statistics",
                 value=f"Total Members: **{total_members:,}**\n"
                 f"Online Now: **{online_members:,}**\n"
                 f"Humans: **{humans:,}**\n"
@@ -552,7 +552,7 @@ class Utility(commands.Cog):
 
             # Channel statistics
             embed.add_field(
-                name="📢 Channel Statistics",
+                name=" Channel Statistics",
                 value=f"Text Channels: **{text_channels}**\n"
                 f"Voice Channels: **{voice_channels}**\n"
                 f"Categories: **{categories}**\n"
@@ -562,7 +562,7 @@ class Utility(commands.Cog):
 
             # Server statistics
             embed.add_field(
-                name="🏛️ Server Information",
+                name=" Server Information",
                 value=f"Roles: **{roles}**\n"
                 f"Emojis: **{len(guild.emojis)}**\n"
                 f"Boost Level: **{guild.premium_tier}**\n"
@@ -579,7 +579,7 @@ class Utility(commands.Cog):
             )
 
             embed.add_field(
-                name="📈 Growth Metrics",
+                name=" Growth Metrics",
                 value=f"Server Age: **{server_age}** days\n"
                 f"Avg. Members/Day: **{members_per_day}**\n"
                 f"Created: **{time_helper.get_discord_timestamp(guild.created_at, 'D')}**",
@@ -594,7 +594,7 @@ class Utility(commands.Cog):
             )
 
             embed.add_field(
-                name="📊 Activity Metrics",
+                name=" Activity Metrics",
                 value=f"Online Percentage: **{online_percentage}%**\n"
                 f"Bot Percentage: **{round((bots / total_members) * 100, 1) if total_members > 0 else 0}%**\n"
                 f"Categories: **{categories}**",
@@ -603,7 +603,7 @@ class Utility(commands.Cog):
 
             # Additional info
             embed.add_field(
-                name="🔧 Technical Info",
+                name=" Technical Info",
                 value=f"Server ID: `{guild.id}`\n"
                 f"Verification: **{guild.verification_level.name.title()}**\n"
                 f"Content Filter: **{guild.explicit_content_filter.name.title()}**",
@@ -649,3 +649,4 @@ async def setup(bot: commands.Bot):
     utility_cog = Utility(bot)
     await bot.add_cog(utility_cog)
     # Commands are automatically registered when cog is loaded
+

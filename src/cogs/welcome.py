@@ -1,4 +1,4 @@
-"""
+﻿"""
 Welcome system cog for MalaBoT.
 Handles welcome messages for new members with customizable embeds.
 """
@@ -148,7 +148,7 @@ class Welcome(commands.Cog):
             guild_id = member.guild.id
             user_id = member.id
 
-                        # ✅ RESET ALL USER DATA WHEN THEY LEAVE
+                        #  RESET ALL USER DATA WHEN THEY LEAVE
             try:
                 # Reset XP data using Supabase
                 self.bot.db_manager.supabase.table('users').delete().eq('guild_id', guild_id).eq('user_id', user_id).execute()
@@ -328,14 +328,14 @@ class Welcome(commands.Cog):
 
                     channel = self.cog.bot.get_channel(self.selected_channel)
                     embed = embed_helper.success_embed(
-                        title="✅ Welcome Channel Set",
+                        title=" Welcome Channel Set",
                         description=f"Welcome channel has been set to {channel.mention}",
                     )
                     await interaction.response.send_message(embed=embed, ephemeral=True)
 
             view = ChannelSelectView(self)
             embed = embed_helper.info_embed(
-                title="📢 Select Welcome Channel",
+                title=" Select Welcome Channel",
                 description="Please select the channel where welcome messages should be sent.",
             )
             await interaction.response.send_message(
@@ -365,7 +365,7 @@ class Welcome(commands.Cog):
                 await self.bot.db_manager.set_setting("welcome_title", msg.content)
 
                 embed = embed_helper.success_embed(
-                    title="✅ Welcome Title Set",
+                    title=" Welcome Title Set",
                     description=f"Welcome title has been set to:\n\n{msg.content}",
                 )
                 await interaction.followup.send(embed=embed, ephemeral=True)
@@ -399,7 +399,7 @@ class Welcome(commands.Cog):
                 await self.bot.db_manager.set_setting("welcome_message", msg.content)
 
                 embed = embed_helper.success_embed(
-                    title="✅ Welcome Message Set",
+                    title=" Welcome Message Set",
                     description=f"Welcome message has been set to:\n\n{msg.content}",
                 )
                 await interaction.followup.send(embed=embed, ephemeral=True)
@@ -436,7 +436,7 @@ class Welcome(commands.Cog):
                     image_desc = msg.content
 
                 embed = embed_helper.success_embed(
-                    title="✅ Welcome Image Set",
+                    title=" Welcome Image Set",
                     description=f"Welcome image has been set to: {image_desc}",
                 )
                 await interaction.followup.send(embed=embed, ephemeral=True)
@@ -471,3 +471,4 @@ async def setup(bot: commands.Bot):
     welcome_cog = Welcome(bot)
     await bot.add_cog(welcome_cog)
     # Commands are automatically registered when cog is loaded
+

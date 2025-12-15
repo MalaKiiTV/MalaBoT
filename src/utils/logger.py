@@ -1,4 +1,4 @@
-"""
+﻿"""
 Advanced logging system for MalaBoT with colorized output, rotation, and multiple log files.
 """
 
@@ -232,10 +232,10 @@ Error Details:
 
         verification_info = f"""
 {SYSTEM_MESSAGES['startup_verification']}
-Environment Check: {'✅ PASS' if verification_results.get('environment') else '❌ FAIL'}
-Directory Check: {'✅ PASS' if verification_results.get('directories') else '❌ FAIL'}
-Log File Check: {'✅ PASS' if verification_results.get('log_files') else '❌ FAIL'}
-Database Check: {'✅ PASS' if verification_results.get('database') else '❌ FAIL'}
+Environment Check: {' PASS' if verification_results.get('environment') else ' FAIL'}
+Directory Check: {' PASS' if verification_results.get('directories') else ' FAIL'}
+Log File Check: {' PASS' if verification_results.get('log_files') else ' FAIL'}
+Database Check: {' PASS' if verification_results.get('database') else ' FAIL'}
 Details: {verification_results.get('details', 'No additional details')}
 Verification Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 {'='*60}
@@ -350,3 +350,4 @@ def log_xp(message: str):
 def log_birthday(message: str):
     """Log birthday-related actions."""
     logger_manager.get_logger("bot").info(f"[BIRTHDAY] {message}")
+

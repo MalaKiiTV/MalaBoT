@@ -1,4 +1,4 @@
-"""Database migration verification utility"""
+﻿"""Database migration verification utility"""
 
 import asyncio
 import logging
@@ -17,7 +17,7 @@ async def verify_migrations():
         try:
             # Try a simple query to verify connection
             result = db.supabase.table('users').select('count').execute()
-            logger.info("Supabase connection verified ✅")
+            logger.info("Supabase connection verified ")
             return True
         except Exception as e:
             logger.error(f"Supabase connection failed: {e}")
@@ -33,3 +33,4 @@ async def verify_migrations():
 
 if __name__ == "__main__":
     asyncio.run(verify_migrations())
+

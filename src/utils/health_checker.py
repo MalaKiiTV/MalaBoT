@@ -1,4 +1,4 @@
-"""
+﻿"""
 Health Check System
 Monitors bot health and verifies critical data integrity
 """
@@ -27,7 +27,7 @@ class HealthChecker:
         Returns:
             Dictionary of check results
         """
-        logger.info("🏥 Running full health check...")
+        logger.info(" Running full health check...")
 
         results = {}
 
@@ -56,17 +56,17 @@ class HealthChecker:
         """Check if Supabase connection exists"""
         try:
             if not self.bot.db_manager:
-                logger.error("❌ Database manager not initialized!")
+                logger.error(" Database manager not initialized!")
                 return False
 
             # Check if Supabase client exists
             if not hasattr(self.bot.db_manager, 'supabase'):
-                logger.error("❌ Supabase client not found!")
+                logger.error(" Supabase client not found!")
                 return False
 
             return True
         except Exception as e:
-            logger.error(f"❌ Database check failed: {e}")
+            logger.error(f" Database check failed: {e}")
             return False
 
     async def _check_database_accessible(self) -> bool:
@@ -79,7 +79,7 @@ class HealthChecker:
             result = self.bot.db_manager.supabase.table('users').select('count').execute()
             return True
         except Exception as e:
-            logger.error(f"❌ Supabase not accessible: {e}")
+            logger.error(f" Supabase not accessible: {e}")
             return False
 
     async def _check_tables_exist(self) -> bool:
@@ -100,10 +100,10 @@ class HealthChecker:
 
             # For Supabase, we assume tables exist if we can query them
             # Tables are managed in Supabase dashboard
-            logger.info("✅ Using Supabase - tables managed in dashboard")
+            logger.info(" Using Supabase - tables managed in dashboard")
             return True
         except Exception as e:
-            logger.error(f"❌ Table check failed: {e}")
+            logger.error(f" Table check failed: {e}")
             return False
 
     async def _check_settings_readable(self) -> bool:
@@ -113,7 +113,7 @@ class HealthChecker:
             await self.bot.db_manager.get_setting("health_check_test")
             return True
         except Exception as e:
-            logger.error(f"❌ Settings not readable: {e}")
+            logger.error(f" Settings not readable: {e}")
             return False
 
     async def _check_critical_data(self) -> bool:
@@ -130,11 +130,11 @@ class HealthChecker:
                     issues.append(f"Guild {guild.name} has no settings")
 
             if issues:
-                logger.warning(f"⚠️ Data issues: {issues}")
+                logger.warning(f" Data issues: {issues}")
 
             return len(issues) == 0
         except Exception as e:
-            logger.error(f"❌ Critical data check failed: {e}")
+            logger.error(f" Critical data check failed: {e}")
             return False
 
     async def _guild_has_settings(self, guild_id: int) -> bool:
@@ -173,12 +173,12 @@ class HealthChecker:
             missing = [c for c in required_cogs if c not in loaded_cogs]
 
             if missing:
-                logger.error(f"❌ Missing cogs: {missing}")
+                logger.error(f" Missing cogs: {missing}")
                 return False
 
             return True
         except Exception as e:
-            logger.error(f"❌ Cog check failed: {e}")
+            logger.error(f" Cog check failed: {e}")
             return False
 
     async def _check_memory(self) -> bool:
@@ -191,7 +191,7 @@ class HealthChecker:
 
             # Warn if over 500MB
             if memory_mb > 500:
-                logger.warning(f"⚠️ High memory usage: {memory_mb:.1f}MB")
+                logger.warning(f" High memory usage: {memory_mb:.1f}MB")
                 return False
 
             return True
@@ -199,7 +199,7 @@ class HealthChecker:
             # psutil not installed, skip check
             return True
         except Exception as e:
-            logger.error(f"❌ Memory check failed: {e}")
+            logger.error(f" Memory check failed: {e}")
             return True  # Don't fail on memory check errors
 
     def _log_results(self, results: dict[str, bool]):
@@ -208,14 +208,14 @@ class HealthChecker:
         total = len(results)
 
         if passed == total:
-            logger.info(f"✅ Health check passed: {passed}/{total} checks OK")
+            logger.info(f" Health check passed: {passed}/{total} checks OK")
         else:
-            logger.warning(f"⚠️ Health check issues: {passed}/{total} checks OK")
+            logger.warning(f" Health check issues: {passed}/{total} checks OK")
 
             # Log failed checks
             for check, result in results.items():
                 if not result:
-                    logger.error(f"  ❌ {check}")
+                    logger.error(f"   {check}")
 
     async def verify_role_connections(self, guild_id: int) -> tuple[bool, str]:
         """
@@ -258,12 +258,12 @@ class HealthChecker:
         if not self.health_status:
             return "No health check run yet"
 
-        report = ["🏥 Health Check Report"]
+        report = [" Health Check Report"]
         report.append(f"Last check: {self.last_check.strftime('%Y-%m-%d %H:%M:%S')}")
         report.append("")
 
         for check, result in self.health_status.items():
-            status = "✅" if result else "❌"
+            status = "" if result else ""
             report.append(f"{status} {check.replace('_', ' ').title()}")
 
         return "\n".join(report)
@@ -277,7 +277,7 @@ async def run_startup_verification(bot) -> bool:
         True if all checks pass
     """
     logger.info("=" * 60)
-    logger.info("🚀 STARTING BOT VERIFICATION")
+    logger.info(" STARTING BOT VERIFICATION")
     logger.info("=" * 60)
 
     checker = HealthChecker(bot)
@@ -288,11 +288,12 @@ async def run_startup_verification(bot) -> bool:
 
     if all_passed:
         logger.info("=" * 60)
-        logger.info("✅ ALL CHECKS PASSED - BOT READY")
+        logger.info(" ALL CHECKS PASSED - BOT READY")
         logger.info("=" * 60)
     else:
         logger.error("=" * 60)
-        logger.error("❌ SOME CHECKS FAILED - REVIEW ERRORS ABOVE")
+        logger.error(" SOME CHECKS FAILED - REVIEW ERRORS ABOVE")
         logger.error("=" * 60)
 
     return all_passed
+

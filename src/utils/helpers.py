@@ -1,4 +1,4 @@
-"""
+﻿"""
 Helper utilities for MalaBoT
 Provides various helper classes and functions for common operations
 """
@@ -347,25 +347,25 @@ async def check_mod_permission(
             role_names.append(mod_role.name)
 
     role_list = (
-        "\n".join([f"• {name}" for name in role_names])
+        "\n".join([f" {name}" for name in role_names])
         if role_names
-        else "• No mod role configured"
+        else " No mod role configured"
     )
 
     is_server_owner = interaction.guild.owner_id == interaction.user.id
     is_administrator = interaction.user.guild_permissions.administrator
 
     embed = embed_helper.error_embed(
-        title="🚫 Permission Denied",
+        title=" Permission Denied",
         description=f"This command is only available to:\n\n"
-        f"• Bot Owners\n"
-        f"• Server Owner\n"
-        f"• Administrators\n"
-        f"• Users with mod role:\n{role_list}\n\n"
+        f" Bot Owners\n"
+        f" Server Owner\n"
+        f" Administrators\n"
+        f" Users with mod role:\n{role_list}\n\n"
         f"Your current permissions:\n"
-        f"• Bot Owner: {'✅' if is_owner(interaction.user) else '❌'}\n"
-        f"• Server Owner: {'✅' if is_server_owner else '❌'}\n"
-        f"• Administrator: {'✅' if is_administrator else '❌'}",
+        f" Bot Owner: {'' if is_owner(interaction.user) else ''}\n"
+        f" Server Owner: {'' if is_server_owner else ''}\n"
+        f" Administrator: {'' if is_administrator else ''}",
     )
     await interaction.response.send_message(embed=embed, ephemeral=True)
     return False
@@ -440,7 +440,7 @@ def is_mod_decorator(specific_mod_role_key: str | None = None):
             if not hasattr(bot, "db_manager"):
                 await interaction.response.send_message(
                     embed=embed_helper.error_embed(
-                        "❌ Database Error", "Database manager not available."
+                        " Database Error", "Database manager not available."
                     ),
                     ephemeral=True,
                 )
@@ -507,3 +507,4 @@ def xp_helper(xp: int) -> dict:
             (xp_progress / xp_total_for_level * 100) if xp_total_for_level > 0 else 100
         ),
     }
+

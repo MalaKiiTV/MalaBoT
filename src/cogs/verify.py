@@ -1,4 +1,4 @@
-"""
+﻿"""
 Verify Cog for MalaBoT
 Parent slash command: /verify
 Subcommands: submit, review
@@ -18,9 +18,9 @@ from src.utils.logger import log_system
 
 # Platform options for dropdown
 PLATFORM_OPTIONS = [
-    discord.SelectOption(label="Xbox", value="xbox", emoji="🎮"),
-    discord.SelectOption(label="PlayStation", value="playstation", emoji="🎮"),
-    discord.SelectOption(label="Steam", value="steam", emoji="💻"),
+    discord.SelectOption(label="Xbox", value="xbox"),
+    discord.SelectOption(label="PlayStation", value="playstation"),
+    discord.SelectOption(label="Steam", value="steam"),
 ]
 
 
@@ -108,7 +108,7 @@ class PlatformSelect(Select):
             # Send a brief public confirmation that auto-deletes
             confirmation_msg = await interaction.channel.send(
                 embed=create_embed(
-                    "✅ Verification Submitted",
+                    " Verification Submitted",
                     f"<@{self.user_id}>'s verification has been submitted for review!",
                     COLORS["success"],
                 )
@@ -117,7 +117,7 @@ class PlatformSelect(Select):
             # Also send ephemeral confirmation to user
             await interaction.followup.send(
                 embed=create_embed(
-                    "Verification Submitted ✅",
+                    "Verification Submitted ",
                     "Your verification has been sent for mod review. You'll be notified once it's approved or rejected.",
                     COLORS["success"],
                 ),
@@ -150,7 +150,7 @@ class PlatformSelect(Select):
                 )
 
                 embed = discord.Embed(
-                    title="📸 New Verification Submission",
+                    title=" New Verification Submission",
                     description=(
                         f"**User:** <@{self.user_id}>\n"
                         f"**Activision ID:** `{self.activision_id}`\n"
@@ -352,15 +352,15 @@ class VerifyGroup(app_commands.Group):
                     verified_role = guild.get_role(int(verified_role_id))
                     if verified_role:
                         await member.add_roles(verified_role)
-                        result_text = f"✅ Verified {member.mention} and assigned {verified_role.mention} role."
+                        result_text = f" Verified {member.mention} and assigned {verified_role.mention} role."
                     else:
-                        result_text = f"✅ Verified {member.mention} but verified role not found. Please run `/setup` and select Verification System to configure."
+                        result_text = f" Verified {member.mention} but verified role not found. Please run `/setup` and select Verification System to configure."
                 else:
-                    result_text = f"✅ Verified {member.mention} but no verified role configured. Please run `/setup` and select Verification System to configure."
+                    result_text = f" Verified {member.mention} but no verified role configured. Please run `/setup` and select Verification System to configure."
 
             elif decision_value == "unverified" and member:
                 result_text = (
-                    f"❌ Marked {user.mention} as unverified. They remain unverified."
+                    f" Marked {user.mention} as unverified. They remain unverified."
                 )
 
             elif decision_value == "cheater" and member:
@@ -406,7 +406,7 @@ class VerifyGroup(app_commands.Group):
 
                                 # Send notification to cheater jail
                                 jail_embed = discord.Embed(
-                                    title="🚨 New Arrival",
+                                    title=" New Arrival",
                                     description=(
                                         f"{member.mention} has been sent to cheater jail.\n\n"
                                         f"**Reason:** Confirmed cheater during verification\n"
@@ -420,17 +420,17 @@ class VerifyGroup(app_commands.Group):
                                     content=f"{member.mention}", embed=jail_embed
                                 )
 
-                                result_text = f"🔒 Sent {member.mention} to cheater jail ({cheater_channel.mention}) with {cheater_role.mention} role."
+                                result_text = f" Sent {member.mention} to cheater jail ({cheater_channel.mention}) with {cheater_role.mention} role."
                             finally:
                                 # Always release the lock
                                 bot.processing_members.discard(member.id)
 
                         except discord.Forbidden:
-                            result_text = f"❌ Failed to assign cheater role to {member.mention}. Missing permissions."
+                            result_text = f" Failed to assign cheater role to {member.mention}. Missing permissions."
                     else:
-                        result_text = "❌ Cheater role or channel not found. Please configure in `/setup` → Verification System"
+                        result_text = " Cheater role or channel not found. Please configure in `/setup`  Verification System"
                 else:
-                    result_text = "❌ Cheater jail system not configured. Please run `/setup` → Verification System to set up cheater role and channel."
+                    result_text = " Cheater jail system not configured. Please run `/setup`  Verification System to set up cheater role and channel."
 
             # Send ephemeral confirmation to moderator
             await safe_send_message(interaction, content=result_text, ephemeral=True)
@@ -439,9 +439,9 @@ class VerifyGroup(app_commands.Group):
             try:
                 public_embed = discord.Embed(
                     title=(
-                        "✅ Verification Reviewed"
+                        " Verification Reviewed"
                         if decision_value == "verified"
-                        else "❌ Verification Decision"
+                        else " Verification Decision"
                     ),
                     description=(
                         f"**User:** {user.mention}\n"
@@ -662,3 +662,6 @@ async def setup(bot: commands.Bot):
     verify_group = VerifyGroup(verify_cog)
     verify_cog._verify_group = verify_group  # Store reference for cleanup
     bot.tree.add_command(verify_group)
+
+
+
