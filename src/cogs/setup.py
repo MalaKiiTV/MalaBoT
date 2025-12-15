@@ -24,6 +24,57 @@ from src.utils.logger import log_system
 # ============================================================
 
 
+
+class VerificationReminderChannelSelect(discord.ui.ChannelSelect):
+    """Channel selector for verification reminder message"""
+
+    def __init__(self, db_manager, guild_id: int, bot):
+        super().__init__(
+            placeholder='Select channel for verification reminder button',
+            channel_types=[discord.ChannelType.text],
+            min_values=1,
+            max_values=1,
+        )
+        self.db = db_manager
+        self.guild_id = guild_id
+        self.bot = bot
+
+    async def callback(self, interaction: discord.Interaction):
+        channel = self.values[0]
+
+        # Get the verify cog
+        verify_cog = self.bot.get_cog('VerifyCog')
+        if not verify_cog:
+            await interaction.response.send_message(
+                embed=create_embed(
+                    'Error',
+                    'Verification cog not loaded',
+                    COLORS['error'],
+                ),
+                ephemeral=True,
+            )
+            return
+
+        try:
+            await verify_cog.setup_verification_reminder_message(self.guild_id, channel)
+            await interaction.response.send_message(
+                embed=create_embed(
+                    'Reminder Message Set',
+                    f'? Verification reminder button posted to {channel.mention}',
+                    COLORS['success'],
+                ),
+                ephemeral=True,
+            )
+        except Exception as e:
+            await interaction.response.send_message(
+                embed=create_embed(
+                    'Error',
+                    f'Failed to setup reminder message: {str(e)}',
+                    COLORS['error'],
+                ),
+                ephemeral=True,
+            )
+
 class VerifyChannelSelect(discord.ui.ChannelSelect):
     """Channel selector for verification review channel"""
 
@@ -211,7 +262,8 @@ class CheaterJailChannelSelect(discord.ui.ChannelSelect):
 class VerificationSetupView(View):
     """View for verification system setup"""
 
-    def __init__(self, db_manager, guild: discord.Guild):
+    def __init__(self, db_manager, guild: discord.Guild, bot):
+        self.bot = bot
         super().__init__(timeout=300)
         self.db = db_manager
         self.guild = guild
@@ -221,6 +273,7 @@ class VerificationSetupView(View):
         self.add_item(RoleSelect(db_manager, guild.id))
         self.add_item(CheaterRoleSelect(db_manager, guild.id))
         self.add_item(CheaterJailChannelSelect(db_manager, guild.id))
+
 
     @discord.ui.button(
         label="View Current Config", style=discord.ButtonStyle.secondary)
@@ -260,6 +313,49 @@ class VerificationSetupView(View):
             color=COLORS["info"],
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @discord.ui.button(label="Setup Reminder Button", style=discord.ButtonStyle.primary, emoji="📌")
+    async def setup_reminder_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Setup verification reminder message with button"""
+        class ChannelSelectView(discord.ui.View):
+            def __init__(self, parent_view):
+                super().__init__(timeout=60)
+                self.parent_view = parent_view
+                channel_select = discord.ui.ChannelSelect(
+                    placeholder="Select channel for reminder button",
+                    channel_types=[discord.ChannelType.text],
+                    min_values=1,
+                    max_values=1
+                )
+                channel_select.callback = self.channel_callback
+                self.add_item(channel_select)
+
+            async def channel_callback(self, interaction: discord.Interaction):
+                channel_obj = self.children[0].values[0]
+                channel = interaction.guild.get_channel(channel_obj.id)
+                verify_cog = self.parent_view.bot.get_cog("Verify")
+                if not verify_cog:
+                    await interaction.response.send_message("❌ Verification cog not loaded", ephemeral=True)
+                    return
+                try:
+                    await verify_cog.setup_verification_reminder_message(interaction.guild_id, channel)
+                    await interaction.response.send_message(
+                        embed=create_embed(
+                            "Reminder Message Set",
+                            f"✅ Verification reminder button posted to {channel.mention}",
+                            COLORS["success"]
+                        ),
+                        ephemeral=True
+                    )
+                except Exception as e:
+                    await interaction.response.send_message(f"❌ Error: {str(e)}", ephemeral=True)
+
+        await interaction.response.send_message(
+            "Select a channel for the verification reminder button:",
+            view=ChannelSelectView(self),
+            ephemeral=True
+        )
+
 
 
 # ============================================================
@@ -907,7 +1003,7 @@ class SetupSelect(Select):
 
     async def setup_verification(self, interaction: discord.Interaction):
         """Setup verification system with interactive configuration"""
-        view = VerificationSetupView(interaction.client.db_manager, interaction.guild)
+        view = VerificationSetupView(interaction.client.db_manager, interaction.guild, interaction.client)
 
         embed = discord.Embed(
             title=" Verification System Setup",
@@ -2854,6 +2950,8 @@ async def setup(bot: commands.Bot):
     setup_cog = Setup(bot)
     await bot.add_cog(setup_cog)
     # Commands are automatically registered when cog is loaded
+
+
 
 
 

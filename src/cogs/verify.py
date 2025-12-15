@@ -503,6 +503,33 @@ class VerifyGroup(app_commands.Group):
             )
 
 
+class VerificationReminderView(discord.ui.View):
+    """Persistent view for verification reminder button"""
+    
+    def __init__(self, bot):
+        super().__init__(timeout=None)
+        self.bot = bot
+    
+    @discord.ui.button(
+        label="Start Verification",
+        style=discord.ButtonStyle.primary,
+        custom_id="verify_reminder_button"
+    )
+    async def verify_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Handle verification button click"""
+        # Check if already verified
+        verify_role_id = await self.bot.db_manager.get_setting("verify_role", interaction.guild_id)
+        if verify_role_id:
+            verify_role = interaction.guild.get_role(int(verify_role_id))
+            if verify_role and verify_role in interaction.user.roles:
+                await interaction.response.send_message("✅ You are already verified!", ephemeral=True)
+                return
+        
+        # Start verification process
+        modal = ActivisionIDModal(self.bot)
+        await interaction.response.send_modal(modal)
+
+
 class Verify(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -656,9 +683,23 @@ class Verify(commands.Cog):
         )
 
 
+    async def setup_verification_reminder_message(self, guild_id: int, channel: discord.TextChannel):
+        """Setup a persistent verification reminder message with button"""
+        embed = discord.Embed(
+            title="📝 Need to Verify?",
+            description="Click the button below to start your verification process.\n\nYou'll need:\n• Your Activision ID\n• A screenshot showing your Combat Record for Rebirth AND your Activision ID in the same screenshot",
+            color=COLORS["info"]
+        )
+        embed.set_footer(text="Verification helps keep our community safe")
+        
+        view = VerificationReminderView(self.bot)
+        await channel.send(embed=embed, view=view)
+
+
 async def setup(bot: commands.Bot):
     verify_cog = Verify(bot)
     await bot.add_cog(verify_cog)
+    bot.add_view(VerificationReminderView(bot))
     verify_group = VerifyGroup(verify_cog)
     verify_cog._verify_group = verify_group  # Store reference for cleanup
     bot.tree.add_command(verify_group)
