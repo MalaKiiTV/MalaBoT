@@ -359,6 +359,7 @@ class Birthdays(commands.Cog):
     async def _list_birthdays(self, interaction: discord.Interaction):
         """List all birthdays sorted by who's next."""
         try:
+            await interaction.response.defer()
             guild_id = interaction.guild.id
             # Get all birthdays from database
             all_birthdays = await self.bot.db_manager.get_all_birthdays(guild_id)  # type: ignore
@@ -465,7 +466,7 @@ class Birthdays(commands.Cog):
             else:
                 embed.set_footer(text=f"Total: {len(birthday_data)} birthday{'s' if len(birthday_data) != 1 else ''}  Use /bday set to add yours!")
 
-            await interaction.response.send_message(embed=embed)
+            await interaction.followup.send(embed=embed)
 
         except Exception as e:
             self.logger.error(f"Error listing birthdays: {e}")

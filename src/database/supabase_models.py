@@ -315,7 +315,7 @@ class DatabaseManager:
         else:
             # Get current MM-DD
             current_mmdd = (current_date or datetime.now()).strftime('%m-%d')
-            result = self.supabase.table('birthdays').select('user_id').eq('guild_id', guild_id).like('birthday::text', f'%{current_mmdd}').execute()
+            result = self.supabase.table('birthdays').select('user_id').eq('guild_id', guild_id).like('birthday', f'%{current_mmdd}').execute()
         
         return [(r['user_id'],) for r in result.data]
 
@@ -323,7 +323,7 @@ class DatabaseManager:
         """Get birthdays that haven't been announced today."""
         current_mmdd = current_date.strftime('%m-%d')
         today_str = current_date.strftime('%Y-%m-%d')
-        result = self.supabase.table('birthdays').select('user_id, birthday, announced_date').eq('guild_id', guild_id).like('birthday::text', f'%{current_mmdd}').execute()
+        result = self.supabase.table('birthdays').select('user_id, birthday, announced_date').eq('guild_id', guild_id).like('birthday', f'%{current_mmdd}').execute()
 
         # Filter for unannounced today
         unannounced = []

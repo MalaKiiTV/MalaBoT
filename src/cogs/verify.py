@@ -39,10 +39,10 @@ class ActivisionIDModal(Modal, title="Submit Verification"):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message(
             embed=create_embed(
-                "Upload Screenshot",
+                "Upload Video",
                 f"**Activision ID:** `{self.activision_id.value}`\n\n"
-                "Please upload your **Warzone Combat Record screenshot** in your next message.\n"
-                "The screenshot should clearly show your Activision ID and stats.",
+                "Please upload a **short video (under 10 seconds)** showing your Combat Record for Rebirth AND your Activision ID in the same video.\n\n"
+                "**Important:** Videos that are unclear or do not show both your Combat Record and Activision ID clearly will not be reviewed. Please ensure both are visible before submitting.",
                 COLORS["info"],
             ),
             ephemeral=True,
@@ -62,8 +62,8 @@ class PlatformSelect(Select):
         activision_id: str,
         screenshot_url: str,
         user_id: int,
-        screenshot_bytes=None,
-        screenshot_filename=None,
+        video_bytes=None,
+        video_filename=None,
     ):
         super().__init__(
             placeholder="Select your gaming platform...",
@@ -74,8 +74,8 @@ class PlatformSelect(Select):
         self.activision_id = activision_id
         self.screenshot_url = screenshot_url
         self.user_id = user_id
-        self.screenshot_bytes = screenshot_bytes
-        self.screenshot_filename = screenshot_filename
+        self.video_bytes = video_bytes
+        self.video_filename = video_filename
 
     async def callback(self, interaction: discord.Interaction):
         platform = self.values[0]
@@ -146,7 +146,7 @@ class PlatformSelect(Select):
             if review_channel:
                 # Debug logging
                 log_system(
-                    f"[VERIFY_DEBUG] Has screenshot bytes: {self.screenshot_bytes is not None}"
+                    f"[VERIFY_DEBUG] Has screenshot bytes: {self.video_bytes is not None}"
                 )
 
                 embed = discord.Embed(
@@ -162,19 +162,18 @@ class PlatformSelect(Select):
 
                 embed.set_footer(text=f"User ID: {self.user_id}")
 
-                # Send with screenshot file attachment if available
-                if self.screenshot_bytes and self.screenshot_filename:
+                  # Send with video file attachment if available
+                if self.video_bytes and self.video_filename:
                     import io
 
                     file = discord.File(
-                        io.BytesIO(self.screenshot_bytes),
-                        filename=self.screenshot_filename,
+                        io.BytesIO(self.video_bytes),
+                        filename=self.video_filename,
                     )
-                    embed.set_image(url=f"attachment://{self.screenshot_filename}")
                     await review_channel.send(embed=embed, file=file)
                 else:
                     log_system(
-                        f"[VERIFY_WARNING] No screenshot data for user {self.user_id}",
+                        f"[VERIFY_WARNING] No video data for user {self.user_id}",
                         level="warning",
                     )
                     await review_channel.send(embed=embed)
@@ -225,8 +224,8 @@ class PlatformView(View):
         activision_id: str,
         screenshot_url: str,
         user_id: int,
-        screenshot_bytes=None,
-        screenshot_filename=None,
+        video_bytes=None,
+        video_filename=None,
     ):
         super().__init__(timeout=180)
         self.add_item(
@@ -234,8 +233,8 @@ class PlatformView(View):
                 activision_id,
                 screenshot_url,
                 user_id,
-                screenshot_bytes,
-                screenshot_filename,
+                video_bytes,
+                video_filename,
             )
         )
 
@@ -637,40 +636,57 @@ class Verify(commands.Cog):
             return
 
         activision_id = pending["activision_id"]
-        screenshot = message.attachments[0]
+        video = message.attachments[0]
 
-        # Check if attachment is an image
+        # Check if attachment is a video
         if not any(
-            screenshot.filename.lower().endswith(ext)
-            for ext in [".png", ".jpg", ".jpeg", ".gif", ".webp"]
+              video.filename.lower().endswith(ext)
+              for ext in [".mp4", ".mov", ".webm", ".mkv", ".avi"]
         ):
             await message.reply(
                 embed=create_embed(
                     "Invalid File Type",
-                    "Please upload an image file (PNG, JPG, JPEG, GIF, or WEBP).",
+                      "Please upload a video file (MP4, MOV, WEBM, MKV, or AVI). Maximum 10 seconds.",
                     COLORS["error"],
                 ),
                 delete_after=10,
             )
             return
 
+        # Check file size (Discord has 25MB limit for regular users)
+        log_system(f"[VERIFY_DEBUG] Checking file size: {video.size} bytes")
+        if video.size > 8 * 1024 * 1024:
+            await message.reply(
+                  embed=create_embed(
+                      "File Too Large",
+                      "Video file is too large. Please keep it under 8MB.",
+                      COLORS["error"],
+                  ),
+                  delete_after=10,
+            )
+            await message.delete()
+            return
+
+
         # Download screenshot bytes for later re-upload
-        screenshot_bytes = await screenshot.read()
+        video_bytes = await video.read()
 
         # Delete the screenshot message BEFORE sending reply
         try:
+            log_system(f"[VERIFY_DEBUG] Attempting to delete message {message.id}")
             await message.delete()
         except Exception as e:
             # Message already deleted or doesn't exist - ignore
+            log_system(f"[VERIFY_DEBUG] Delete failed: {e}")
             pass
 
         # Send platform selection to the channel (not as reply since original message is deleted)
         view = PlatformView(
             activision_id,
-            screenshot.url,
+            video.url,
             user_id,
-            screenshot_bytes,
-            screenshot.filename,
+            video_bytes,
+            video.filename,
         )
         await message.channel.send(
             content=message.author.mention,
@@ -687,7 +703,7 @@ class Verify(commands.Cog):
         """Setup a persistent verification reminder message with button"""
         embed = discord.Embed(
             title="📝 Need to Verify?",
-            description="Click the button below to start your verification process.\n\nYou'll need:\n• Your Activision ID\n• A screenshot showing your Combat Record for Rebirth AND your Activision ID in the same screenshot",
+            description="Click the button below to start your verification process.\n\nYou'll need:\n• Your Activision ID\n• A short video (under 10 seconds) showing your Combat Record for Rebirth AND your Activision ID in the same video",
             color=COLORS["info"]
         )
         embed.set_footer(text="Verification helps keep our community safe")
